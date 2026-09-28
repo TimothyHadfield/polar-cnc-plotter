@@ -27,6 +27,32 @@ try {
     await writeFile(new URL(`../tests/fixtures/${name}.json`, import.meta.url), JSON.stringify(small));
     console.log(`${name}: ${strokes.length} strokes, ${pts} points`);
   }
+  // the picture sample is drawn here (our own, so it's free to publish): bold HELLO on white
+  const png = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 1000; c.height = 460;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#111'; g.font = 'bold 300px Arial, Helvetica, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('HELLO', 500, 240);
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  await writeFile(new URL('../samples/hello-block.png', import.meta.url), Buffer.from(png, 'base64'));
+  // pictures: decoded and shrunk by the real js/image.js, saved as grayscale
+  for (const file of ['hello-block.png']) {
+    const img = await page.evaluate(async (f) => {
+      const { loadGray } = await import('/js/image.js');
+      const blob = await (await fetch(`/samples/${f}`)).blob();
+      const { gray, w, h } = await loadGray(blob);
+      let s = '';
+      for (let i = 0; i < gray.length; i += 0x8000) s += String.fromCharCode(...gray.subarray(i, i + 0x8000));
+      return { w, h, gray: btoa(s) };
+    }, file);
+    const name = file.replace(/\.\w+$/, '');
+    await writeFile(new URL(`../tests/fixtures/${name}.gray.json`, import.meta.url), JSON.stringify(img));
+    console.log(`${file}: ${img.w}x${img.h} grayscale`);
+  }
 } finally {
   await browser.close();
 }

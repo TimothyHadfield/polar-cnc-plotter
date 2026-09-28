@@ -27,7 +27,7 @@ A point at (x, y) becomes r = √(x² + y²) and θ = atan2(y, x), so a picture 
 
 ## Plotter app
 
-**[Open the app](https://timothyhadfield.github.io/polar-cnc-plotter/)**: drop in an SVG, see exactly what the pen will draw, download the polar G-code.
+**[Open the app](https://timothyhadfield.github.io/polar-cnc-plotter/)**: drop in an SVG or any picture (PNG, JPG, or paste one with Ctrl+V), see exactly what the pen will draw, download the polar G-code. Pictures are traced into pen lines automatically: outlines by default, or centerlines (one line down the middle of each stroke) in Settings.
 
 **Why it exists:** GRBL-Plotter's "Convert to polar coordinates" decides when to add or subtract 360° from the *sign* of the angle, not from the *change* between two points. Whenever a stroke crosses certain lines through the center, the platter spins a full turn with the pen down and draws a stray ring. A port of that code ([tests/grblplotter-port.mjs](tests/grblplotter-port.mjs)) puts 2 full spins into a simple centered square.
 

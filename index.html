@@ -11,7 +11,7 @@
 <main class="app">
   <section class="stage" id="stage">
     <canvas id="preview" aria-label="Plot preview"></canvas>
-    <div class="drop-hint" id="dropHint">Drop an SVG here</div>
+    <div class="drop-hint" id="dropHint">Drop a drawing or picture here</div>
   </section>
 
   <aside class="panel">
@@ -23,17 +23,23 @@
     </header>
 
     <div class="row">
-      <label class="btn" for="file">Open SVG</label>
-      <input type="file" id="file" accept=".svg,image/svg+xml" hidden>
-      <span class="samples">or <button class="link" data-sample="hello-world">Hello World</button> · <button class="link" data-sample="uvu-logo">UVU logo</button></span>
+      <label class="btn" for="file">Open picture</label>
+      <input type="file" id="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
+      <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button></span>
     </div>
 
-    <div class="file" id="fileName">No drawing yet</div>
+    <div class="file" id="fileName">No drawing yet <span class="hint">· or paste one (Ctrl+V)</span></div>
 
     <label class="slider">
       <span>Size <b id="sizeOut">100%</b></span>
       <input type="range" id="size" min="10" max="100" step="1" value="100">
     </label>
+
+    <label class="slider" id="darkRow" style="visibility:hidden">
+      <span>Darkness <button class="q" type="button" data-q="darkHelp" aria-label="What is this?">?</button> <b id="darkOut"></b></span>
+      <input type="range" id="dark" min="1" max="254" step="1" value="128">
+    </label>
+    <p class="help" id="darkHelp" hidden>How dark a pixel must be to count as ink. Starts at the best split for this picture.</p>
 
     <div class="stats" id="stats"></div>
 
@@ -61,6 +67,8 @@
     <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
     <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>
     <label class="switch"><input type="checkbox" id="showTravel"><span></span>Show pen-up moves</label>
+    <label class="switch"><input type="checkbox" id="center"><span></span>Centerlines <button class="q" type="button" data-q="centerHelp" aria-label="What is this?">?</button></label>
+    <p class="help" id="centerHelp" hidden>For pictures of line drawings: each line is drawn once instead of outlined.</p>
 
     <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
     <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>

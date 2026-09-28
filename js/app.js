@@ -1,5 +1,7 @@
 import { DEFAULTS, prepare, toGcode, simulate, placedToGcode, testCircle, testSpoke } from './polar.js';
 import { svgToStrokes } from './svg.js';
+import { loadGray } from './image.js';
+import { traceImage, otsu } from './trace.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -7,12 +9,13 @@ const PAPER = 200;  // mm, the round sheet on the platter
 // ---------- settings (kept in this browser) ----------
 const KEY = 'polar-plotter-settings';
 const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset'];
-let settings = { ...DEFAULTS, showTravel: false };
+let settings = { ...DEFAULTS, showTravel: false, center: false };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch {} };
 
 // ---------- state ----------
-let raw = null;          // strokes from the SVG, in its own units
+let raw = null;          // strokes from the SVG or traced picture, in its own units
+let picture = null;      // { gray, w, h, threshold } when the drawing came from a picture
 let name = '';
 let result = null;       // { gcode, stats, sim }
 
@@ -85,26 +88,51 @@ function draw() {
 new ResizeObserver(() => draw()).observe(canvas);
 
 // ---------- loading drawings ----------
-function load(text, fileName) {
+const dark = $('dark');
+function showName(fileName) {
+  name = fileName.replace(/\.\w+$/i, '');
+  $('fileName').textContent = fileName;
+  $('err').textContent = '';
+}
+function retrace() {
+  if (!picture) return;
+  raw = traceImage(picture, { threshold: picture.threshold, mode: settings.center ? 'center' : 'outline' }).strokes;
+}
+function showDark() {
+  $('darkRow').style.visibility = picture ? 'visible' : 'hidden';
+  if (!picture) return;
+  dark.value = picture.threshold;
+  $('darkOut').textContent = Math.round(picture.threshold / 2.55) + '%';
+}
+
+// Any file or blob: SVG goes through the SVG reader, everything else is traced as a picture.
+async function load(blob, fileName) {
   try {
-    raw = svgToStrokes(text);
-    name = fileName.replace(/\.svg$/i, '');
-    $('fileName').textContent = fileName;
-    $('err').textContent = '';
+    const isSvg = /svg/i.test(blob.type) || /\.svg$/i.test(fileName);
+    if (isSvg) {
+      raw = svgToStrokes(await blob.text());
+      picture = null;
+    } else {
+      const img = await loadGray(blob);
+      picture = { ...img, threshold: otsu(img.gray) };
+      retrace();
+    }
+    showName(fileName);
+    showDark();
     rebuild();
   } catch (e) {
-    $('err').textContent = e.message;
+    $('err').textContent = /decode|source|bitmap/i.test(e.message) ? 'That file isn’t a picture this browser can read.' : e.message;
   }
 }
 
-$('file').addEventListener('change', async e => {
+$('file').addEventListener('change', e => {
   const f = e.target.files[0];
-  if (f) load(await f.text(), f.name);
+  if (f) load(f, f.name);
   e.target.value = '';
 });
 document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', async () => {
   const n = b.dataset.sample;
-  try { load(await (await fetch(`samples/${n}.svg`)).text(), `${n}.svg`); }
+  try { load(await (await fetch(`samples/${n}`)).blob(), n); }
   catch { $('err').textContent = 'Could not load the sample.'; }
 }));
 
@@ -114,7 +142,38 @@ stage.addEventListener('dragleave', () => stage.classList.remove('dragging'));
 stage.addEventListener('drop', async e => {
   e.preventDefault(); stage.classList.remove('dragging');
   const f = e.dataTransfer.files[0];
-  if (f) load(await f.text(), f.name);
+  if (f) return load(f, f.name);
+  // an image dragged straight from another web page arrives as a link, not a file
+  const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+  if (url) fetchPicture(url.trim().split('\n')[0]);
+});
+
+async function fetchPicture(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error();
+    load(await res.blob(), decodeURIComponent(url.split('/').pop().split('?')[0]) || 'picture');
+  } catch {
+    $('err').textContent = 'That site won’t share the picture directly. Right-click it → Copy image, then press Ctrl+V here.';
+  }
+}
+
+// Ctrl+V: a copied image, a copied SVG, or a copied picture address
+document.addEventListener('paste', e => {
+  const items = [...(e.clipboardData?.items || [])];
+  const img = items.find(i => i.type.startsWith('image/'));
+  if (img) { e.preventDefault(); load(img.getAsFile(), 'pasted picture'); return; }
+  const text = e.clipboardData?.getData('text/plain')?.trim() || '';
+  if (text.startsWith('<svg') || text.startsWith('<?xml')) { e.preventDefault(); load(new Blob([text], { type: 'image/svg+xml' }), 'pasted.svg'); }
+  else if (/^https?:\/\/\S+$/i.test(text) && !(e.target instanceof HTMLInputElement)) { e.preventDefault(); fetchPicture(text); }
+});
+
+dark.addEventListener('input', () => {
+  if (!picture) return;
+  picture.threshold = +dark.value;
+  $('darkOut').textContent = Math.round(picture.threshold / 2.55) + '%';
+  clearTimeout(dark.t);
+  dark.t = setTimeout(() => { retrace(); rebuild(); }, 150);
 });
 
 // ---------- controls ----------
@@ -149,10 +208,15 @@ for (const f of FIELDS) {
     if (Number.isFinite(v)) { settings[f] = v; save(); rebuild(); } else el.value = settings[f];
   });
 }
-for (const f of ['flip', 'showTravel']) {
+for (const f of ['flip', 'showTravel', 'center']) {
   const el = $(f);
   el.checked = !!settings[f];
-  el.addEventListener('change', () => { settings[f] = el.checked; save(); f === 'showTravel' ? draw() : rebuild(); });
+  el.addEventListener('change', () => {
+    settings[f] = el.checked; save();
+    if (f === 'showTravel') return draw();
+    if (f === 'center') retrace();
+    rebuild();
+  });
 }
 document.querySelectorAll('.q').forEach(b => b.addEventListener('click', e => {
   e.preventDefault();

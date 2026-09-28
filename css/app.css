@@ -69,6 +69,8 @@ h3 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); font-weight: 600;
 .icon:hover { color: var(--ink); background: var(--bg); }
 
 .file { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hint { color: var(--muted); font-weight: 400; font-size: 13px; }
+.slider .q { margin-right: auto; margin-left: 6px; }
 .stats { color: var(--muted); font-size: 14px; min-height: 1.35em; }
 .err { color: var(--err); margin: 0; font-size: 14px; min-height: 1.35em; }
 
