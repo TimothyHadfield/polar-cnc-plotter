@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Polar Plotter</title>
+<meta name="description" content="Turn an SVG drawing into polar G-code for a GRBL polar pen plotter, with a preview of exactly what the pen will draw.">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<main class="app">
+  <section class="stage" id="stage">
+    <canvas id="preview" aria-label="Plot preview"></canvas>
+    <div class="drop-hint" id="dropHint">Drop an SVG here</div>
+  </section>
+
+  <aside class="panel">
+    <header class="top">
+      <h1>Polar Plotter</h1>
+      <button class="icon" id="openSettings" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.7h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
+    </header>
+
+    <div class="row">
+      <label class="btn" for="file">Open SVG</label>
+      <input type="file" id="file" accept=".svg,image/svg+xml" hidden>
+      <span class="samples">or <button class="link" data-sample="hello-world">Hello World</button> · <button class="link" data-sample="uvu-logo">UVU logo</button></span>
+    </div>
+
+    <div class="file" id="fileName">No drawing yet</div>
+
+    <label class="slider">
+      <span>Size <b id="sizeOut">100%</b></span>
+      <input type="range" id="size" min="10" max="100" step="1" value="100">
+    </label>
+
+    <div class="stats" id="stats"></div>
+
+    <button class="btn primary" id="download" disabled>Download G-code</button>
+    <p class="err" id="err" role="alert"></p>
+  </aside>
+</main>
+
+<div class="sheet" id="settings" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <header class="top">
+      <h2 id="setTitle">Settings</h2>
+      <button class="icon" id="closeSettings" aria-label="Close">✕</button>
+    </header>
+
+    <div class="grid">
+      <label><span class="lbl">Drawing width <span class="unit">mm</span></span><input type="number" id="diameter" min="20" max="200" step="1"></label>
+      <label><span class="lbl">Pen speed <span class="unit">mm/min</span></span><input type="number" id="speed" min="50" max="3000" step="10"></label>
+      <label><span class="lbl">Pen up <span class="unit">Z</span></span><input type="number" id="penUp" step="0.1"></label>
+      <label><span class="lbl">Pen down <span class="unit">Z</span></span><input type="number" id="penDown" step="0.1"></label>
+      <label><span class="lbl">Center gap <span class="unit">mm</span> <button class="q" type="button" data-q="gapHelp" aria-label="What is this?">?</button></span><input type="number" id="offset" step="0.1"></label>
+    </div>
+    <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
+
+    <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
+    <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>
+    <label class="switch"><input type="checkbox" id="showTravel"><span></span>Show pen-up moves</label>
+
+    <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
+    <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>
+    <div class="row">
+      <button class="btn" data-test="circle">Circle</button>
+      <button class="btn" data-test="spoke">Spoke</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

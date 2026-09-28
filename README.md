@@ -4,7 +4,7 @@ A pen plotter that works in **polar coordinates**: the pen slides along one stra
 
 ![The finished plotter, wired to the Arduino and CNC shield](docs/photos/full-machine.jpg)
 
-**Status:** fully built, with all 3 axes moving and calibrated. Drawings don't come out right yet: the Cartesian-to-polar conversion is still producing scrambled images (see [Status](#status)).
+**Status:** fully built, with all 3 axes moving and calibrated. Drawings didn't come out right with the Instructables software chain, so I'm building my own plotter app (see [Plotter app](#plotter-app)).
 
 ## How it works
 
@@ -24,6 +24,29 @@ A point at (x, y) becomes r = √(x² + y²) and θ = atan2(y, x), so a picture 
 1. **Inkscape**: trace the image into vector paths.
 2. **GRBL-Plotter**: turn the paths into G-code and convert Cartesian to polar.
 3. **Universal G-code Sender**: calibrate the axes and stream the G-code to the Arduino.
+
+## Plotter app
+
+**[Open the app](https://timothyhadfield.github.io/polar-cnc-plotter/)**: drop in an SVG, see exactly what the pen will draw, download the polar G-code.
+
+**Why it exists:** GRBL-Plotter's "Convert to polar coordinates" decides when to add or subtract 360° from the *sign* of the angle, not from the *change* between two points. Whenever a stroke crosses certain lines through the center, the platter spins a full turn with the pen down and draws a stray ring. A port of that code ([tests/grblplotter-port.mjs](tests/grblplotter-port.mjs)) puts 2 full spins into a simple centered square.
+
+**What the app does differently** ([js/polar.js](js/polar.js)):
+- Takes the short way round between angles, so there are no stray spins.
+- Splits every line until the machine's path stays within 0.1 mm of it. GRBL moves in a straight line in (radius, angle), which is a curve on the paper.
+- Corrects for a pen line that misses the platter center (the "center gap" setting).
+- Uses GRBL's inverse-time feed (G93), so the pen moves at a steady speed on the paper.
+- Draws the preview *from the G-code it outputs*, so the preview shows what the machine will really do.
+
+**Tests:** `node --test tests/*.test.mjs` runs 26 tests. Each shape and both sample drawings are simulated the way GRBL moves, and the tests check the pen never strays more than 0.1 mm from the intended lines. The same check fails on GRBL-Plotter's method.
+
+**Machine check files** ([tests/machine/](tests/machine/)):
+- `1-circle.nc`, `2-spoke.nc`: if the circle closes and the spoke is straight, the machine is fine.
+- `3-square-grbl-plotter-method.nc` vs `4-square-fixed.nc`: the same square converted both ways.
+
+Before running them: pen at the platter center, just touching the paper, then `G92 X0 Y0 Z0`. Pen up is Z2 and down is Z0 (change both in the app's settings).
+
+Coming next: a Plot button that drives the plotter straight from the browser (Chrome/Edge over USB).
 
 ## Build
 
