@@ -45,6 +45,39 @@
 
     <button class="btn primary" id="download" disabled>Download G-code</button>
     <p class="err" id="err" role="alert"></p>
+
+    <section class="machine" id="machine" hidden>
+      <div class="row" id="offline">
+        <button class="btn wide" id="connect">Connect plotter</button>
+        <button class="q" type="button" data-q="connectHelp" aria-label="What is this?">?</button>
+      </div>
+      <p class="help" id="connectHelp" hidden>Chrome or Edge, plotter plugged in by USB. Connecting restarts the Arduino, so set center again each time.</p>
+
+      <div class="live" id="live" hidden>
+        <div class="mstatus"><span class="dot" id="mDot"></span><b id="mState">…</b><span id="mPos"></span><button class="link" id="disconnect">Disconnect</button></div>
+        <div class="pad">
+          <span class="lbl">Move</span>
+          <button class="btn sm" data-jog="X-" title="Carriage toward center">In</button>
+          <button class="btn sm" data-jog="X+" title="Carriage outward">Out</button>
+          <button class="btn sm" data-jog="Y+" title="Turn platter counterclockwise" aria-label="Turn counterclockwise">↺</button>
+          <button class="btn sm" data-jog="Y-" title="Turn platter clockwise" aria-label="Turn clockwise">↻</button>
+          <span class="lbl">Pen</span>
+          <button class="btn sm" data-pen="up">Up</button>
+          <button class="btn sm" data-pen="down">Down</button>
+          <button class="btn sm" data-jog="Z+" title="Raise pen a little" aria-label="Raise pen a little">▲</button>
+          <button class="btn sm" data-jog="Z-" title="Lower pen a little" aria-label="Lower pen a little">▼</button>
+          <span class="lbl">Step</span>
+          <span class="seg" id="steps"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span>
+          <button class="btn sm span2" id="setCenter">Set center</button>
+        </div>
+        <button class="btn primary" id="plot" disabled>Plot</button>
+        <div class="run" id="run" hidden>
+          <div class="bar"><span id="bar"></span></div>
+          <div class="row"><span id="runText"></span><button class="btn sm" id="pause">Pause</button><button class="btn sm" id="stop">Stop</button></div>
+        </div>
+        <p class="mmsg" id="mMsg"></p>
+      </div>
+    </section>
   </aside>
 </main>
 
@@ -75,6 +108,13 @@
     <div class="row">
       <button class="btn" data-test="circle">Circle</button>
       <button class="btn" data-test="spoke">Spoke</button>
+    </div>
+
+    <div id="consoleBox" hidden>
+      <h3>Plotter console <button class="q" type="button" data-q="consoleHelp" aria-label="What is this?">?</button></h3>
+      <p class="help" id="consoleHelp" hidden>For GRBL settings like $$ or $101=29.6. Connect first.</p>
+      <form class="row" id="cmdForm"><input id="cmd" placeholder="$$" autocomplete="off" spellcheck="false"><button class="btn" id="cmdSend">Send</button></form>
+      <pre class="log" id="log"></pre>
     </div>
   </div>
 </div>

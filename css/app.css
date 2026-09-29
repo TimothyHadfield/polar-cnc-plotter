@@ -79,6 +79,39 @@ h3 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); font-weight: 600;
 .slider b { color: var(--ink); }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 
+/* plotter controls */
+.machine { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.machine[hidden], .machine [hidden] { display: none; }
+.btn.wide { flex: 1; }
+.btn.sm { padding: 6px 0; font-size: 14px; }
+.live { display: flex; flex-direction: column; gap: 10px; }
+.mstatus { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.mstatus #mPos { color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot[data-state=Idle] { background: #2e9d52; }
+.dot[data-state=Run], .dot[data-state=Jog] { background: var(--accent); }
+.dot[data-state=Hold] { background: #d99a1e; }
+.dot[data-state=Alarm] { background: var(--err); }
+.pad { display: grid; grid-template-columns: 44px repeat(4, 1fr); gap: 6px; align-items: center; }
+.pad .lbl { color: var(--muted); font-size: 14px; }
+.pad .span2 { grid-column: span 2; }
+.seg { grid-column: span 2; display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--panel); padding: 6px 0; font-size: 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.run { display: flex; flex-direction: column; gap: 8px; }
+.run .row { flex-wrap: nowrap; }
+.run #runText { flex: 1; color: var(--muted); font-size: 14px; }
+.run .btn.sm { padding: 6px 14px; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+.mmsg { margin: 0; font-size: 14px; color: var(--muted); min-height: 1.35em; }
+.mmsg.bad { color: var(--err); }
+.panel.connected #download { background: var(--panel); color: var(--ink); border-color: var(--line); padding: 9px; }
+#cmd { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: ui-monospace, Consolas, monospace; }
+#cmdForm { margin-top: 4px; flex-wrap: nowrap; }
+.log { margin: 8px 0 0; height: 120px; overflow-y: auto; background: var(--bg); border-radius: 8px; padding: 8px; font-size: 12px; white-space: pre-wrap; color: var(--muted); }
+
 /* settings sheet */
 .sheet {
   position: fixed; inset: 0; background: rgb(0 0 0 / .35);

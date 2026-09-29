@@ -1,4 +1,5 @@
-import { DEFAULTS, prepare, toGcode, simulate, placedToGcode, testCircle, testSpoke } from './polar.js';
+import { DEFAULTS, prepare, toGcode, simulate, placedToGcode, testCircle, testSpoke, toPlatter } from './polar.js';
+import { initMachine } from './machine.js';
 import { svgToStrokes } from './svg.js';
 import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
@@ -18,6 +19,8 @@ let raw = null;          // strokes from the SVG or traced picture, in its own u
 let picture = null;      // { gray, w, h, threshold } when the drawing came from a picture
 let name = '';
 let result = null;       // { gcode, stats, sim }
+let pen = null;          // live pen position [r, θ, z] from the plotter, when connected
+let machine = null;
 
 // ---------- conversion ----------
 let timer = 0;
@@ -36,6 +39,7 @@ function rebuild(delay = 0) {
     }
     draw();
     showStats();
+    machine?.refresh();
   }, delay);
 }
 
@@ -75,15 +79,22 @@ function draw() {
   ctx.strokeStyle = color('--paper-edge');
   ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6); ctx.stroke();
 
-  if (!result) return;
-  ctx.lineJoin = ctx.lineCap = 'round';
-  if (settings.showTravel) {
-    ctx.strokeStyle = color('--travel'); ctx.lineWidth = 0.8; ctx.setLineDash([3, 4]);
-    for (const s of result.sim.up) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
-    ctx.setLineDash([]);
+  if (result) {
+    ctx.lineJoin = ctx.lineCap = 'round';
+    if (settings.showTravel) {
+      ctx.strokeStyle = color('--travel'); ctx.lineWidth = 0.8; ctx.setLineDash([3, 4]);
+      for (const s of result.sim.up) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
+      ctx.setLineDash([]);
+    }
+    ctx.strokeStyle = color('--pen'); ctx.lineWidth = Math.max(1, 0.5 * k);
+    for (const s of result.sim.down) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
   }
-  ctx.strokeStyle = color('--pen'); ctx.lineWidth = Math.max(1, 0.5 * k);
-  for (const s of result.sim.down) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
+  // where the real pen is right now
+  if (pen && pen[0] >= 0) {
+    const p = toPlatter(pen, settings);
+    ctx.fillStyle = color('--travel');
+    ctx.beginPath(); ctx.arc(X(p), Y(p), 5, 0, 2 * Math.PI); ctx.fill();
+  }
 }
 new ResizeObserver(() => draw()).observe(canvas);
 
@@ -228,4 +239,9 @@ document.querySelectorAll('[data-test]').forEach(b => b.addEventListener('click'
   download(placedToGcode(strokes, settings).gcode, `test-${t}.nc`);
 }));
 
+machine = initMachine({
+  getJob: () => result && { gcode: result.gcode, minutes: result.stats.minutes + result.stats.travelMM / 400 },
+  getSettings: () => settings,
+  onPen: p => { if (String(p) !== String(pen)) { pen = p; draw(); } },
+});
 rebuild();

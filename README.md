@@ -46,7 +46,7 @@ A point at (x, y) becomes r = √(x² + y²) and θ = atan2(y, x), so a picture 
 
 Before running them: pen at the platter center, just touching the paper, then `G92 X0 Y0 Z0`. Pen up is Z2 and down is Z0 (change both in the app's settings).
 
-Coming next: a Plot button that drives the plotter straight from the browser (Chrome/Edge over USB).
+**Plot straight from the browser** (Chrome or Edge on a computer, plotter on USB): Connect plotter → move the pen over the platter center → Set center → Plot. Pause, Stop, jog and pen buttons are built in, and Settings has a console for GRBL `$` settings. No UGS needed. Add `?demo` to the address to try it with a pretend plotter.
 
 ## Build
 
