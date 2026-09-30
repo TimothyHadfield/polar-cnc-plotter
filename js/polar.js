@@ -75,18 +75,111 @@ export function simplify(pts, eps) {
 
 // ---------- preparing the drawing ----------
 
-// Centre the strokes on the platter, flip SVG's downward y, and scale to fit the drawing circle.
-export function fitStrokes(strokes, o) {
+// Bounding box [x0, y0, x1, y1] of all points, or null when there are none.
+export function bounds(strokes) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const s of strokes) for (const [x, y] of s) {
     if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
-  if (!isFinite(x0)) return [];
-  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  return isFinite(x0) ? [x0, y0, x1, y1] : null;
+}
+
+// How fitStrokes maps raw units to platter mm: p_mm = [(x - cx) * k, -(y - cy) * k].
+export function fitFrame(strokes, o) {
+  const b = bounds(strokes);
+  if (!b) return null;
+  const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
   let R = 0;
   for (const s of strokes) for (const [x, y] of s) R = Math.max(R, Math.hypot(x - cx, y - cy));
-  const k = R ? (o.diameter / 2) * (o.size / 100) / R : 1;
+  return { cx, cy, k: R ? (o.diameter / 2) * (o.size / 100) / R : 1 };
+}
+
+// Centre the strokes on the platter, flip SVG's downward y, and scale to fit the drawing circle.
+export function fitStrokes(strokes, o) {
+  const f = fitFrame(strokes, o);
+  if (!f) return [];
+  const { cx, cy, k } = f;
   return strokes.map(s => s.map(([x, y]) => [(x - cx) * k, -(y - cy) * k]));
+}
+
+// ---------- placement: crop, turn, move, and keep the pen on the paper ----------
+// place = { turn (degrees, + = counter-clockwise on the preview), dx, dy (mm), crop ([u0,v0,u1,v1] in
+// 0…1 of the raw drawing's bounding box, or null) }.
+
+const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+
+// Keep the parts of each stroke inside a convex region. span(a, b) returns the visible [t0, t1]
+// of segment a->b (0 ≤ t0 < t1 ≤ 1) or null. Strokes crossing the edge are split exactly on it.
+function clipConvex(strokes, span) {
+  const out = [];
+  for (const s of strokes) {
+    let cur = null;
+    for (let i = 1; i < s.length; i++) {
+      const a = s[i - 1], b = s[i];
+      const v = span(a, b);
+      if (!v) { if (cur) out.push(cur); cur = null; continue; }
+      const [t0, t1] = v;
+      if (t0 > 0 && cur) { out.push(cur); cur = null; }
+      if (!cur) cur = [t0 > 0 ? lerp2(a, b, t0) : a];
+      cur.push(t1 < 1 ? lerp2(a, b, t1) : b);
+      if (t1 < 1) { out.push(cur); cur = null; }
+    }
+    if (cur) out.push(cur);
+  }
+  return out.filter(s => s.length > 1);
+}
+
+// Cut everything farther than R from the centre. Strokes already inside pass through untouched.
+export function clipOuter(strokes, R) {
+  const within = s => s.every(p => Math.hypot(p[0], p[1]) <= R + 1e-9);
+  const span = (a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const A = dx * dx + dy * dy, B = 2 * (a[0] * dx + a[1] * dy), C = a[0] * a[0] + a[1] * a[1] - R * R;
+    if (A === 0) return C <= 0 ? [0, 1] : null;
+    const disc = B * B - 4 * A * C;
+    if (disc <= 0) return null;
+    const q = Math.sqrt(disc);
+    const t0 = Math.max(0, (-B - q) / (2 * A)), t1 = Math.min(1, (-B + q) / (2 * A));
+    return t0 < t1 ? [t0, t1] : null;
+  };
+  const out = [];
+  for (const s of strokes) {
+    if (within(s)) out.push(s);
+    else out.push(...clipConvex([s], span));
+  }
+  return out;
+}
+
+// Keep the parts of raw strokes inside the crop rectangle (normalized to their bounding box).
+export function cropStrokes(strokes, crop) {
+  const b = bounds(strokes);
+  if (!b || !crop) return strokes;
+  const w = b[2] - b[0], h = b[3] - b[1];
+  const lo = [b[0] + crop[0] * w, b[1] + crop[1] * h], hi = [b[0] + crop[2] * w, b[1] + crop[3] * h];
+  const e = 1e-9 * (Math.max(w, h) || 1);
+  // Liang-Barsky
+  const span = (a, c) => {
+    let t0 = 0, t1 = 1;
+    for (let ax = 0; ax < 2; ax++) {
+      const d = c[ax] - a[ax];
+      for (const [p, q] of [[-d, a[ax] - lo[ax]], [d, hi[ax] - a[ax]]]) {
+        if (p === 0) { if (q < -e) return null; continue; }   // parallel: keep it if on or inside the edge
+        const t = q / p;
+        if (p < 0) { if (t > t0) t0 = t; } else if (t < t1) t1 = t;
+      }
+    }
+    return t0 < t1 ? [t0, t1] : null;
+  };
+  return clipConvex(strokes, span);
+}
+
+// Turn about the centre, move, then cut whatever left the drawing circle (radius R).
+export function placeStrokes(strokes, place, R) {
+  const a = (place.turn || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  const dx = place.dx || 0, dy = place.dy || 0;
+  if (!a && !dx && !dy) return strokes;
+  const moved = strokes.map(st => st.map(([x, y]) => [x * c - y * s + dx, x * s + y * c + dy]));
+  return clipOuter(moved, R);
 }
 
 // Cut out the parts of each stroke that are closer to the centre than `rMin` (unreachable).
@@ -144,9 +237,11 @@ export function orderStrokes(strokes) {
 }
 
 // Everything the converter will actually try to draw, in platter mm.
-export function prepare(rawStrokes, opts) {
+// place (optional): crop, turn and move, see placeStrokes.
+export function prepare(rawStrokes, opts, place) {
   const o = { ...DEFAULTS, ...opts };
-  let strokes = fitStrokes(rawStrokes, o);
+  let strokes = fitStrokes(place?.crop ? cropStrokes(rawStrokes, place.crop) : rawStrokes, o);
+  if (place) strokes = placeStrokes(strokes, place, o.diameter / 2);
   strokes = strokes.map(s => simplify(s, o.tol / 5));
   strokes = clipInner(strokes, Math.abs(o.offset) + 1e-6);
   return orderStrokes(strokes);

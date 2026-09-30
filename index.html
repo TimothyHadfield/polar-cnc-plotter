@@ -12,6 +12,10 @@
   <section class="stage" id="stage">
     <canvas id="preview" aria-label="Plot preview"></canvas>
     <div class="drop-hint" id="dropHint">Drop a drawing or picture here</div>
+    <div class="placebar" id="placeBar" style="visibility:hidden">
+      <button class="btn sm" id="crop" type="button">Crop</button>
+      <button class="btn sm" id="resetPlace" type="button" hidden>Reset</button>
+    </div>
   </section>
 
   <aside class="panel">
@@ -30,10 +34,16 @@
 
     <div class="file" id="fileName">No drawing yet <span class="hint">· or paste one (Ctrl+V)</span></div>
 
-    <label class="slider">
-      <span>Size <b id="sizeOut">100%</b></span>
-      <input type="range" id="size" min="10" max="100" step="1" value="100">
-    </label>
+    <div class="pair">
+      <label class="slider">
+        <span>Size <b id="sizeOut">100%</b></span>
+        <input type="range" id="size" min="10" max="100" step="1" value="100">
+      </label>
+      <label class="slider">
+        <span>Turn <b id="turnOut">0°</b></span>
+        <input type="range" id="turn" min="-180" max="180" step="1" value="0">
+      </label>
+    </div>
 
     <label class="slider" id="darkRow" style="visibility:hidden">
       <span>Darkness <button class="q" type="button" data-q="darkHelp" aria-label="What is this?">?</button> <b id="darkOut"></b></span>

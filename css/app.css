@@ -44,6 +44,17 @@ button, input { font: inherit; color: inherit; }
 }
 .stage.dragging .drop-hint { display: flex; }
 
+/* move, turn, crop (js/place.js) */
+#preview { touch-action: none; }
+.stage.movable #preview { cursor: grab; }
+.stage.movable #preview:active { cursor: grabbing; }
+.stage.cropping #preview { cursor: crosshair; }
+.placebar { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; }
+.placebar .btn.sm { padding: 6px 12px; }
+.placebar .btn[hidden] { display: none; }
+.placebar .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
 .panel {
   background: var(--panel); border-left: 1px solid var(--line);
   padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;

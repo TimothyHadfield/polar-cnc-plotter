@@ -3,6 +3,7 @@ import { initMachine } from './machine.js';
 import { svgToStrokes } from './svg.js';
 import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
+import { initPlace } from './place.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -21,6 +22,9 @@ let name = '';
 let result = null;       // { gcode, stats, sim }
 let pen = null;          // live pen position [r, θ, z] from the plotter, when connected
 let machine = null;
+// where the drawing sits (js/place.js): not saved, reset for every new drawing
+const place = { turn: 0, dx: 0, dy: 0, crop: null };
+const resetPlace = () => Object.assign(place, { turn: 0, dx: 0, dy: 0, crop: null });
 
 // ---------- conversion ----------
 let timer = 0;
@@ -29,9 +33,10 @@ function rebuild(delay = 0) {
   timer = setTimeout(() => {
     if (!raw) { result = null; draw(); showStats(); return; }
     try {
-      const strokes = prepare(raw, settings);
+      const t0 = performance.now();
+      const strokes = prepare(raw, settings, place);
       const out = toGcode(strokes, settings);
-      result = { ...out, sim: simulate(out.gcode, settings, 0.4) };
+      result = { ...out, sim: simulate(out.gcode, settings, 0.4), ms: performance.now() - t0 };
       $('err').textContent = strokes.length ? '' : 'Nothing to draw in this file.';
     } catch (e) {
       result = null;
@@ -65,6 +70,9 @@ function draw() {
   const k = (Math.min(w, h) - 24) / PAPER;       // px per mm
   const cx = w / 2, cy = h / 2;
   const X = p => cx + p[0] * k, Y = p => cy - p[1] * k;
+  api.view = { k, cx, cy };
+  const [sx, sy] = api.inkShift || [0, 0];   // drag preview for heavy drawings (js/place.js)
+  const IX = p => X(p) + sx * k, IY = p => Y(p) - sy * k;
 
   // paper, drawing area, centre gap
   ctx.fillStyle = color('--paper'); ctx.strokeStyle = color('--paper-edge'); ctx.lineWidth = 1;
@@ -83,11 +91,11 @@ function draw() {
     ctx.lineJoin = ctx.lineCap = 'round';
     if (settings.showTravel) {
       ctx.strokeStyle = color('--travel'); ctx.lineWidth = 0.8; ctx.setLineDash([3, 4]);
-      for (const s of result.sim.up) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
+      for (const s of result.sim.up) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(IX(p), IY(p)) : ctx.moveTo(IX(p), IY(p))); ctx.stroke(); }
       ctx.setLineDash([]);
     }
     ctx.strokeStyle = color('--pen'); ctx.lineWidth = Math.max(1, 0.5 * k);
-    for (const s of result.sim.down) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
+    for (const s of result.sim.down) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(IX(p), IY(p)) : ctx.moveTo(IX(p), IY(p))); ctx.stroke(); }
   }
   // extra layers from other modules (crop box, plot progress…): fn({ ctx, X, Y, k, cx, cy, color })
   for (const f of overlays) f({ ctx, X, Y, k, cx, cy, color });
@@ -133,6 +141,7 @@ async function load(blob, fileName) {
     }
     showName(fileName);
     showDark();
+    resetPlace();
     rebuild();
   } catch (e) {
     $('err').textContent = /decode|source|bitmap/i.test(e.message) ? 'That file isn’t a picture this browser can read.' : e.message;
@@ -145,6 +154,7 @@ function setDrawing(strokes, label) {
   picture = null;
   showName(label);
   showDark();
+  resetPlace();
   rebuild();
 }
 
@@ -260,7 +270,13 @@ const api = {
   rebuild, draw,
   addOverlay: f => overlays.push(f),
   canvas,
+  getRaw: () => raw,
+  getPlace: () => place,
+  setPlace: (patch, delay = 0) => { Object.assign(place, patch); rebuild(delay); },
+  view: { k: 1, cx: 0, cy: 0 },   // preview scale, set by draw()
+  inkShift: null,
 };
+initPlace(api);
 
 machine = initMachine({
   getJob: () => result && { gcode: result.gcode, minutes: result.stats.minutes + result.stats.travelMM / 400 },
