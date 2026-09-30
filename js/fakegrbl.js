@@ -16,6 +16,7 @@ export class FakeGrbl {
     this.abs = true;
     this.moving = 0;          // ms of motion left
     this.alive = true;
+    this.settings = { 100: '47.620', 101: '17.132', 102: '100.000' };   // `$n=` values, echoed by `$$`
     setTimeout(() => this.emit("Grbl 1.1h ['$' for help]"), bootMs);  // opening the port resets the Uno
     this.timer = setInterval(() => this.tick(), lineMs);
   }
@@ -74,8 +75,10 @@ export class FakeGrbl {
   exec(line) {
     if (this.failIf?.(line, this.received.length)) return 'error:2';
     if (line === '$X') { if (this.state === 'Alarm') this.state = 'Idle'; return 'ok'; }
-    if (line === '$$') { ['$100=47.620', '$101=17.132', '$102=100.000'].forEach(l => this.emit(l)); return 'ok'; }
+    if (line === '$$') { Object.entries(this.settings).forEach(([n, v]) => this.emit(`$${n}=${v}`)); return 'ok'; }
     if (this.state === 'Alarm') return 'error:9';
+    const set = /^\$(\d+)=(-?[\d.]+)$/.exec(line);
+    if (set) { this.settings[set[1]] = (+set[2]).toFixed(3); return 'ok'; }
     if (/^\$\d+=/.test(line)) return 'ok';
     const jog = line.startsWith('$J=');
     const words = (jog ? line.slice(3) : line).toUpperCase().match(/[A-Z][-+.\d]*/g) || [];
