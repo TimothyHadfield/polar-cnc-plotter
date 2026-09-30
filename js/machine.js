@@ -8,7 +8,7 @@ const $ = id => document.getElementById(id);
 
 export function initMachine({ getJob, getSettings, onPen }) {
   const demo = new URLSearchParams(location.search).has('demo');
-  if (!('serial' in navigator) && !demo) return;
+  if (!('serial' in navigator) && !demo) return null;
   $('machine').hidden = false;
   $('consoleBox').hidden = false;
 
@@ -166,5 +166,5 @@ export function initMachine({ getJob, getSettings, onPen }) {
   if (!demo) navigator.serial.addEventListener('disconnect', () => lost());
 
   refresh();
-  return { refresh };
+  return { refresh, getGrbl: () => grbl, say };
 }

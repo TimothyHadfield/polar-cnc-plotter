@@ -89,6 +89,8 @@ function draw() {
     ctx.strokeStyle = color('--pen'); ctx.lineWidth = Math.max(1, 0.5 * k);
     for (const s of result.sim.down) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))); ctx.stroke(); }
   }
+  // extra layers from other modules (crop box, plot progress…): fn({ ctx, X, Y, k, cx, cy, color })
+  for (const f of overlays) f({ ctx, X, Y, k, cx, cy, color });
   // where the real pen is right now
   if (pen && pen[0] >= 0) {
     const p = toPlatter(pen, settings);
@@ -96,6 +98,7 @@ function draw() {
     ctx.beginPath(); ctx.arc(X(p), Y(p), 5, 0, 2 * Math.PI); ctx.fill();
   }
 }
+const overlays = [];
 new ResizeObserver(() => draw()).observe(canvas);
 
 // ---------- loading drawings ----------
@@ -134,6 +137,15 @@ async function load(blob, fileName) {
   } catch (e) {
     $('err').textContent = /decode|source|bitmap/i.test(e.message) ? 'That file isn’t a picture this browser can read.' : e.message;
   }
+}
+
+// For drawings made inside the app (text, patterns…): strokes in SVG-like units, y down.
+function setDrawing(strokes, label) {
+  raw = strokes;
+  picture = null;
+  showName(label);
+  showDark();
+  rebuild();
 }
 
 $('file').addEventListener('change', e => {
@@ -239,9 +251,22 @@ document.querySelectorAll('[data-test]').forEach(b => b.addEventListener('click'
   download(placedToGcode(strokes, settings).gcode, `test-${t}.nc`);
 }));
 
+// What feature modules get to work with. Keep this the only door into app state.
+const api = {
+  setDrawing,
+  getSettings: () => settings,
+  setSettings: patch => { Object.assign(settings, patch); save(); rebuild(); },
+  getResult: () => result,
+  rebuild, draw,
+  addOverlay: f => overlays.push(f),
+  canvas,
+};
+
 machine = initMachine({
   getJob: () => result && { gcode: result.gcode, minutes: result.stats.minutes + result.stats.travelMM / 400 },
   getSettings: () => settings,
   onPen: p => { if (String(p) !== String(pen)) { pen = p; draw(); } },
+  api,
 });
+api.machine = machine;   // null when this browser can't use USB serial
 rebuild();

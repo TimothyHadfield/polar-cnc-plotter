@@ -79,6 +79,12 @@ h3 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); font-weight: 600;
 .slider b { color: var(--ink); }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 
+/* tool panels (js/tool.js): the open tool replaces the rest of the panel */
+.panel.tooling > :not(.tool) { display: none; }
+.tool { display: flex; flex-direction: column; gap: 12px; }
+.tool[hidden] { display: none; }
+.tool .top .btn { padding: 6px 14px; }
+
 /* plotter controls */
 .machine { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
 .machine[hidden], .machine [hidden] { display: none; }
