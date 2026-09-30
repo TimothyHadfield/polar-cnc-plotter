@@ -54,7 +54,7 @@
       <p class="help" id="connectHelp" hidden>Chrome or Edge, plotter plugged in by USB. Connecting restarts the Arduino, so set center again each time.</p>
 
       <div class="live" id="live" hidden>
-        <div class="mstatus"><span class="dot" id="mDot"></span><b id="mState">…</b><span id="mPos"></span><button class="link" id="disconnect">Disconnect</button></div>
+        <div class="mstatus"><span class="dot" id="mDot"></span><b id="mState">…</b><span id="mPos"></span><button class="link" id="calOpen">Calibrate</button><button class="link" id="disconnect">Disconnect</button></div>
         <div class="pad">
           <span class="lbl">Move</span>
           <button class="btn sm" data-jog="X-" title="Carriage toward center">In</button>
@@ -77,6 +77,10 @@
         </div>
         <p class="mmsg" id="mMsg"></p>
       </div>
+    </section>
+
+    <section class="tool" id="calTool" hidden>
+      <header class="top"><h2>Calibrate</h2><button class="btn" data-close-tool>Done</button></header>
     </section>
   </aside>
 </main>

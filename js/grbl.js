@@ -39,6 +39,16 @@ export function gcodeLines(text) {
     .filter(Boolean);
 }
 
+// ["$100=47.620", "$101=17.132 (y, step/mm)"] -> { 100: 47.62, 101: 17.132 }. Other lines are ignored.
+export function parseSettings(lines) {
+  const out = {};
+  for (const l of lines) {
+    const m = /^\$(\d+)=\s*(-?[\d.]+)/.exec(String(l).trim());
+    if (m) out[+m[1]] = +m[2];
+  }
+  return out;
+}
+
 export class Grbl {
   constructor(transport, { onStatus = () => {}, onLog = () => {}, onEvent = () => {} } = {}) {
     this.t = transport;
@@ -211,6 +221,15 @@ export class Grbl {
     await this.send('G92 X0 Y0');
     const s = await this.nextStatus();
     this.center = [s.mpos[0], s.mpos[1]];
+  }
+  // `$$` -> { 100: 47.62, 101: 17.132, … } (the `$n=value` lines GRBL prints before its ok).
+  async readSettings() {
+    const lines = [];
+    const grab = { test: l => { if (/^\$\d+=/.test(l)) lines.push(l); return false; }, resolve() {} };
+    this.waiters.push(grab);
+    try { await this.send('$$'); }
+    finally { const i = this.waiters.indexOf(grab); if (i >= 0) this.waiters.splice(i, 1); }
+    return parseSettings(lines);
   }
   // G92 may not survive a reset; put it back from the remembered machine position.
   async restoreCenter() {

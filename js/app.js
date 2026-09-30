@@ -1,5 +1,6 @@
 import { DEFAULTS, prepare, toGcode, simulate, placedToGcode, testCircle, testSpoke, toPlatter } from './polar.js';
 import { initMachine } from './machine.js';
+import { initCalibrate } from './calibrate.js';
 import { svgToStrokes } from './svg.js';
 import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
@@ -269,4 +270,5 @@ machine = initMachine({
   api,
 });
 api.machine = machine;   // null when this browser can't use USB serial
+initCalibrate(api);
 rebuild();
