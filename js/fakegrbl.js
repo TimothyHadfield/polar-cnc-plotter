@@ -29,7 +29,10 @@ export class FakeGrbl {
     for (const ch of s) {
       if (ch === '?') this.report();
       else if (ch === '!') { if (this.state === 'Run' || (this.state === 'Idle' && this.buf)) { this.hold = true; this.state = 'Hold:0'; } }
-      else if (ch === '~') { if (this.hold) { this.hold = false; this.state = this.buf || this.moving ? 'Run' : 'Idle'; } }
+      else if (ch === '~') {
+        if (this.hold) { this.hold = false; this.state = this.buf || this.moving ? 'Run' : 'Idle'; }
+        if (this.m0) { this.m0 = false; this.emit('ok'); }   // like GRBL: M0's ok comes after cycle start
+      }
       else if (ch === '\x18') this.softReset();
       else if (ch === '\x85') { this.moving = 0; }
       else {
@@ -48,6 +51,7 @@ export class FakeGrbl {
 
   softReset() {
     const lost = this.state === 'Run' && !this.hold;
+    this.m0 = false;
     this.buf = ''; this.moving = 0; this.hold = false; this.abs = true;
     this.wco = [0, 0, 0];     // worst case: G92 does not survive a reset
     this.state = lost ? 'Alarm' : 'Idle';
@@ -68,7 +72,8 @@ export class FakeGrbl {
       const line = this.buf.slice(0, i).trim();
       this.buf = this.buf.slice(i + 1);
       this.received.push(line);
-      this.emit(this.exec(line));
+      const reply = this.exec(line);
+      if (reply) this.emit(reply);
     }
   }
 
@@ -80,6 +85,9 @@ export class FakeGrbl {
     const set = /^\$(\d+)=(-?[\d.]+)$/.exec(line);
     if (set) { this.settings[set[1]] = (+set[2]).toFixed(3); return 'ok'; }
     if (/^\$\d+=/.test(line)) return 'ok';
+    // M0 program pause: everything before it has finished (lines run one at a time here); hold
+    // until `~`, which also sends this line's ok.
+    if (/^M0+(?!\d)/i.test(line)) { this.hold = true; this.m0 = true; this.state = 'Hold:0'; return null; }
     const jog = line.startsWith('$J=');
     const words = (jog ? line.slice(3) : line).toUpperCase().match(/[A-Z][-+.\d]*/g) || [];
     let rel = !this.abs, g92 = false;

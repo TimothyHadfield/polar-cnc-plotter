@@ -1,8 +1,18 @@
-// SVG text -> list of strokes (arrays of [x, y] points in the SVG's root units).
+// SVG text -> list of strokes (arrays of [x, y] points in the SVG's root units). Each stroke has a
+// `.color` (#rrggbb): the element's stroke colour, else its fill, else black.
 // Paths are flattened by js/pathflat.js (fast); other shapes and all transforms use the browser.
 import { flattenPath } from './pathflat.js';
 
 const SHAPES = 'path,line,polyline,polygon,rect,circle,ellipse';
+
+// Computed paint ("rgb(255, 0, 0)", "none", "url(#g)") -> "#ff0000", or null when it paints nothing.
+export function paintHex(v) {
+  const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?/.exec(v || '');
+  if (!m) return null;
+  if (m[4] !== undefined && parseFloat(m[4]) === 0) return null;   // fully transparent
+  return '#' + [m[1], m[2], m[3]].map(c => Math.round(Math.min(255, +c)).toString(16).padStart(2, '0')).join('');
+}
+const colorOf = el => { const cs = getComputedStyle(el); return paintHex(cs.stroke) || paintHex(cs.fill) || '#000000'; };
 
 export function svgToStrokes(text) {
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
@@ -27,8 +37,13 @@ export function svgToStrokes(text) {
     for (const el of els) {
       const m = toRoot.multiply(el.getScreenCTM());
       const tf = ([x, y]) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+      const color = colorOf(el);
       if (el.nodeName.toLowerCase() === 'path') {
-        for (const s of flattenPath(el.getAttribute('d') || '', tol / Math.max(1e-9, Math.hypot(m.a, m.b)))) strokes.push(s.map(tf));
+        for (const s of flattenPath(el.getAttribute('d') || '', tol / Math.max(1e-9, Math.hypot(m.a, m.b)))) {
+          const t = s.map(tf);
+          t.color = color;
+          strokes.push(t);
+        }
         continue;
       }
       let len;
@@ -40,6 +55,7 @@ export function svgToStrokes(text) {
         const p = el.getPointAtLength(len * i / n);
         cur.push(tf([p.x, p.y]));
       }
+      cur.color = color;
       strokes.push(cur);
     }
     return strokes.filter(s => s.length > 1);

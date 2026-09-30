@@ -1,18 +1,37 @@
 // The plotter controls: connect over USB (Web Serial), jog, pen, set center, plot / pause / stop.
 // Shown only in browsers that can talk to USB serial (Chrome / Edge on a computer), or with ?demo.
 
-import { Grbl, openSerial, gcodeLines } from './grbl.js';
+import { Grbl, openSerial, gcodeLines, resumeLines, resumePoint, RESUME_HEADER, isPause } from './grbl.js';
 import { FakeGrbl } from './fakegrbl.js';
 
 const $ = id => document.getElementById(id);
 
-export function initMachine({ getJob, getSettings, onPen }) {
+// Pen changes in a job: streamed line index of each M0 -> { n, color } from the `; pen <n>: #rrggbb`
+// comment before it. Indexes count lines the way gcodeLines() keeps them.
+function penChanges(gcode) {
+  const out = new Map();
+  let i = -1, pen = null;
+  for (const raw of gcode.split(/\r?\n/)) {
+    const m = /^\s*;\s*pen (\d+):\s*(#[0-9a-f]{6})/i.exec(raw);
+    if (m) pen = { n: +m[1], color: m[2] };
+    const line = raw.replace(/\(.*?\)/g, '').replace(/;.*/, '').trim();
+    if (!line) continue;
+    i++;
+    if (isPause(line) && pen) out.set(i, pen);
+  }
+  return out;
+}
+
+export function initMachine({ getJob, getSettings, onPen, api }) {
   const demo = new URLSearchParams(location.search).has('demo');
   if (!('serial' in navigator) && !demo) return null;
   $('machine').hidden = false;
   $('consoleBox').hidden = false;
 
   let grbl = null, link = null, poll = 0, step = 1, running = false, paused = false;
+  // active: the plot being streamed ({ gcode, lines, from, head, pens }); its line i is line
+  // from + (i - head) of the whole drawing. resume: where a plot that ended early can pick up.
+  let active = null, resume = null, handledPause = -1, lastDone = null, lastPen = '';
   const panel = document.querySelector('.panel');
 
   // ---------- messages ----------
@@ -30,10 +49,15 @@ export function initMachine({ getJob, getSettings, onPen }) {
     $('live').hidden = !on;
     panel.classList.toggle('connected', on);
     $('run').hidden = !running;
-    $('plot').hidden = running;
+    $('plotRow').hidden = running;
     const busy = running || !on;
     document.querySelectorAll('[data-jog],[data-pen],#setCenter').forEach(b => { b.disabled = busy; });
     const job = getJob();
+    if (resume && !running && job?.gcode !== resume.gcode) resume = null;   // a different drawing
+    const rb = $('resumePlot');
+    rb.hidden = !resume || !grbl?.center;
+    rb.disabled = busy;
+    if (resume) rb.textContent = `Resume ${Math.floor(resume.from / resume.total * 100)}%`;
     const plot = $('plot');
     plot.disabled = busy || !grbl?.center || !job;
     plot.textContent = !job ? 'Plot' : grbl && !grbl.center ? 'Set center first' : 'Plot';
@@ -45,7 +69,47 @@ export function initMachine({ getJob, getSettings, onPen }) {
     $('mState').textContent = state;
     $('mDot').dataset.state = state;
     $('mPos').textContent = grbl?.center ? `r ${s.wpos[0].toFixed(1)} mm · θ ${s.wpos[1].toFixed(1)}°` : 'center not set';
-    onPen(grbl?.center ? s.wpos : null);
+    // a pen change (M0 in the job): hold until the new pen is in, then Resume
+    if (running && !paused && active) {
+      const i = grbl.programPause();
+      if (i >= 0 && i !== handledPause) {
+        handledPause = i;
+        paused = true;
+        showPenChange(active.pens.get(toDrawing(i)));
+        refresh();
+      }
+    }
+    const p = grbl?.center ? s.wpos : null;
+    const moved = String(p) !== lastPen;
+    lastPen = String(p);
+    onPen(p);
+    // progress shading: redraw when more is drawn, unless onPen just redrew (at most once per report)
+    const d = doneLine();
+    if (d !== lastDone) { lastDone = d; if (!moved) api?.draw(); }
+  }
+
+  function showPenChange(pen) {
+    const el = $('mMsg');
+    el.classList.remove('bad');
+    if (!pen) { el.textContent = 'Paused by the drawing. Resume when ready.'; return; }
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = pen.color;
+    el.replaceChildren(`Change to pen ${pen.n} `, sw, ` ${pen.color}, then Resume.`);
+  }
+
+  // Streamed line i of the current run -> line of the whole drawing.
+  const toDrawing = i => active.from + Math.max(0, i - active.head);
+  // While plotting: lines of the drawing before this one are surely on paper. null when not plotting.
+  function doneLine() {
+    if (!running || !active) return null;
+    return grbl?.job ? toDrawing(grbl.drawnLines()) : active.from;
+  }
+  // A plot ended early: remember where to pick up (a few lines of overlap; redrawing them is harmless).
+  function remember(drawnInRun) {
+    if (!active) return;
+    const drawn = toDrawing(drawnInRun);
+    resume = drawn > 0 ? { gcode: active.gcode, from: resumePoint(active.lines, drawn), total: active.lines.length } : null;
   }
 
   // ---------- connect ----------
@@ -75,6 +139,8 @@ export function initMachine({ getJob, getSettings, onPen }) {
   }
   async function drop() {
     clearInterval(poll);
+    if (running && grbl?.job) remember(grbl.drawnLines());   // unplugged mid-plot
+    active = null;
     const l = link;
     grbl = null; link = null; running = false; paused = false;
     onPen(null);
@@ -110,29 +176,40 @@ export function initMachine({ getJob, getSettings, onPen }) {
   $('setCenter').addEventListener('click', () => run(grbl.setCenter().then(() => { say('Center set.'); refresh(); })));
 
   // ---------- plot ----------
-  $('plot').addEventListener('click', async () => {
+  // from = 0: the whole drawing. from > 0: pick up a plot that ended early at that line.
+  async function plot(from) {
     const job = getJob();
     if (!job || !grbl?.center) return;
-    const lines = gcodeLines(job.gcode);
-    running = true; paused = false;
+    const all = gcodeLines(job.gcode);
+    const lines = from ? resumeLines(all, from, getSettings().penUp) : all;
+    active = { gcode: job.gcode, lines: all, from, head: from ? RESUME_HEADER : 0, pens: penChanges(job.gcode) };
+    running = true; paused = false; handledPause = -1; lastDone = null;
     say('');
     refresh();
+    grbl.lastJob = null;
     const t0 = Date.now();
     const progress = f => {
-      $('bar').style.width = (f * 100).toFixed(1) + '%';
-      const left = f > 0.02 ? (Date.now() - t0) * (1 - f) / f / 60000 : job.minutes * (1 - f);
-      $('runText').textContent = `${Math.floor(f * 100)}% · ~${Math.max(1, Math.round(left))} min left`;
+      const whole = (from + f * (all.length - from)) / all.length;   // share of the whole drawing
+      $('bar').style.width = (whole * 100).toFixed(1) + '%';
+      const left = f > 0.02 ? (Date.now() - t0) * (1 - f) / f / 60000 : job.minutes * (1 - whole);
+      $('runText').textContent = `${Math.floor(whole * 100)}% · ~${Math.max(1, Math.round(left))} min left`;
     };
     progress(0);
     try {
       const res = await grbl.stream(lines, progress);
+      resume = null;
       say(res.errors.length ? `Done, ${res.errors.length} line(s) skipped.` : `Done in ${Math.max(1, Math.round((Date.now() - t0) / 60000))} min.`);
     } catch (e) {
+      if (grbl?.lastJob) remember(grbl.lastJob.drawn);
       if (e.message !== 'Stopped.') say(e.message, true);
     }
-    running = false; paused = false;
+    if (!active) return;   // unplugged: drop() already tidied up
+    running = false; paused = false; active = null;
     refresh();
-  });
+    api?.draw();
+  }
+  $('plot').addEventListener('click', () => plot(0));
+  $('resumePlot').addEventListener('click', () => resume && plot(resume.from));
   $('pause').addEventListener('click', () => {
     if (paused) { grbl.resume(); paused = false; say(''); } else { grbl.pause(); paused = true; }
     refresh();
@@ -166,5 +243,5 @@ export function initMachine({ getJob, getSettings, onPen }) {
   if (!demo) navigator.serial.addEventListener('disconnect', () => lost());
 
   refresh();
-  return { refresh, getGrbl: () => grbl, say };
+  return { refresh, getGrbl: () => grbl, say, doneLine };
 }

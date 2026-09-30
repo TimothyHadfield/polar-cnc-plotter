@@ -61,7 +61,7 @@ function showStats() {
   if (!result) { $('stats').textContent = ''; return; }
   const s = result.stats;
   const mins = s.minutes + s.travelMM / 400;
-  $('stats').textContent = `${s.strokes} strokes · ${(s.drawMM / 1000).toFixed(1)} m of ink · ~${Math.max(1, Math.round(mins))} min`;
+  $('stats').textContent = `${s.strokes} strokes · ${(s.drawMM / 1000).toFixed(1)} m of ink · ~${Math.max(1, Math.round(mins))} min${s.pens > 1 ? ` · ${s.pens} pens` : ''}`;
 }
 
 // ---------- preview ----------
@@ -103,8 +103,27 @@ function draw() {
       for (const s of result.sim.up) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(IX(p), IY(p)) : ctx.moveTo(IX(p), IY(p))); ctx.stroke(); }
       ctx.setLineDash([]);
     }
-    ctx.strokeStyle = color('--pen'); ctx.lineWidth = Math.max(1, 0.5 * k);
-    for (const s of result.sim.down) { ctx.beginPath(); s.forEach((p, i) => i ? ctx.lineTo(IX(p), IY(p)) : ctx.moveTo(IX(p), IY(p))); ctx.stroke(); }
+    // ink: each pen in its own colour when there are several (--pen if it would vanish on the paper);
+    // while plotting, what isn't drawn yet is light (sim.down[i].lines = G-code line per point)
+    const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+    const paper = rgb(color('--paper')), penInk = color('--pen');
+    const inkOf = s => {
+      if (!(result.stats.pens > 1) || !s.color) return penInk;
+      const c = rgb(s.color);
+      return Math.hypot(c[0] - paper[0], c[1] - paper[1], c[2] - paper[2]) < 100 ? penInk : s.color;
+    };
+    const light = ink => hex(rgb(ink).map((v, i) => v * 0.25 + paper[i] * 0.75));
+    const done = machine?.doneLine?.() ?? null;
+    const line = (s, a, b) => { ctx.beginPath(); for (let i = a; i < b; i++) i > a ? ctx.lineTo(IX(s[i]), IY(s[i])) : ctx.moveTo(IX(s[i]), IY(s[i])); ctx.stroke(); };
+    ctx.lineWidth = Math.max(1, 0.5 * k);
+    for (const s of result.sim.down) {
+      const ink = inkOf(s);
+      let cut = s.length;                                   // points before `cut` are on paper
+      if (done !== null) { cut = 0; while (cut < s.length && s.lines[cut] < done) cut++; }
+      if (cut < s.length) { ctx.strokeStyle = light(ink); line(s, Math.max(0, cut - 1), s.length); }
+      if (cut > 1) { ctx.strokeStyle = ink; line(s, 0, cut); }
+    }
   }
   // extra layers from other modules (crop box, plot progress…): fn({ ctx, X, Y, k, cx, cy, color })
   for (const f of overlays) f({ ctx, X, Y, k, cx, cy, color });
