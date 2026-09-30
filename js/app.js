@@ -3,6 +3,8 @@ import { initMachine } from './machine.js';
 import { svgToStrokes } from './svg.js';
 import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
+import { initText } from './text.js';
+import { initPatterns } from './patterns.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -269,4 +271,6 @@ machine = initMachine({
   api,
 });
 api.machine = machine;   // null when this browser can't use USB serial
+initText(api);
+initPatterns(api);
 rebuild();
