@@ -74,6 +74,7 @@ function draw() {
   const css = getComputedStyle(document.documentElement);
   const color = v => css.getPropertyValue(v).trim();
   const k = (Math.min(w, h) - 24) / PAPER;       // px per mm
+  if (k <= 0) return;                             // preview squeezed to nothing
   const cx = w / 2, cy = h / 2;
   const X = p => cx + p[0] * k, Y = p => cy - p[1] * k;
   api.view = { k, cx, cy };

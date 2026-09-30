@@ -79,6 +79,7 @@ h3 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); font-weight: 600;
 .icon { background: none; border: 0; padding: 6px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; }
 .icon:hover { color: var(--ink); background: var(--bg); }
 
+.panel > * { flex-shrink: 0; }   /* the panel scrolls instead of squashing its rows */
 .file { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hint { color: var(--muted); font-weight: 400; font-size: 13px; }
 .slider .q { margin-right: auto; margin-left: 6px; }
@@ -198,5 +199,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); gap: 10px; overflow: visible; }
+  /* plotter controls or a tool panel: the panel scrolls inside so the preview keeps its space */
+  .panel.connected, .panel.tooling { max-height: 58dvh; overflow-y: auto; }
   .stats, .err { font-size: 13px; }
 }
