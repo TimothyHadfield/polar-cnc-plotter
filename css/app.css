@@ -142,6 +142,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 }
 .help { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
 
+.pick { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 14px; }
+
 .switch { display: flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; font-size: 14px; }
 .switch input { position: absolute; opacity: 0; pointer-events: none; }
 .switch > span {

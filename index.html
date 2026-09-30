@@ -94,14 +94,17 @@
       <label><span class="lbl">Pen up <span class="unit">Z</span></span><input type="number" id="penUp" step="0.1"></label>
       <label><span class="lbl">Pen down <span class="unit">Z</span></span><input type="number" id="penDown" step="0.1"></label>
       <label><span class="lbl">Center gap <span class="unit">mm</span> <button class="q" type="button" data-q="gapHelp" aria-label="What is this?">?</button></span><input type="number" id="offset" step="0.1"></label>
+      <label><span class="lbl">Line gap <span class="unit">mm</span> <button class="q" type="button" data-q="lineGapHelp" aria-label="What is this?">?</button></span><input type="number" id="gap" min="0.4" max="5" step="0.1"></label>
     </div>
     <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
+    <p class="help" id="lineGapHelp" hidden>Space between spiral rings or hatch lines.</p>
 
     <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
     <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>
     <label class="switch"><input type="checkbox" id="showTravel"><span></span>Show pen-up moves</label>
-    <label class="switch"><input type="checkbox" id="center"><span></span>Centerlines <button class="q" type="button" data-q="centerHelp" aria-label="What is this?">?</button></label>
-    <p class="help" id="centerHelp" hidden>For pictures of line drawings: each line is drawn once instead of outlined.</p>
+    <div class="pick"><span class="lbl">Picture style <button class="q" type="button" data-q="styleHelp" aria-label="What is this?">?</button></span>
+      <span class="seg" id="pictureStyle"><button type="button" data-style="outline">Outlines</button><button type="button" data-style="center">Centerlines</button><button type="button" data-style="spiral">Spiral</button><button type="button" data-style="hatch">Hatch</button></span></div>
+    <p class="help" id="styleHelp" hidden>Outlines: the pen goes around each dark shape.<br>Centerlines: for line drawings, each line drawn once.<br>Spiral: one line from the center, wiggling where dark.<br>Hatch: crossed lines shade photos; darker gets more.</p>
 
     <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
     <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>

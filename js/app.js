@@ -3,15 +3,19 @@ import { initMachine } from './machine.js';
 import { svgToStrokes } from './svg.js';
 import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
+import { spiral, hatch } from './styles.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
 
 // ---------- settings (kept in this browser) ----------
 const KEY = 'polar-plotter-settings';
-const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset'];
-let settings = { ...DEFAULTS, showTravel: false, center: false };
+const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset', 'gap'];
+const STYLES = ['outline', 'center', 'spiral', 'hatch'];   // picture style
+let settings = { ...DEFAULTS, showTravel: false, gap: 1.2 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
+if (!STYLES.includes(settings.style)) settings.style = settings.center ? 'center' : 'outline';   // old Centerlines switch
+delete settings.center;
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch {} };
 
 // ---------- state ----------
@@ -27,6 +31,7 @@ let timer = 0;
 function rebuild(delay = 0) {
   clearTimeout(timer);
   timer = setTimeout(() => {
+    retrace();   // spiral and hatch depend on the drawing size (line gap is in mm on paper)
     if (!raw) { result = null; draw(); showStats(); return; }
     try {
       const strokes = prepare(raw, settings);
@@ -108,9 +113,15 @@ function showName(fileName) {
   $('fileName').textContent = fileName;
   $('err').textContent = '';
 }
+// Picture -> strokes in the chosen style. Skips the work when nothing it depends on changed.
 function retrace() {
   if (!picture) return;
-  raw = traceImage(picture, { threshold: picture.threshold, mode: settings.center ? 'center' : 'outline' }).strokes;
+  const st = settings.style, shade = st === 'spiral' || st === 'hatch';
+  const key = [st, picture.threshold, ...(shade ? [settings.gap, settings.diameter, settings.size] : [])].join();
+  if (picture.key === key) return;
+  picture.key = key;
+  const o = { threshold: picture.threshold, gap: settings.gap, diameter: settings.diameter, size: settings.size };
+  raw = (st === 'spiral' ? spiral(picture, o) : st === 'hatch' ? hatch(picture, o) : traceImage(picture, { threshold: picture.threshold, mode: st })).strokes;
 }
 function showDark() {
   $('darkRow').style.visibility = picture ? 'visible' : 'hidden';
@@ -227,20 +238,29 @@ for (const f of FIELDS) {
   const el = $(f);
   el.value = settings[f];
   el.addEventListener('change', () => {
-    const v = parseFloat(el.value);
+    let v = parseFloat(el.value);
+    if (f === 'gap') el.value = v = Math.min(5, Math.max(0.4, v));
     if (Number.isFinite(v)) { settings[f] = v; save(); rebuild(); } else el.value = settings[f];
   });
 }
-for (const f of ['flip', 'showTravel', 'center']) {
+for (const f of ['flip', 'showTravel']) {
   const el = $(f);
   el.checked = !!settings[f];
   el.addEventListener('change', () => {
     settings[f] = el.checked; save();
     if (f === 'showTravel') return draw();
-    if (f === 'center') retrace();
     rebuild();
   });
 }
+const styleSeg = $('pictureStyle');
+const showStyle = () => styleSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.style === settings.style));
+showStyle();
+styleSeg.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  settings.style = b.dataset.style; save(); showStyle();
+  if (picture) rebuild();   // rebuild re-traces
+});
 document.querySelectorAll('.q').forEach(b => b.addEventListener('click', e => {
   e.preventDefault();
   const h = $(b.dataset.q); h.hidden = !h.hidden;
