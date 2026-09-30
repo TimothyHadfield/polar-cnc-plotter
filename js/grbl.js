@@ -3,6 +3,10 @@
 // waiting in its 128-byte receive buffer, and count one `ok`/`error` per line.
 
 export const RX_LIMIT = 127;
+// GRBL on an Uno acknowledges a line when it enters its 16-slot (15 usable) planner buffer, so up
+// to this many acknowledged lines may not have been drawn yet.
+export const PLANNER = 15;
+export const isPause = text => /^M0+(?!\d)/i.test(text);   // M0: program pause (pen change)
 
 const ERRORS = {
   1: 'a letter was expected', 2: 'bad number', 3: 'unknown $ command', 8: 'only allowed when idle',
@@ -60,6 +64,8 @@ export class Grbl {
     if (line.startsWith('<') && line.endsWith('>')) {
       this.status = parseStatus(line, this.wco);
       this.wco = this.status.wco;
+      // Idle: everything acknowledged before this report has been drawn
+      if (this.job && this.status.state === 'Idle') this.job.sure = this.job.done;
       this.onStatus(this.status);
     } else if (line === 'ok' || line.startsWith('error:')) {
       const c = this.pending.shift();
@@ -143,7 +149,7 @@ export class Grbl {
   stream(lines, onProgress = () => {}) {
     if (this.job) return Promise.reject(new Error('Already plotting.'));
     return new Promise((resolve, reject) => {
-      const job = this.job = { total: lines.length, done: 0, held: false, resolve, reject, errors: [] };
+      const job = this.job = { lines, total: lines.length, done: 0, sure: 0, held: false, resolve, reject, errors: [] };
       lines.forEach((text, i) => this.queue.push({
         text, job, index: i,
         resolve: () => { job.done++; onProgress(job.done / job.total); if (job.done === job.total) this.finish(job); },
@@ -164,9 +170,26 @@ export class Grbl {
     }
   }
 
+  // Lines of the current job that have surely been drawn (lines[0..n-1]). Lags a little, never ahead.
+  drawnLines() {
+    const j = this.job;
+    if (!j) return 0;
+    return Math.min(j.done, Math.max(j.sure, j.done - PLANNER, this.programPause() + 1, 0));
+  }
+
+  // Held by an M0 in the job (a pen change), not by Pause: that M0's line index, else -1.
+  // GRBL empties its planner before an M0, then holds; the M0 is the last or next line acknowledged.
+  programPause() {
+    const j = this.job;
+    if (!j || j.held || !/^Hold/.test(this.status?.state || '')) return -1;
+    for (const i of [j.done - 1, j.done]) if (i >= 0 && isPause(j.lines[i] || '')) return i;
+    return -1;
+  }
+
   endJob(err) {
     const job = this.job;
     if (!job) return;
+    this.lastJob = { total: job.total, drawn: err ? this.drawnLines() : job.total };
     this.job = null;
     this.queue = this.queue.filter(c => c.job !== job);
     if (err) job.reject(err); else job.resolve({ errors: job.errors });
@@ -218,6 +241,30 @@ export class Grbl {
     const f = v => v.toFixed(3);
     await this.send(`G92 X${f(s.mpos[0] - this.center[0])} Y${f(s.mpos[1] - this.center[1])}`);
   }
+}
+
+// Lines to finish a plot that ended early. `lines` as streamed (gcodeLines), `from` = first line to
+// run again. Pen up, pen-up rapid to where line `from` starts, pen back to the Z in effect there, rest.
+export function resumeLines(lines, from, penUp) {
+  let x = 0, y = 0, z = penUp;
+  for (const l of lines.slice(0, from)) {
+    const w = {};
+    for (const [, k, v] of l.toUpperCase().matchAll(/([XYZ])\s*(-?[\d.]+)/g)) w[k] = +v;
+    if (w.X !== undefined) x = w.X;
+    if (w.Y !== undefined) y = w.Y;
+    if (w.Z !== undefined) z = w.Z;
+  }
+  const f = v => +v.toFixed(3);
+  return ['G21 G90 G93', `G0 Z${f(penUp)}`, `G0 X${f(x)} Y${f(y)}`, `G0 Z${f(z)}`, ...lines.slice(from)];
+}
+export const RESUME_HEADER = 4;
+
+// Where to restart after a plot stopped with `drawn` lines surely drawn: a few lines back, for overlap,
+// but never back across a pen change (M0), which would draw the overlap with the wrong pen.
+export function resumePoint(lines, drawn, overlap = 5) {
+  let from = Math.max(0, drawn - overlap);
+  for (let i = drawn - 1; i >= from; i--) if (isPause(lines[i] || '')) { from = i + 1; break; }
+  return from;
 }
 
 // ---------- Web Serial (Chrome / Edge) ----------

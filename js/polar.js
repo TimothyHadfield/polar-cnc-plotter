@@ -57,7 +57,7 @@ export function distToSegment(p, a, b) {
 
 // Ramer-Douglas-Peucker.
 export function simplify(pts, eps) {
-  if (pts.length < 3) return pts.slice();
+  if (pts.length < 3) return keepColor(pts.slice(), pts);
   const keep = new Uint8Array(pts.length);
   keep[0] = keep[pts.length - 1] = 1;
   const stack = [[0, pts.length - 1]];
@@ -70,7 +70,7 @@ export function simplify(pts, eps) {
     }
     if (best > eps) { keep[bi] = 1; stack.push([i, bi], [bi, j]); }
   }
-  return pts.filter((_, k) => keep[k]);
+  return keepColor(pts.filter((_, k) => keep[k]), pts);
 }
 
 // ---------- preparing the drawing ----------
@@ -86,7 +86,7 @@ export function fitStrokes(strokes, o) {
   let R = 0;
   for (const s of strokes) for (const [x, y] of s) R = Math.max(R, Math.hypot(x - cx, y - cy));
   const k = R ? (o.diameter / 2) * (o.size / 100) / R : 1;
-  return strokes.map(s => s.map(([x, y]) => [(x - cx) * k, -(y - cy) * k]));
+  return strokes.map(s => keepColor(s.map(([x, y]) => [(x - cx) * k, -(y - cy) * k]), s));
 }
 
 // Cut out the parts of each stroke that are closer to the centre than `rMin` (unreachable).
@@ -105,13 +105,14 @@ export function clipInner(strokes, rMin) {
   };
   const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   for (const s of strokes) {
-    let cur = inside(s[0]) ? null : [s[0]];
+    const start = p => keepColor([p], s);
+    let cur = inside(s[0]) ? null : start(s[0]);
     for (let i = 1; i < s.length; i++) {
       const a = s[i - 1], b = s[i];
       for (const t of cross(a, b)) {
         const p = lerp(a, b, t);
         if (cur) { cur.push(p); if (cur.length > 1) out.push(cur); cur = null; }
-        else cur = [p];
+        else cur = start(p);
       }
       if (cur) cur.push(b);
       if (inside(b) && cur) { if (cur.length > 1) out.push(cur); cur = null; }
@@ -122,10 +123,19 @@ export function clipInner(strokes, rMin) {
 }
 
 // Greedy nearest-neighbour order (strokes may be reversed) to cut pen-up travel.
+// Strokes with a `.color` stay grouped by colour (one pen each), in order of first appearance.
 export function orderStrokes(strokes) {
-  const left = strokes.slice();
+  const groups = new Map();
+  for (const s of strokes) {
+    if (!groups.has(s.color)) groups.set(s.color, []);
+    groups.get(s.color).push(s);
+  }
   const out = [];
   let at = [0, 0];
+  for (const left of groups.values()) at = orderGroup(left, out, at);
+  return out;
+}
+function orderGroup(left, out, at) {
   while (left.length) {
     let bi = 0, rev = false, bd = Infinity;
     for (let i = 0; i < left.length; i++) {
@@ -136,11 +146,17 @@ export function orderStrokes(strokes) {
       if (d1 < bd) { bd = d1; bi = i; rev = true; }
     }
     const s = left.splice(bi, 1)[0];
-    const t = rev ? s.slice().reverse() : s;
+    const t = rev ? keepColor(s.slice().reverse(), s) : s;
     out.push(t);
     at = t[t.length - 1];
   }
-  return out;
+  return at;
+}
+
+// Strokes are plain point arrays; an optional `.color` (#rrggbb, from the SVG) rides along.
+function keepColor(to, from) {
+  if (from.color !== undefined) to.color = from.color;
+  return to;
 }
 
 // Everything the converter will actually try to draw, in platter mm.
@@ -175,6 +191,8 @@ function emitSegment(a, b, ma, o, out, depth) {
 }
 
 // strokes: output of prepare(). Returns { gcode, stats }.
+// More than one stroke colour: each colour group starts with a `; pen <n>: #rrggbb` comment, and
+// from pen 2 on an M0 (GRBL program pause, pen already up) so the pen can be swapped; `~` resumes.
 export function toGcode(strokes, opts) {
   const o = { ...DEFAULTS, ...opts };
   const L = [];
@@ -184,7 +202,14 @@ export function toGcode(strokes, opts) {
   L.push('G21 G90 G93');
   L.push(`G0 Z${f3(o.penUp)}`);
   let y = 0, drawMM = 0, travelMM = 0, at = [0, 0], moves = 0;
+  const pens = new Set(strokes.map(s => s.color)).size;
+  let pen = 0, color;
   for (const s of strokes) {
+    if (pens > 1 && (pen === 0 || s.color !== color)) {
+      color = s.color;
+      L.push(`; pen ${++pen}: ${color || '#000000'}`);
+      if (pen > 1) L.push('M0');
+    }
     const m0 = toMachine(s[0], o, y);
     travelMM += Math.hypot(s[0][0] - at[0], s[0][1] - at[1]);
     L.push(`G0 X${f3(m0[0])} Y${f3(m0[1])}`);
@@ -205,7 +230,7 @@ export function toGcode(strokes, opts) {
   }
   L.push('G94');
   L.push('M2');
-  return { gcode: L.join('\n') + '\n', stats: { strokes: strokes.length, moves, lines: L.length, drawMM, travelMM, minutes: drawMM / o.speed } };
+  return { gcode: L.join('\n') + '\n', stats: { strokes: strokes.length, pens: Math.max(1, pen), moves, lines: L.length, drawMM, travelMM, minutes: drawMM / o.speed } };
 }
 
 export function convert(rawStrokes, opts) {
@@ -216,16 +241,22 @@ export function convert(rawStrokes, opts) {
 
 // Reads polar G-code and returns what the pen does on the paper, sampling each move the way GRBL
 // executes it (straight in machine X/Y). Returns { down: [[pts]], up: [[pts]] } in platter mm.
+// Each down[i] also has `.lines`: lines[j] = index (into gcodeLines(), i.e. the lines as streamed)
+// of the move that reaches point j (point 0 shares its move's index), so ink can be split into
+// drawn / not yet drawn; and `.color` when a `; pen <n>: #rrggbb` comment precedes it. M0 is a no-op.
 export function simulate(gcode, opts, step = 0.5) {
   const o = { ...DEFAULTS, ...opts };
   const zMid = (o.penUp + o.penDown) / 2;
   const penIsDown = z => (o.penDown < o.penUp ? z <= zMid : z >= zMid);
   let x = 0, y = 0, z = o.penUp, abs = true;
   const down = [], up = [];
-  let cur = null;
+  let cur = null, ln = -1, color;
   for (const raw of gcode.split('\n')) {
+    const pen = /^\s*;\s*pen \d+:\s*(#[0-9a-f]{6})/i.exec(raw);
+    if (pen) color = pen[1].toLowerCase();
     const line = raw.replace(/;.*|\(.*?\)/g, '').toUpperCase();
     if (!line.trim()) continue;
+    ln++;
     if (/G91(?!\d)/.test(line)) abs = false;
     if (/G90(?!\d)/.test(line)) abs = true;
     const w = {};
@@ -242,8 +273,8 @@ export function simulate(gcode, opts, step = 0.5) {
       const pts = [];
       for (let i = 0; i <= n; i++) pts.push(toPlatter([x + (nx - x) * i / n, y + (ny - y) * i / n], o));
       if (wasDown) {
-        if (!cur) { cur = [pts[0]]; down.push(cur); }
-        for (let i = 1; i < pts.length; i++) cur.push(pts[i]);
+        if (!cur) { cur = [pts[0]]; cur.lines = [ln]; if (color) cur.color = color; down.push(cur); }
+        for (let i = 1; i < pts.length; i++) { cur.push(pts[i]); cur.lines.push(ln); }
       } else {
         up.push(pts);
       }

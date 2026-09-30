@@ -112,6 +112,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
 .mmsg { margin: 0; font-size: 14px; color: var(--muted); min-height: 1.35em; }
+.plotrow { flex-wrap: nowrap; gap: 8px; }
+.plotrow .btn { flex: 1; width: auto; padding: 12px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line); vertical-align: -1px; }
 .mmsg.bad { color: var(--err); }
 .panel.connected #download { background: var(--panel); color: var(--ink); border-color: var(--line); padding: 9px; }
 #cmd { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: ui-monospace, Consolas, monospace; }
