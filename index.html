@@ -29,6 +29,8 @@
     <div class="row">
       <label class="btn" for="file">Open picture</label>
       <input type="file" id="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
+      <button class="btn" id="openText">Text</button>
+      <button class="btn" id="openPattern">Pattern</button>
       <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button></span>
     </div>
 
@@ -87,6 +89,19 @@
         </div>
         <p class="mmsg" id="mMsg"></p>
       </div>
+    </section>
+
+    <section class="tool" id="textTool" hidden>
+      <header class="top"><h2>Text</h2><button class="btn" data-close-tool>Done</button></header>
+      <textarea id="textInput" rows="3" spellcheck="false" aria-label="Text to draw">Hello</textarea>
+      <span class="seg" id="textFont"><button data-v="sans" class="on">Sans</button><button data-v="script">Script</button><button data-v="serif">Serif</button></span>
+      <span class="seg" id="textLayout"><button data-v="lines" class="on">Lines</button><button data-v="circle">Circle</button></span>
+    </section>
+
+    <section class="tool" id="patternTool" hidden>
+      <header class="top"><h2>Pattern</h2><button class="btn" data-close-tool>Done</button></header>
+      <span class="seg" id="patternType"><button data-v="spiral" class="on">Spiral</button><button data-v="rose">Rose</button><button data-v="spirograph">Spirograph</button><button data-v="waves">Waves</button></span>
+      <div class="pattern-sliders" id="patternSliders"></div>
     </section>
 
     <section class="tool" id="calTool" hidden>

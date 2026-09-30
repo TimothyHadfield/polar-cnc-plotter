@@ -6,6 +6,8 @@ import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
 import { initPlace } from './place.js';
 import { spiral, hatch } from './styles.js';
+import { initText } from './text.js';
+import { initPatterns } from './patterns.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -308,4 +310,6 @@ machine = initMachine({
 });
 api.machine = machine;   // null when this browser can't use USB serial
 initCalibrate(api);
+initText(api);
+initPatterns(api);
 rebuild();

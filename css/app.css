@@ -97,6 +97,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tool[hidden] { display: none; }
 .tool .top .btn { padding: 6px 14px; }
 
+/* text + pattern tools */
+#textInput {
+  font: 16px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); resize: none;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); width: 100%;
+}
+.tool .seg button { flex: 1 1 auto; padding: 7px 6px; }
+.pattern-sliders { display: flex; flex-direction: column; gap: 12px; min-height: 166px; }  /* room for 3 sliders, so switching type doesn't resize the panel */
+
 /* plotter controls */
 .machine { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
 .machine[hidden], .machine [hidden] { display: none; }

@@ -88,7 +88,8 @@ export function bounds(strokes) {
 export function fitFrame(strokes, o) {
   const b = bounds(strokes);
   if (!b) return null;
-  const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+  // drawings made around a middle point (patterns, circle text) say so with strokes.center
+  const [cx, cy] = strokes.center ?? [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
   let R = 0;
   for (const s of strokes) for (const [x, y] of s) R = Math.max(R, Math.hypot(x - cx, y - cy));
   return { cx, cy, k: R ? (o.diameter / 2) * (o.size / 100) / R : 1 };
