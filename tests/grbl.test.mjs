@@ -1,12 +1,15 @@
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Grbl, parseStatus, gcodeLines, RX_LIMIT } from '../js/grbl.js';
 import { FakeGrbl } from '../js/fakegrbl.js';
 import { DEFAULTS, convert } from '../js/polar.js';
 
+const fakes = [];
+after(() => fakes.forEach(f => f.close()));     // even when a test fails, so the run can exit
 async function connect(opts) {
   const fake = new FakeGrbl(opts);
+  fakes.push(fake);
   const events = [];
   const g = new Grbl(fake, { onEvent: (e, m) => events.push([e, m]) });
   await g.ready();
@@ -109,7 +112,7 @@ test('a reset nobody asked for (USB reconnect) forgets the center', async () => 
   await g.setCenter();
   assert.ok(g.center);
   fake.softReset();
-  await new Promise(r => setTimeout(r, 60));
+  for (const t = Date.now() + 3000; g.center !== null && Date.now() < t;) await new Promise(r => setTimeout(r, 10));   // banner comes ~20 ms later, slower on a busy machine
   assert.equal(g.center, null);
   assert.ok(events.some(e => e[0] === 'reset'));
   fake.close();

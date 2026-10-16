@@ -35,7 +35,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (about 8 files, ~100 tests, 2-3 minutes; no package.json,
+- Tests: `node --test tests/*.test.mjs` (8 files, 96 tests, about 1-2 minutes; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with
