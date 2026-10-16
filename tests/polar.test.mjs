@@ -128,3 +128,10 @@ test('path: numbers packed together (1.5.5 and 1e2) read right', () => {
   const [p] = flattenPath('M0 0L1.5.5L1e1-2');
   assert.deepEqual(p, [[0, 0], [1.5, 0.5], [10, -2]]);
 });
+
+test('path: a command cut short ends the path there, like a browser (no NaN points)', () => {
+  for (const d of ['M0 0 L10 10 L20', 'M0 0 L10 10 C1 2 3 L5 5', 'M0 0 L10 10 A5 5 0 0 1', 'M0 0 L10 10 M3']) {
+    const s = flattenPath(d);
+    assert.deepEqual(s, [[[0, 0], [10, 10]]], d);
+  }
+});

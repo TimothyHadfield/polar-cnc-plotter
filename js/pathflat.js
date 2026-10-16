@@ -74,6 +74,8 @@ function arc(out, p0, rx, ry, phiDeg, large, sweep, p1, tol) {
   out[out.length - 1] = [p1[0], p1[1]];
 }
 
+const ARGS = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
+
 export function flattenPath(d, tol = 0.05) {
   const tok = tokenize(d);
   const paths = [];
@@ -95,6 +97,8 @@ export function flattenPath(d, tol = 0.05) {
       continue;
     }
     if (!has()) { continue; }
+    // too few numbers for this command: the path is broken here, and browsers draw only up to it
+    for (let j = 0; j < ARGS[C]; j++) if (typeof tok[k + j] !== 'number') return paths.filter(p => p.length > 1);
     const ox = rel ? x : 0, oy = rel ? y : 0;
     if (C === 'M') {
       x = ox + num(); y = oy + num(); sx = x; sy = y; start();
