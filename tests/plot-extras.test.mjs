@@ -103,7 +103,7 @@ test('stop mid-plot on the pretend plotter, then resume: it finishes and nothing
   const lines = gcodeLines(toGcode(target, o).gcode);
   const first = g.stream(lines);
   first.catch(() => {});
-  await until(() => g.job && g.job.done > 300);
+  await until(() => g.job && g.job.done > 300, 30000);   // Windows timers tick ~15 ms; slow on a busy machine
   await g.stop();
   await assert.rejects(first, /Stopped/);
   const drawn = g.lastJob.drawn;
