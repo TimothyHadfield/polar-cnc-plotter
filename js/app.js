@@ -232,7 +232,7 @@ document.addEventListener('paste', e => {
   if (img) { e.preventDefault(); load(img.getAsFile(), 'pasted picture'); return; }
   const text = e.clipboardData?.getData('text/plain')?.trim() || '';
   if (text.startsWith('<svg') || text.startsWith('<?xml')) { e.preventDefault(); load(new Blob([text], { type: 'image/svg+xml' }), 'pasted.svg'); }
-  else if (/^https?:\/\/\S+$/i.test(text) && !(e.target instanceof HTMLInputElement)) { e.preventDefault(); fetchPicture(text); }
+  else if (/^https?:\/\/\S+$/i.test(text) && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); fetchPicture(text); }
 });
 
 dark.addEventListener('input', () => {
@@ -272,7 +272,10 @@ for (const f of FIELDS) {
   el.value = settings[f];
   el.addEventListener('change', () => {
     let v = parseFloat(el.value);
-    if (f === 'gap') el.value = v = Math.min(5, Math.max(0.4, v));
+    // keep to the input's own min/max (a 0 speed or a 500 mm drawing makes G-code the plotter can't run)
+    if (Number.isFinite(v) && (el.min !== '' || el.max !== '')) {
+      el.value = v = Math.min(el.max === '' ? Infinity : +el.max, Math.max(el.min === '' ? -Infinity : +el.min, v));
+    }
     if (Number.isFinite(v)) { settings[f] = v; save(); rebuild(); } else el.value = settings[f];
   });
 }
