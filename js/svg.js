@@ -13,6 +13,11 @@ export function paintHex(v) {
   return '#' + [m[1], m[2], m[3]].map(c => Math.round(Math.min(255, +c)).toString(16).padStart(2, '0')).join('');
 }
 const colorOf = el => { const cs = getComputedStyle(el); return paintHex(cs.stroke) || paintHex(cs.fill) || '#000000'; };
+// Hidden by display:none on itself or any group above it (Inkscape's hidden layers).
+const hidden = (el, root) => {
+  for (let n = el; n && n !== root; n = n.parentElement) if (getComputedStyle(n).display === 'none') return true;
+  return false;
+};
 
 export function svgToStrokes(text) {
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
@@ -28,7 +33,7 @@ export function svgToStrokes(text) {
   document.body.appendChild(host);
   try {
     const els = [...svg.querySelectorAll(SHAPES)]
-      .filter(e => !e.closest('defs,clipPath,mask,pattern,symbol,marker') && getComputedStyle(e).display !== 'none');
+      .filter(e => !e.closest('defs,clipPath,mask,pattern,symbol,marker') && !hidden(e, svg));
     const vb = svg.viewBox.baseVal;
     const diag = vb && vb.width ? Math.hypot(vb.width, vb.height) : 1414;
     const tol = diag / 10000;                  // about 0.02 mm on a 150 mm page
