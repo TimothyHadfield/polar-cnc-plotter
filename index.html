@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Polar Plotter</title>
 <meta name="description" content="Turn an SVG drawing into polar G-code for a GRBL polar pen plotter, with a preview of exactly what the pen will draw.">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -145,7 +146,7 @@
     <div id="consoleBox" hidden>
       <h3>Plotter console <button class="q" type="button" data-q="consoleHelp" aria-label="What is this?">?</button></h3>
       <p class="help" id="consoleHelp" hidden>For GRBL settings like $$ or $101=29.6. Connect first.</p>
-      <form class="row" id="cmdForm"><input id="cmd" placeholder="$$" autocomplete="off" spellcheck="false"><button class="btn" id="cmdSend">Send</button></form>
+      <form class="row" id="cmdForm"><input id="cmd" placeholder="$$" autocomplete="off" spellcheck="false" aria-label="Plotter command"><button class="btn" id="cmdSend">Send</button></form>
       <pre class="log" id="log"></pre>
     </div>
   </div>

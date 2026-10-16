@@ -99,7 +99,7 @@ const HTML = `
   <p class="help" id="calTurnHelp" hidden>If the platter stops short or goes past one turn, $101 is off.</p>
   <p class="calsay">Tape a mark on the platter edge, lined up with something fixed.</p>
   <div class="row"><button class="btn wide" data-act="turn">Turn once</button><button class="btn" data-act="turnOk">Exactly once</button></div>
-  <div class="calres"><span>It turned</span><input type="number" id="calTurned" min="1" step="1"><span>°</span></div>
+  <div class="calres"><span>It turned</span><input type="number" id="calTurned" min="1" step="1" aria-label="It turned, degrees"><span>°</span></div>
   <div class="calres"><span>New $101 <b id="calNew101">–</b></span><button class="btn sm end" data-act="save101" disabled>Save</button></div>
 </div>
 
@@ -108,7 +108,7 @@ const HTML = `
   <p class="help" id="calRailHelp" hidden>Measure how far the carriage really moved. If it isn't 20 mm, $100 is off.</p>
   <p class="calsay">Start the carriage away from the rail ends.</p>
   <div class="row"><button class="btn wide" data-act="rail">Move 20 mm out</button><button class="btn" data-act="railBack">Move back</button></div>
-  <div class="calres"><span>It moved</span><input type="number" id="calMoved" min="0.1" step="0.1"><span>mm</span></div>
+  <div class="calres"><span>It moved</span><input type="number" id="calMoved" min="0.1" step="0.1" aria-label="It moved, mm"><span>mm</span></div>
   <div class="calres"><span>New $100 <b id="calNew100">–</b></span><button class="btn sm end" data-act="save100" disabled>Save</button></div>
 </div>
 
@@ -128,7 +128,7 @@ const HTML = `
   <div class="calres"><button class="btn sm" data-act="xIn">In</button><button class="btn sm" data-act="xOut">Out</button>
     <span class="seg" id="calXStep"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span></div>
   <div class="row"><button class="btn wide" data-act="center">Set center</button><button class="btn wide" data-act="drawLine">Draw test</button></div>
-  <div class="calres"><span>Halves apart</span><input type="number" id="calApart" min="0" step="0.1"><span>mm</span></div>
+  <div class="calres"><span>Halves apart</span><input type="number" id="calApart" min="0" step="0.1" aria-label="Halves apart, mm"><span>mm</span></div>
   <label class="switch"><input type="checkbox" id="calSide"><span></span>Other side</label>
   <div class="calres"><span>New gap <b id="calNewGap">–</b></span><button class="btn sm end" data-act="saveGap" disabled>Save</button></div>
 </div>
