@@ -11,6 +11,7 @@ preview, USB plotting, calibration). Next real step is Tim testing it on the mac
 ## Status
 | Area | State |
 |---|---|
+| Site icon (tab + iPhone home screen) | Added 2026-10-17: polar arm with a red pen dot on the app's blue; `icon.svg` + `apple-touch-icon.png` |
 | Machine (mechanics, wiring, GRBL, calibration) | Built (per README) |
 | Plotter app | Live on GitHub Pages, all node tests pass |
 | Real drawings with the app | NOT verified (needs Tim at the machine) |
