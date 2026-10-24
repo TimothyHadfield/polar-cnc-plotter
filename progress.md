@@ -5,8 +5,12 @@ Last updated 2026-10-16. Read `CLAUDE.md` (what the project is, file map, how to
 file. The README is the public showcase; its Status section is Tim's own words about the machine.
 
 ## Goal right now
-No active goal from Tim. The plotter app is built (SVG/picture/text/pattern -> polar G-code,
-preview, USB plotting, calibration). Next real step is Tim testing it on the machine.
+Get the motors moving. 2026-10-24: Tim connected the app; jogs did nothing. Claude talked to GRBL
+directly on COM3 (PowerShell SerialPort, app disconnected first): Idle, no alarm, GRBL 1.1h, and
+jogs X±5 / Y±10 ran to completion per GRBL's own position reports. Tim: nothing moved, no sound,
+driver heat sinks warm. Suspect the 12 V **0.5 A** supply (too weak for 2 steppers + pen lifter);
+Tim is looking for a bigger one. Also: EEPROM holds GRBL factory defaults ($100-102 = 250), so
+calibration must be redone once motors move.
 
 ## Status
 | Area | State |
@@ -27,6 +31,9 @@ None.
 - Y axis is platter degrees, not mm (`$101` = steps per degree).
 - Plot/resume tests use FakeGrbl with real timers: slow (minutes) and can time out on a busy machine.
 - `svg.js`, `app.js` UI and `machine.js` are browser-only: verify with phone-view, not node.
+- Claude can reach the plotter itself: COM3 at 115200 via PowerShell `System.IO.Ports.SerialPort`,
+  but only while the browser app is disconnected ("Access denied" otherwise). Ask Tim before moving it.
+- The app hides r/θ until Set center, so before that you can't see whether a jog registered.
 
 ## Decisions
 - 2026-10-16 sweep: SVG hidden layers (`display:none` on a group, as Inkscape hides layers) are no
