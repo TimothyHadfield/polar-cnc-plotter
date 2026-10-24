@@ -12,10 +12,22 @@ driver heat sinks warm. Suspect the 12 V **0.5 A** supply (too weak for 2 steppe
 Tim is looking for a bigger one. Also: EEPROM holds GRBL factory defaults ($100-102 = 250), so
 calibration must be redone once motors move.
 Later 2026-10-24: new 12 V 5 A supply on the shield's screw terminal (12.5 V measured, 5 V pin 4.5 V)
-changed nothing; motors loose even with `$1=255` (Claude set it; **restore `$1=25`** once motors
-work). Drivers are **TMC2209** (not A4988): knob Vref target ~1.0 V X/Y, ~0.3 V Z (I ≈ 0.71·Vref);
-all read a fixed ~0.1 V. Found by meter: drivers were plugged in **rotated 180°** (GND/VM row on
-the logic side). Tim is flipping them; they may be damaged.
+changed nothing; motors loose even with `$1=255` (set for the hand test, restored to `$1=25` at
+end of session). Drivers are **TMC2209** (not A4988): knob Vref target ~1.0 V X/Y, ~0.3 V Z
+(I ≈ 0.71·Vref). Found by meter: drivers were plugged in **rotated 180°**; Tim flipped them, then
+motors held. One driver smoked (probe/screwdriver slip shorted pins) and was replaced with a spare.
+Arduino survived. Tim swapped the two middle wires of the X and Y motor plugs (were black, blue,
+green, red).
+
+**State at end of 2026-10-24 (Tim took a break):** Vref X 1.3 V, Y 0.4 V, Z 0.4 V. Watched test
+(X ±8, Y ±90 jogs): **carriage (X) shakes back and forth** instead of moving, both before and after
+the middle-wire swap; **platter (Y) doesn't move**; Z untested.
+**Next session, in order:** (1) power off, Ω-test each motor's wires to find the real coil pairs
+(few Ω = pair, OL = not) and put one pair on plug pins 1-2, the other on 3-4. Don't trust colours:
+the swap didn't fix X. If one coil reads OL on every combination, a wire/coil is broken.
+(2) Y Vref to ~1.0 V (0.4 V ≈ 0.28 A is weak for the platter). (3) Rerun watched test; ask Tim
+"ready" in the question box first, keep jogs small since steps/mm are factory 250. (4) Then the
+app's Calibrate tool. Safety: never plug/unplug motors powered; probe only the knob top.
 
 ## Status
 | Area | State |
