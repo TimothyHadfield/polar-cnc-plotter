@@ -11,6 +11,11 @@ jogs X±5 / Y±10 ran to completion per GRBL's own position reports. Tim: nothin
 driver heat sinks warm. Suspect the 12 V **0.5 A** supply (too weak for 2 steppers + pen lifter);
 Tim is looking for a bigger one. Also: EEPROM holds GRBL factory defaults ($100-102 = 250), so
 calibration must be redone once motors move.
+Later 2026-10-24: new 12 V 5 A supply on the shield's screw terminal (12.5 V measured, 5 V pin 4.5 V)
+changed nothing; motors loose even with `$1=255` (Claude set it; **restore `$1=25`** once motors
+work). Drivers are **TMC2209** (not A4988): knob Vref target ~1.0 V X/Y, ~0.3 V Z (I ≈ 0.71·Vref);
+all read a fixed ~0.1 V. Found by meter: drivers were plugged in **rotated 180°** (GND/VM row on
+the logic side). Tim is flipping them; they may be damaged.
 
 ## Status
 | Area | State |
