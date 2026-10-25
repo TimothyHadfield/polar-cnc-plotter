@@ -66,6 +66,17 @@ header). Read as: guide's layout + Tim's bought parts (Amazon list) + Tim's prin
   connector needed re-auth, so Tim's order links weren't pulled.
 - Choices Tim didn't make: page title "Build the Plotter", step list/wording, colours, tap-a-part
   highlight, "Build guide" link placement.
+- Realism + tap-to-select round (2026-10-25). Tim: "be able to select the actual items and have it
+  be highlighted and have a description of it pulled up" + "work really hard to make everything look
+  like it does in real life". Multi-colour parts are split into GLB pieces `<part>__<piece>`
+  (SCAD `sub=` + `piece()`; materials in `MATS` in the exporter, sRGB->linear). `js/build-look.js`
+  paints textures (wood, PLA layer lines, STEPPERONLINE label, red rose drawing on the paper), studio
+  environment, and adds wires + paper clips. Tap a part (or list row) -> blue glow + card with
+  `about` text (`PARTS[k].about` in build-steps.js). X motor now in front of the right stand as in
+  `docs/photos/`. Verified: phone-view WebKit 393px + 1440px, tap -> "Marker pen" card, all 10 steps
+  render, no console errors.
+- Choices Tim didn't make this round: colours/finishes, the rose drawing on the paper, card position
+  (bottom-left of the 3D view), wire routing, the blue highlight colour.
 
 ## Authorized next steps
 None.

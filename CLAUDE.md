@@ -31,8 +31,9 @@ previews it, and can stream it to the plotter over USB.
   `tests/grblplotter-port.mjs` reproduces GRBL-Plotter's broken polar conversion for comparison.
 - `tools/serve.mjs` (static server, default port 8765), `tools/make-fixtures.mjs` (needs Playwright
   + server on 8765), `tools/make-machine-tests.mjs`.
-- `build.html`, `css/build.css`, `js/build.js` (three.js viewer), `js/build-steps.js` (steps, parts,
-  links): the 3D build guide. Model: `cad/plotter-assembly.scad` -> `python tools/make-build-model.py`
+- `build.html`, `css/build.css`, `js/build.js` (three.js viewer, tap-to-select card),
+  `js/build-look.js` (textures, lighting, wires), `js/build-steps.js` (steps, parts, links, `about`
+  text): the 3D build guide. GLB nodes are `<part>` or `<part>__<piece>`; steps list base names. Model: `cad/plotter-assembly.scad` -> `python tools/make-build-model.py`
   (needs OpenSCAD + trimesh) -> `build/plotter.glb` and printable `build/stl/*.stl`.
 - `samples/`: the three sample drawings behind the "or Hello World · UVU logo · HELLO.png" links.
 
