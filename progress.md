@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress
 
 ## START HERE
-Last updated 2026-10-16. Read `CLAUDE.md` (what the project is, file map, how to test), then this
+Last updated 2026-10-25. Read `CLAUDE.md` (what the project is, file map, how to test), then this
 file. The README is the public showcase; its Status section is Tim's own words about the machine.
 
 ## Goal right now
@@ -51,9 +51,21 @@ Scratch Python env with trimesh: `C:/Users/timha/AppData/Local/Temp/claude/venv3
 ## Components reference (2026-10-25)
 [docs/components.md](docs/components.md): every part (original guide, Tim's bought/salvaged parts,
 printed parts) with its job, measured findings (big 60T pulley is NOT GT2 pitch: 2.09 vs 2.00 mm),
-expected `$100-102`, improvement ideas and open questions for Tim. Tim's idea (2026-10-25, not
-started, "Talk to me before doing anything"): an improved Instructables guide of his own build
-with a full 3D render of the whole plotter. Answered as realistic; waiting on his go.
+expected `$100-102`, improvement ideas and open questions for Tim.
+
+## 3D build guide (built 2026-10-25)
+Tim: "assume everything I have is identical to what the instructables describes ... steps for each
+part with only the items in each step shown. Add all approriate links ... so a user can only use
+this singular cite as all instructions". Live at `build.html` (linked "Build guide" in the app
+header). Read as: guide's layout + Tim's bought parts (Amazon list) + Tim's printed parts.
+- `cad/plotter-assembly.scad` = whole machine, one `show("name")` per part; positions not measured
+  on the real machine are approximate. `tools/make-build-model.py` (venv
+  `C:/Users/timha/AppData/Local/Temp/claude/venv3d`, trimesh) -> `build/plotter.glb` + `build/stl/`.
+- `js/build-steps.js` = all wording, parts, links (edit here); `js/build.js` = three.js 0.160 viewer.
+- Amazon search links (no exact listing found): TMC2209 5-pack, spiral wrap, 12 V supply. Gmail
+  connector needed re-auth, so Tim's order links weren't pulled.
+- Choices Tim didn't make: page title "Build the Plotter", step list/wording, colours, tap-a-part
+  highlight, "Build guide" link placement.
 
 ## Authorized next steps
 None.
@@ -79,6 +91,8 @@ None.
 ## NOT verified
 - Anything on the real plotter (USB streaming, pen changes, calibration steps) since 2026-09-29.
 - Web Serial flows were only exercised with `?demo` (FakeGrbl).
+- Build guide: assembly positions are reasoned from the guide photos, not measured; build-step
+  wording not checked by Tim.
 
 ## Rejected / parked
 - (none)

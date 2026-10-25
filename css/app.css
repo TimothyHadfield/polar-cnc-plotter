@@ -60,6 +60,7 @@ button, input { font: inherit; color: inherit; }
   padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
 }
 .top { display: flex; align-items: center; justify-content: space-between; }
+.build-link { margin-left: auto; margin-right: 6px; font-size: 14px; }
 h1 { font-size: 18px; margin: 0; }
 h2 { font-size: 17px; margin: 0; }
 h3 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); font-weight: 600; }

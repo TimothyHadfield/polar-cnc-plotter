@@ -1,0 +1,35 @@
+/* build.html: 3D build guide (shares app.css variables and buttons) */
+.build .panel { gap: 12px; overflow: hidden; min-height: 0; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); pointer-events: none; }
+.loading[hidden] { display: none; }
+
+.steps { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; }
+.steps button {
+  height: 30px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel);
+  cursor: pointer; font-size: 13px; font-weight: 600; padding: 0;
+}
+.steps button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.build .step { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+.step h2 { margin-bottom: 2px; }
+.step ol { margin: 8px 0 0; padding-left: 20px; }
+.step li { margin: 4px 0; }
+.parts { list-style: none; padding: 0; margin: 0; }
+.parts li {
+  display: flex; gap: 8px; align-items: baseline; padding: 5px 6px; margin: 0 -6px;
+  border-radius: 6px; cursor: default; font-size: 14px;
+}
+.parts li.has-model { cursor: pointer; }
+.parts li.has-model:hover, .parts li.lit { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.parts .qty { color: var(--muted); min-width: 22px; }
+.parts .name { flex: 1; }
+.parts a, .links a { color: var(--accent); white-space: nowrap; }
+.links { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+
+.nav { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+@media (max-width: 760px) {
+  .app.build { grid-template-columns: 1fr; grid-template-rows: 42dvh minmax(0, 1fr); }
+  .build .panel { overflow: hidden; }
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Build the Plotter</title>
+<meta name="description" content="Step-by-step 3D build guide for the polar pen plotter, with every part and link.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/build.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main class="app build">
+  <section class="stage" id="stage">
+    <canvas id="view" aria-label="3D model of this step"></canvas>
+    <div class="loading" id="loading">Loading model…</div>
+  </section>
+
+  <aside class="panel">
+    <header class="top">
+      <h1>Build the Plotter</h1>
+      <a class="link" href="./">Plotter app</a>
+    </header>
+    <nav class="steps" id="steps" aria-label="Steps"></nav>
+    <div class="step" id="step"></div>
+    <div class="nav">
+      <button class="btn" id="prev" type="button">Back</button>
+      <button class="btn" id="next" type="button">Next</button>
+    </div>
+  </aside>
+</main>
+<script type="module" src="js/build.js"></script>
+</body>
+</html>
