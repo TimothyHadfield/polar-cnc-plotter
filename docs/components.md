@@ -113,7 +113,39 @@ Without jumpers the formulas above halve (1/8).
 - Paper hold-down that doesn't stick up (magnets or a clamp ring) instead of a paper clip.
 - Endstop or a printed centre mark so "Set center" is repeatable.
 
-## 8. Open questions for Tim
+## 8. Tim's own write-ups (found 2026-10-25)
+- **[Polar CNC Plotter Review](https://docs.google.com/document/d/1hw1lb1qYNkZk2Jz47sUAbBguTbjWJZgsS9VIIwJpNko/edit)**
+  (Google Doc, Apr-Jun 2026): his parts list with links and prices, tools (pipe cutters, drill),
+  cost (1 machine $192 from nothing, 2 = $308, 3 = $427) and build notes. **This is the seed of
+  the improved guide.** His notes, condensed:
+  - Printed gears too thin for the belt: make them ~10 mm wide. Original bearing supports not needed
+    for his bearing blocks.
+  - Buy the 5 V 2-phase linear rail (48 mm stroke, ~$15) instead of salvaging a DVD sled: no
+    soldering, no big pen-holder print, more compact.
+  - 1 mm scrap plastic axis plates were too flimsy; replaced with thin metal. 3D-printed plates
+    would be better (no cutting/drilling, holes in the right place).
+  - Uno R4 WiFi can't run GRBL (the doc says "switch to a regular Arduino UNO R4"; means R3).
+  - Unsure why the original has two square iron bars under the base. Bolts poke through the
+    wood; the big NEMA 17 puts the platter too high, so he sank the motor below the board
+    (thinks it's worse). Fixes: taller PVC stands (extra coupler) or a shorter motor.
+  - The spindle motor is only an axle; a bolt and washers or a cheap bought bearing could replace
+    it (resize the big pulley bore to match).
+  - Idea: 3D-print the whole base platform so stand and motor positions are exact.
+  - Rod supports into PVC: double-sided tape fails (wrong thickness, sticks too early). Size the
+    printed plug to fit and super-glue it.
+  - X idler pulley axle is a small nail and tape; a smoother axle would help.
+  - Belt anchor: small bolt through the carriage plate, belt wrapped, zip-tied tight, nut on top.
+    The belt sits off the rods' centre line, so it bows (`<===>`), adding side friction that grows
+    near the idler. Fix: recess the nuts (printed plate) or space the belt out with extra nuts.
+- ECE 1000 reports (proposal, progress, final) in
+  `OneDrive/Documents/Projects & Hobbies/CNC & Plotter/docs/reports/`: same story; final report
+  says drawings came out unintelligible, blamed on the Cartesian-to-polar conversion.
+- **Reasoned, worth checking:** the old `GRBL Configuration.txt` there holds the original
+  author's `$100=47.620` / `$101=17.132`. With Tim's NEMA 17 + 16T pulley the right values are
+  ~100 and ~26.7 (1/16). If those were never changed, drawings came out at about half size in
+  radius and two-thirds in angle, which alone scrambles any picture.
+
+## 9. Open questions for Tim
 Answered 2026-10-25 by the Amazon list: X pulley 16T, belts 6 mm GT2, rods 300 mm, platter 200 mm.
 1. Are microstep jumpers fitted under the drivers? (sets the 1/8 vs 1/16 numbers)
 2. Which printed parts are on the machine now: is the platter on the steel plate or `motor_plate`?
