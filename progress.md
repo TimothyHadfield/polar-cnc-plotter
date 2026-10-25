@@ -38,6 +38,16 @@ app's Calibrate tool. Safety: never plug/unplug motors powered; probe only the k
 | Real drawings with the app | NOT verified (needs Tim at the machine) |
 | 2026-10-16 sweep | Bug fixes + handoff files, see Decisions |
 
+## CAD (started 2026-10-25)
+Tim's TinkerCad print plate (`Downloads/Polar Potter Custom.stl`, 16 bodies) is redrawn as
+modules in `cad/plotter-parts.scad` (laid out where they sat on his plate; `part=` shows one).
+Checked per part against the original mesh (volume within 0.2%, except bracket -1.5%; teeth are
+measured one-tooth profiles, rotated slightly vs original). Deliberate changes: NEMA screw holes
+3.0 -> 3.4; peg caps attached (`cap_gap`, original floated 0.33 mm = mid-air print); a 0.1 mm
+sliver body and a 0.09 mm disk on one pulley dropped. OpenSCAD 2021.01 installed (winget); Tim
+watches with Design -> Automatic Reload and Preview. Headless render: `openscad -o x.png`.
+Scratch Python env with trimesh: `C:/Users/timha/AppData/Local/Temp/claude/venv3d`.
+
 ## Authorized next steps
 None.
 
