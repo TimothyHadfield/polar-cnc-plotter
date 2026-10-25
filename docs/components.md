@@ -43,22 +43,26 @@ Original GRBL values: `$100=47.620`, `$101=17.132`, `$102=100`. The guide says 1
 
 | Part | Measured / reasoned | Job |
 |---|---|---|
-| 3x NEMA 17 steppers, label `17HE15-1504S` (StepperOnline) | Measured from photo; 1.8°, 1.5 A rated (reasoned from part number) | X carriage, Y platter (+1 spare) |
-| Wire colours black, blue, green, red | Tim, 2026-10-24 | Coil pairs still to be found with an Ohm test |
+| 3x NEMA 17 STEPPERONLINE `17HE15-1504S`: 42x42x38 mm, 1.8° (200 steps/rev), 1.5 A/phase, 2.3 Ω/phase, 42 Ncm holding, 4 wires, 1 m cable | Amazon listing (Tim, 2026-10-25) | X carriage, Y platter (+1 spare) |
+| Wire colours black, blue, green, red | Tim, 2026-10-24 | Coil pairs: Ohm test should read ~2.3 Ω across a pair, OL across pairs |
 | 4x SC8UU aluminium bearing blocks | Photo | Carriage, two per rod |
-| 2x 8 mm steel rods | Photo | Carriage rails |
-| GT2 belts (open length + closed loops), aluminium GT2 pulleys (5-bag) + hex key | Photo; tooth count of the X motor pulley unknown | X belt drive; platter belt |
-| 2x round aluminium discs (~20 cm) | Photo | Platter (one spare) |
+| 2x 8 mm x 300 mm case-hardened chrome rods (Litoexpe) | Amazon listing | Carriage rails |
+| GT2 open belt, 2 mm pitch, 6 mm wide, 5 m (cut to length) | Amazon listing | X belt (carriage) |
+| 2x GT2 closed loop 220 mm (uxcell, sold as "220-2GT-9" but listed 6 mm wide) | Amazon listing; check width, "-9" usually means 9 mm | Platter belt. With 20T + 60T GT2 pulleys this loop puts the shafts ~68 mm apart (reasoned) |
+| 5x aluminium GT2 pulleys, **16 teeth**, 5 mm bore, 6 mm belt (WINSINN) | Amazon listing | X motor pulley (the platter uses the printed 20T instead, per photo) |
+| 2x aluminium discs, 5052, 200 mm (8") x 1 mm (uxcell) | Amazon listing | Platter (one spare) |
+| 5x stainless rods 3 mm x 100 mm (304) | Amazon listing | Pen-lift slider rails (original used 3 x 82 mm) |
 | Salvaged disc-drive spindle (PCB marked `M3B912`) on a cut steel drive plate | Photo `rotary-platter.jpg` | Platter bearing; the NEMA 17 bolts under the same plate |
 | DVD-drive linear stepper (sled + lead screw), leads soldered to a cable | README | Pen lift (Z) |
 | 1/2" PVC elbows and tees, white pipe | Photo | Rod stands |
 | Plywood base | Photo | Base |
-| Arduino Uno R3 clone (LUIRSAY, ATmega328P, CH340) | Past chat 2026-09-28 | GRBL. The Uno R4 WiFi failed: GRBL needs the 8-bit ATmega328P |
-| CNC Shield V3 | Photo | Driver carrier |
-| TMC2209 drivers (Teyleten V2.0 5-pack) | Past chat; measured socket layout 2026-10-24 | Quiet drivers; replaced A4988s that ran loud/rough (one ran hot) |
-| A4988 5-pack (old) | Past chat + photo | Spares |
+| Arduino Uno R3 clone (ATmega328P, USB cable; LUIRSAY per past chat) | Amazon listing + past chat 2026-09-28 | GRBL. The Uno R4 WiFi failed: GRBL needs the 8-bit ATmega328P |
+| CNC Shield V3 ("V3 Engraver" expansion board) | Amazon listing | Driver carrier |
+| 5x TMC2209 V2.0 StepStick (Teyleten Robot), 2.5 A peak, UART capable (used standalone) | Amazon listing; socket layout measured 2026-10-24 | Quiet drivers; replaced A4988s that ran loud/rough (one ran hot) |
+| 5x A4988 with heat sinks (hiBCTR, red, up to 35 V) | Amazon listing | Spares |
 | 12 V 5 A supply on the shield's screw terminal | Tim 2026-10-24 (old one was 12 V 0.5 A, too weak) | Motor power |
-| SWB-06 spiral cable wrap, DC barrel pigtails | Photo | Wire management, power jack |
+| 50 ft spiral cable wrap, 6 mm (XHF, bag says SWB-06) | Amazon listing | Wire management |
+| 6x 5.5 x 2.1 mm threaded panel-mount DC jacks with pigtails | Amazon listing | Power input jack |
 | #4-40 x 1/2" flat-head screws, zip ties, super glue | Photo | Fastening; the belt is zip-tied to the carriage |
 | Paper clip | Photo `full-machine.jpg` | Holds the paper on the platter |
 | 2x SG90 servos, A2212 brushless motor, breadboard, resistors | Photo `materials-printed.jpg` | Not in the finished machine (reasoned: leftovers or an earlier pen-lift idea) |
@@ -94,7 +98,7 @@ holder, z-axis parts (the green DVD-sled frame in `pen-carriage.jpg` is close to
 ## 6. Expected settings (reasoned, confirm with the Calibrate tool)
 | Setting | Formula | Value at 1/16 microstep |
 |---|---|---|
-| `$100` X steps/mm | 200 x 16 / (pulley teeth x 2 mm) | 80 with a 20T pulley, 100 with 16T |
+| `$100` X steps/mm | 200 x 16 / (16 teeth x 2 mm) | **100** (16T pulley per the Amazon listing) |
 | `$101` Y steps/degree | 200 x 16 x (60/20) / 360 | 26.67 (higher if the big pulley slips or rides; see above) |
 | `$102` Z steps/mm | depends on the DVD sled (often 20 steps/rev, 3 mm lead) | ~107; original guide used 100 |
 | X/Y driver Vref | TMC2209: I_rms ≈ 0.71 x Vref | ~1.0 V (0.7 A) is plenty for a plotter with 1.5 A motors |
@@ -110,10 +114,11 @@ Without jumpers the formulas above halve (1/8).
 - Endstop or a printed centre mark so "Set center" is repeatable.
 
 ## 8. Open questions for Tim
-1. X motor pulley: how many teeth (16 or 20)?
-2. Are microstep jumpers fitted under the drivers? (sets the 1/8 vs 1/16 numbers)
-3. Which printed parts are on the machine now: is the platter on the steel plate or `motor_plate`?
+Answered 2026-10-25 by the Amazon list: X pulley 16T, belts 6 mm GT2, rods 300 mm, platter 200 mm.
+1. Are microstep jumpers fitted under the drivers? (sets the 1/8 vs 1/16 numbers)
+2. Which printed parts are on the machine now: is the platter on the steel plate or `motor_plate`?
    Is the yellow X motor plate `motor_plate_2`? What is `base_plate` for?
-4. Belt widths (6 mm or 10 mm) for the X belt and the platter loop.
-5. Rod length and platter disc diameter (for the 3D model).
-6. Was the platter centre offset ever measured (mm)?
+3. Platter loop belt: 6 mm or 9 mm wide (the listing says both)?
+4. Was the platter centre offset ever measured (mm)?
+5. Not from Amazon, so still unknown: SC8UU blocks, PVC fittings, plywood size, the disc-drive
+   spindle and DVD sled sources.
