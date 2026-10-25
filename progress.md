@@ -75,6 +75,13 @@ header). Read as: guide's layout + Tim's bought parts (Amazon list) + Tim's prin
   `about` text (`PARTS[k].about` in build-steps.js). X motor now in front of the right stand as in
   `docs/photos/`. Verified: phone-view WebKit 393px + 1440px, tap -> "Marker pen" card, all 10 steps
   render, no console errors.
+- X belt fix (Tim, 2026-10-25): "pully nearly directly under the two metel bars ... bottom side of
+  the belt is wrapped around and zip tied to the two little poles on the pen carraige". Belt plane
+  now = rod plane (`belt_y = rod_y`), lower run cut and looped round the carriage pegs with zip
+  ties (`open_belt`, pieces `x_belt__belt` / `x_belt__ties`); idler axle added as his cut nail +
+  tape (`idler_axle`). Step 5 also shows the carriage plate so the pegs are visible.
+- Tim asked for better designs for the idler axle and the platter drive: suggestions recorded in
+  `docs/components.md` §7 (bearing idler on an M3 bolt; direct-drive platter). Not built.
 - Choices Tim didn't make this round: colours/finishes, the rose drawing on the paper, card position
   (bottom-left of the 3D view), wire routing, the blue highlight colour.
 

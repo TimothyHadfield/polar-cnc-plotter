@@ -22,7 +22,7 @@ rod_hi   = 137;        // upper rod (elbow) height
 belt_z   = (rod_lo + rod_hi) / 2;
 fit_r    = 13.5;       // 1/2" PVC fitting outer radius
 pipe_d   = 21.3;       // 1/2" PVC pipe outer diameter
-belt_y   = 43;         // X belt plane: just behind the carriage plate, in front of the rods
+belt_y   = rod_y;      // X belt plane: in line with the rods, between the bearing blocks (Tim, 2026-10-25)
 mx       = 128;        // X motor shaft (motor sits in front of the right stand, label facing out)
 ix       = -stand_x + fit_r + 17.38;   // idler axle, from the bracket's hole height
 plate_z  = 26;         // rotary plate rests on 26 mm spacers
@@ -96,6 +96,46 @@ module belt_loop(x1, r1, x2, r2, w = 6, t = 1.1) {
     for (s = [-1, 1]) {
       a = [x1, s * r1]; b = [x2, s * r2]; L = norm(b - a); ang = atan2(b[1] - a[1], b[0] - a[0]);
       for (d = [1 : 2 : L - 1]) translate(a + (b - a) * d / L) rotate(ang) translate([-0.55, s > 0 ? -0.7 : 0]) square([1.1, 0.75]);
+    }
+  }
+}
+// a straight belt run (2D) from inner-face point a to b; s = +1 teeth hang below the face, -1 stand above it
+module run(a, b, s, t = 1.1, teeth = true) {
+  n = [0, s * t];                                                  // the belt's back (runs are near level)
+  polygon([a, b, b + n, a + n]);
+  if (teeth) {
+    L = norm(b - a);
+    for (d = [1 : 2 : L - 1]) translate(a + (b - a) * d / L) translate([-0.55, s > 0 ? -0.7 : -0.05]) square([1.1, 0.75]);
+  }
+}
+module ring_arc(c, r, t, side) translate(c) intersection() {      // half annulus; side = -1 left, +1 right
+  difference() { circle(r + t, $fn = 64); circle(r, $fn = 64); }
+  translate([side > 0 ? 0 : -r - t - 1, -r - t - 1]) square([r + t + 1, 2 * (r + t + 1)]);
+}
+// open GT2 belt (XZ plane, z = 0 at the pulley axes): over both pulleys, the lower run cut and each end
+// wrapped round a carriage peg, folded back on itself and zip-tied (Tim, 2026-10-25)
+module open_belt(x1, r1, x2, r2, pegs, peg_z, peg_r, w = 6, t = 1.1) {
+  piece("belt") linear_extrude(w) {
+    ring_arc([x1, 0], r1, t, -1);
+    ring_arc([x2, 0], r2, t, 1);
+    run([x1, r1], [x2, r2], 1);
+    for (s = [-1, 1]) {
+      x0 = s < 0 ? x1 : x2; r0 = s < 0 ? r1 : r2; px = pegs[s < 0 ? 0 : 1];
+      a = [x0, -r0]; b = [px, peg_z - peg_r];                       // pulley bottom to under the peg
+      run(a, b, -1);
+      ring_arc([px, peg_z], peg_r, t, -s);                          // round the peg's far side
+      fold = b + (a - b) * 16 / norm(a - b);                        // tail comes back over the peg and
+      run([px, peg_z + peg_r], fold, 1, teeth = false);             // lies teeth-down on the run
+      run(fold, b + (a - b) * 28 / norm(a - b), 1, teeth = false);
+    }
+  }
+  piece("ties") for (s = [-1, 1]) {
+    x0 = s < 0 ? x1 : x2; r0 = s < 0 ? r1 : r2; px = pegs[s < 0 ? 0 : 1];
+    a = [x0, -r0]; b = [px, peg_z - peg_r];
+    c = b + (a - b) * 22 / norm(a - b);
+    translate([c[0], c[1] - t - 0.7, -0.8]) {
+      difference() { translate([-1.25, 0, 0]) cube([2.5, 2 * t + 2.2, w + 1.6]); translate([-2, 0.7, 0.7]) cube([4, 2 * t + 0.8, w + 0.2]); }
+      translate([-2.5, -2.6, w - 1.2]) cube([5, 2.6, 4]);             // the tie's square head
     }
   }
 }
@@ -230,11 +270,18 @@ module the_pen() translate([carriage_x, pen_y, platter_z + 9]) pen();
 // ---------- X drive (motor in front of the right stand, as in docs/photos/full-machine.jpg) ----------
 module x_motor_plate() translate([mx - 22.23, rod_y - fit_r, belt_z - 41]) rotate([90, 0, 0]) motor_plate_2();
 module x_motor() translate([mx, rod_y - fit_r - 3, belt_z]) rotate([-90, 0, 0]) rotate([0, 0, 180]) nema17();
-module x_pulley() translate([mx, belt_y - 4.5, belt_z]) rotate([-90, 0, 0]) gt2_16t();
+module x_pulley() translate([mx, belt_y + 4.5, belt_z]) rotate([90, 0, 0]) gt2_16t();   // hub toward the motor
 module idler_bracket() translate([-stand_x + fit_r, belt_y - 9, belt_z - 17.5])
   multmatrix([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]]) bracket();
 module idler_pulley() translate([ix, belt_y - 5.075, belt_z]) rotate([-90, 0, 0]) pulley_a();
-module x_belt() translate([0, belt_y + 3, belt_z]) rotate([90, 0, 0]) belt_loop(ix, 6.37, mx, 5.09);
+module idler_axle() translate([ix, belt_y - 10, belt_z]) rotate([-90, 0, 0]) {   // Tim's: a cut nail, tape on the cut end
+  piece("nail") { translate([0, 0, -1]) cylinder(d = 6.5, h = 1, $fn = 24); cylinder(d = 3, h = 23, $fn = 16); }
+  piece("tape") translate([0, 0, 19.5]) cylinder(d = 5.2, h = 4.5, $fn = 24);
+}
+peg_x = 19.5;                       // carriage pegs (base_plate x 9 and 48, plate centred on the carriage)
+peg_z = belt_z + 47.5 - 55;
+module x_belt() translate([0, belt_y + 3, belt_z]) rotate([90, 0, 0])
+  open_belt(ix, 6.37, mx, 5.09, [carriage_x - peg_x, carriage_x + peg_x], peg_z - belt_z, 3.2);
 
 // ---------- platter drive ----------
 module rotary_plate() translate([-88, pen_y - 36.5, plate_z + 2]) mirror([0, 0, 1]) motor_plate();
@@ -268,6 +315,7 @@ show("stage") stage();          show("slider") slider();         show("pen_clip"
 show("knob") knob();            show("pen") the_pen();
 show("x_motor_plate") x_motor_plate();  show("x_motor") x_motor();  show("x_pulley") x_pulley();
 show("idler_bracket") idler_bracket();  show("idler_pulley") idler_pulley();  show("x_belt") x_belt();
+show("idler_axle") idler_axle();
 show("rotary_plate") rotary_plate();    show("spacers") spacers();  show("y_motor") y_motor();
 show("y_pulley") y_pulley();    show("spindle") the_spindle();   show("big_pulley") y_big_pulley();
 show("y_belt") y_belt();

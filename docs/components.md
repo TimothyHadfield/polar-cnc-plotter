@@ -146,6 +146,15 @@ Without jumpers the formulas above halve (1/8).
 - Lighter, stiffer carriage plate; belt clamp instead of zip ties.
 - Paper hold-down that doesn't stick up (magnets or a clamp ring) instead of a paper clip.
 - Endstop or a printed centre mark so "Set center" is repeatable.
+- (Suggested to Tim 2026-10-25) X idler: replace the nail with a bought GT2 20T idler that has
+  bearings inside, 3 mm bore, on an M3 bolt + nylock nut through the bracket's 3.1 mm holes
+  (washers either side). Free stopgap: M3 bolt as the axle, printed pulley's 5.15 bore is loose
+  on it, so it spins on the bolt.
+- (Suggested to Tim 2026-10-25) Platter: direct drive. Platter hub straight on the NEMA 17 shaft
+  (printed hub with a D-shaped 5 mm bore + set screw, or a 5 mm flange coupler); drops the spindle,
+  both platter pulleys, the closed belt and the off-centre problem. `$101` becomes
+  200 x 16 / 360 = 8.89 steps/degree: 0.11 deg per microstep, 0.2 mm at 100 mm radius (reasoned).
+  Fallback if more torque is needed: lazy Susan bearing + a true GT2 pulley pair.
 
 ## 8. Tim's own write-ups (found 2026-10-25)
 - **[Polar CNC Plotter Review](https://docs.google.com/document/d/1hw1lb1qYNkZk2Jz47sUAbBguTbjWJZgsS9VIIwJpNko/edit)**
