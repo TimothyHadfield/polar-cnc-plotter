@@ -14,6 +14,31 @@ turns it through a small-to-big belt reduction, which sets the **angle (Y, degre
 stepper salvaged from a DVD drive lifts the pen **(Z)**. Arduino Uno R3 + CNC Shield V3 +
 TMC2209 drivers run GRBL 1.1h, fed by a 12 V 5 A supply.
 
+## 1b. How it is assembled (Tim 2026-10-25: "nearly identical to the machine in the instructables")
+From the guide's step photos (steps 2-9) plus Tim's photos:
+- **Base:** flat board 40x13 cm. Two square iron bars underneath run the long way as feet, so
+  the bolt heads/nuts under the board clear the table. Two printed PVC screw holders are bolted at
+  the board ends; the stands slip over them.
+- **Stands (x2), one at each end:** bottom socket -> tee -> short pipe -> elbow, glued. The tee
+  and elbow openings both face inward, so the two 8 mm rods run **one above the other** (a
+  vertical plane), each plugged in with a printed rod support. Stand spacing ~300 mm.
+- **Carriage:** a **vertical** plate facing the front. Bearings on its back ride the two rods; the
+  pen holder / Z stage is on its front, pen pointing down at the platter. The belt is fixed to the
+  plate's back.
+- **X drive:** stepper on a small plate screwed to one stand, between the rods, shaft pointing
+  forward; 16T pulley on it. The idler pulley in its bracket sits on the other stand. The belt
+  runs horizontally between the two rods. (Guide: motor left, idler right; Tim's machine is
+  mirrored: motor right, idler left.)
+- **Rotary (Y):** spindle (used as a bearing) and stepper side by side on the rotary plate, belt
+  20T -> 60T on top. In the guide the plate stands on 4 printed spacers (y-supports, 26 mm) in
+  the middle of the base, under the rail. The platter is a disc with a steel strip and a CD on its
+  underside; the spindle's magnet holds it, the CD hole centres it. Tim's NEMA 17 is too tall,
+  so he sank the motor through/below the board.
+- **Pen line:** the pen's travel line has to pass over the spindle centre; Tim's misses it by a
+  few mm (the app's center gap setting corrects this).
+- **Electronics:** Uno + CNC shield on the base behind the platter, beside the rotary plate;
+  X, Y, Z motor plugs on the shield; 12 V into the shield's screw terminal.
+
 ## 2. The original guide's parts and what each one does
 
 | Original part | What it does |
