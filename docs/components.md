@@ -155,6 +155,12 @@ Without jumpers the formulas above halve (1/8).
   both platter pulleys, the closed belt and the off-centre problem. `$101` becomes
   200 x 16 / 360 = 8.89 steps/degree: 0.11 deg per microstep, 0.2 mm at 100 mm radius (reasoned).
   Fallback if more torque is needed: lazy Susan bearing + a true GT2 pulley pair.
+- (Suggested to Tim 2026-10-25) Motor size: Tim noted the steel bars + board hole exist only
+  because the 38 mm NEMA is too tall, and offered short motors (42x42x20.5 mm, 13 Ncm; or
+  STEPPERONLINE short body 16 Ncm, 1.0 A, 3.5 ohm). Advice: with direct drive keep the 42 Ncm motors
+  he owns (no gearing, so torque matters more); the motor stands on the board, platter ~6 mm higher
+  than now (reasoned from the model), so no hole, no bars, no taller stands. Only if the belt
+  drive stays: the 16 Ncm STEPPERONLINE short body fits under the 26 mm plate.
 
 ## 8. Tim's own write-ups (found 2026-10-25)
 - **[Polar CNC Plotter Review](https://docs.google.com/document/d/1hw1lb1qYNkZk2Jz47sUAbBguTbjWJZgsS9VIIwJpNko/edit)**
