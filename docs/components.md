@@ -53,7 +53,8 @@ Original GRBL values: `$100=47.620`, `$101=17.132`, `$102=100`. The guide says 1
 | 2x aluminium discs, 5052, 200 mm (8") x 1 mm (uxcell) | Amazon listing | Platter (one spare) |
 | 5x stainless rods 3 mm x 100 mm (304) | Amazon listing | Pen-lift slider rails (original used 3 x 82 mm) |
 | Salvaged disc-drive spindle (PCB marked `M3B912`) on a cut steel drive plate | Photo `rotary-platter.jpg` | Platter bearing; the NEMA 17 bolts under the same plate |
-| DVD-drive linear stepper (sled + lead screw), leads soldered to a cable | README | Pen lift (Z) |
+| DVD-drive linear stepper (sled + lead screw), leads soldered to a cable | README | Pen lift (Z) on the built machine |
+| **New Z (ordered Oct 2026):** QINIZX micro linear stage, 2-phase 4-wire, 18° step (20 steps/rev), 5-12 V 100-300 mA, 48 mm stroke (1.89"), lead screw 60 mm x ~2.8 mm, motor Ø15 x 11 mm, stage 81 x 25 x 20 mm, slider 25 x 10 x 14 mm, 120 mm wires | Amazon listing (Tim, 2026-10-25) | Replaces the DVD sled, the big printed pen-holder frame and the 3 mm slider rods (Tim's own review recommended it) |
 | 1/2" PVC elbows and tees, white pipe | Photo | Rod stands |
 | Plywood base | Photo | Base |
 | Arduino Uno R3 clone (ATmega328P, USB cable; LUIRSAY per past chat) | Amazon listing + past chat 2026-09-28 | GRBL. The Uno R4 WiFi failed: GRBL needs the 8-bit ATmega328P |
@@ -69,17 +70,25 @@ Original GRBL values: `$100=47.620`, `$101=17.132`, `$102=100`. The guide says 1
 
 ## 4. Tim's printed parts ([cad/plotter-parts.scad](../cad/plotter-parts.scad))
 
-| Part | Closest original | Job (reasoned from photos + shape) | What Tim changed |
+Tim explained these himself on 2026-10-25 (confirmed, not guessed). This plate is his **new
+version** for the rebuild; the photos show the old machine (scrap plastic, then thin metal plates).
+
+| Part | Closest original | Job (Tim's words, condensed) | What Tim changed |
 |---|---|---|---|
-| `big_pulley` 60T, 27.9 bore, 10 tall | gears 60T (7 tall) | Driven pulley glued on the spindle rotor | Taller for his belt (README) |
-| `pulley_b` 20T, 5.15 bore | gears 20T | Drive pulley on the platter NEMA 17 shaft | Taller |
-| `pulley_a` 20T + `bracket` | idler + bracket | X-belt idler at the far stand (green bracket on the left elbow) | Bracket 25 -> 29 tall for the taller pulley |
-| `spool` x4, 21.3 hub, 8 bore | rod supports (14.6 hub) | Push into the PVC fittings and hold the rod ends | Hub = 1/2" PVC pipe OD so it fits the fitting socket; 8.0 bore = press fit on the rod |
-| `clip` | pen-holder clip | Pen clamp: the pen sits in the C, a screw squeezes it | Resized for his pen |
-| `gear` 15 "teeth", 4.2 bore, 7 counterbore | pen-holder knob | Knurled thumb knob on the clamp screw (photo `pen-carriage.jpg`), not a gear | Nut/head pocket added |
-| `motor_plate` 120x73x2 | rotary sheet 11x7 cm | Platter motor mount (NEMA hole + large blank area for the spindle) | Printed instead of plastic sheet; photo shows the steel drive plate in use, so this may be an unused or later version |
-| `motor_plate_2` 3 mm stepped | X motor sheet 7.5x4 cm | X motor mount on the right stand (two 4.77 holes 63 mm apart); likely the yellow plate in `full-machine.jpg` | Countersunk motor screws |
-| `base_plate` 95x57, block, 2 capped pegs | Z carriage sheet 9.5x5.5 cm | Unknown. Size matches the carriage plate; the pegs could be belt anchors | ? |
+| `spool` x4, 21.3 hub, 8 bore | rod supports (14.6 hub) | Thicker rod supports: touch the inside of the PVC pipe and the rod at the same time, so they can be glued instead of wrapped in double-sided tape | Hub fills the pipe |
+| `clip` + `gear` (15-tooth knurled knob, 4.2 bore, 7 counterbore) | pen-holder clip + knob | Pen holder, same as the original | Removed the original's other pen-holder piece: the new linear stage does that job |
+| `motor_plate` 120x73x2 (largest, almost flat) | rotary sheet 11x7 cm | Platter plate: one side holds whatever spins the platter (spindle/axle), the other the platter NEMA 17 | Printed instead of scrap plastic |
+| `motor_plate_2` 3 mm, cut-out corners | X motor sheet 7.5x4 cm | X axis motor plate: holds the stepper that drives the carriage belt, solidly fixed to the PVC stand. The two large 4.77 holes take screws drilled into the PVC pipe | Printed |
+| `base_plate` 95x57, block, 2 capped pegs | Z carriage sheet 9.5x5.5 cm | Pen-carriage plate: bolts to the linear bearing blocks on one side and the new linear stage on the other. The two pegs are where the belt attaches to pull it | Printed; pegs replace the bolt + zip-tie belt anchor |
+| `big_pulley` 60T + `pulley_b` 20T | gears 60T/20T | Platter belt drive, same as the original | Taller for the belt |
+| `pulley_a` 20T + `bracket` | idler + bracket | X belt idler pulley and its holder, same as the original | Taller |
+
+**Motor recess:** both motor plates have a round recess plus four holes that match the NEMA 17's
+screws. The recess takes the round boss on the motor face, so the motor sits flat and the screws
+can tighten. **Known issue (Tim):** the recess isn't deep enough on one plate, he thinks the
+largest one. Measured in the SCAD: `motor_plate` recess is **1 mm** deep, `motor_plate_2` is
+**2 mm**. A NEMA 17 boss is normally ~2 mm tall x 22 mm wide (check with calipers), so
+`motor_plate` is the short one. Fix later (Tim: "We'll work on each improvement later").
 
 Not redrawn by Tim (used from the original or not used): bearing supports, y-supports, PVC screw
 holder, z-axis parts (the green DVD-sled frame in `pen-carriage.jpg` is close to the original's).
@@ -100,9 +109,9 @@ holder, z-axis parts (the green DVD-sled frame in `pen-carriage.jpg` is close to
 |---|---|---|
 | `$100` X steps/mm | 200 x 16 / (16 teeth x 2 mm) | **100** (16T pulley per the Amazon listing) |
 | `$101` Y steps/degree | 200 x 16 x (60/20) / 360 | 26.67 (higher if the big pulley slips or rides; see above) |
-| `$102` Z steps/mm | depends on the DVD sled (often 20 steps/rev, 3 mm lead) | ~107; original guide used 100 |
+| `$102` Z steps/mm | new stage: 20 steps/rev x 16 / screw lead (not listed; measure travel per turn) | 640 if the lead is 0.5 mm (common on these, unconfirmed); original guide used 100 |
 | X/Y driver Vref | TMC2209: I_rms ≈ 0.71 x Vref | ~1.0 V (0.7 A) is plenty for a plotter with 1.5 A motors |
-| Z driver Vref | small DVD stepper | ~0.3 V |
+| Z driver Vref | new stage is rated 100-300 mA | ~0.3 V (≈0.2 A) |
 TMC2209 microstep jumpers (MS1, MS2): none = 1/8, MS1 = 1/32, MS2 = 1/64, both = 1/16.
 Without jumpers the formulas above halve (1/8).
 
@@ -148,8 +157,7 @@ Without jumpers the formulas above halve (1/8).
 ## 9. Open questions for Tim
 Answered 2026-10-25 by the Amazon list: X pulley 16T, belts 6 mm GT2, rods 300 mm, platter 200 mm.
 1. Are microstep jumpers fitted under the drivers? (sets the 1/8 vs 1/16 numbers)
-2. Which printed parts are on the machine now: is the platter on the steel plate or `motor_plate`?
-   Is the yellow X motor plate `motor_plate_2`? What is `base_plate` for?
+2. (Answered 2026-10-25: printed parts explained in section 4.)
 3. Platter loop belt: 6 mm or 9 mm wide (the listing says both)?
 4. Was the platter centre offset ever measured (mm)?
 5. Not from Amazon, so still unknown: SC8UU blocks, PVC fittings, plywood size, the disc-drive
