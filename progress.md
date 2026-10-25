@@ -48,6 +48,13 @@ sliver body and a 0.09 mm disk on one pulley dropped. OpenSCAD 2021.01 installed
 watches with Design -> Automatic Reload and Preview. Headless render: `openscad -o x.png`.
 Scratch Python env with trimesh: `C:/Users/timha/AppData/Local/Temp/claude/venv3d`.
 
+## Components reference (2026-10-25)
+[docs/components.md](docs/components.md): every part (original guide, Tim's bought/salvaged parts,
+printed parts) with its job, measured findings (big 60T pulley is NOT GT2 pitch: 2.09 vs 2.00 mm),
+expected `$100-102`, improvement ideas and open questions for Tim. Tim's idea (2026-10-25, not
+started, "Talk to me before doing anything"): an improved Instructables guide of his own build
+with a full 3D render of the whole plotter. Answered as realistic; waiting on his go.
+
 ## Authorized next steps
 None.
 
