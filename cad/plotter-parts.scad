@@ -36,13 +36,28 @@ module motor_plate() {
 }
 
 // ---------- base plate: 57 x 95 plate, raised block, two capped pegs ----------
+// The flat face (z = 0, on the print bed) carries the micro linear stage (pen lift). A shallow
+// pocket the stage's white base drops into, so it sits square and centred (Tim, 2026-10-26).
+// The plate is 1 mm thicker on that face so the pocket doesn't leave a thin skin.
+// Measure the stage base with calipers before printing; listing size is 81.3 x 24.9.
 cap_gap = 0;   // TinkerCad had the caps floating 0.33 mm above the pegs (they would print in mid-air)
+stage_len = 81.3;     // stage base, along the plate's 95 mm side
+stage_wid = 24.9;
+stage_fit = 0.3;      // clearance each side
+pocket_d  = 1.5;      // pocket depth
+plate_add = 1;        // extra thickness on the stage face
 module base_plate() {
-  cube([57, 95, 2]);
-  translate([0, 35, 0]) cube([57, 25, 8.17]);
-  for (x = [9, 48]) translate([x, 55, 0]) {
-    cylinder(d = 6.4, h = 17.67);
-    translate([0, 0, 17.67 + cap_gap]) cylinder(d = 10, h = 2);
+  difference() {
+    union() {
+      translate([0, 0, -plate_add]) cube([57, 95, 2 + plate_add]);
+      translate([0, 35, 0]) cube([57, 25, 8.17]);
+      for (x = [9, 48]) translate([x, 55, 0]) {
+        cylinder(d = 6.4, h = 17.67);
+        translate([0, 0, 17.67 + cap_gap]) cylinder(d = 10, h = 2);
+      }
+    }
+    translate([(57 - stage_wid) / 2 - stage_fit, (95 - stage_len) / 2 - stage_fit, -plate_add - 1])
+      cube([stage_wid + 2 * stage_fit, stage_len + 2 * stage_fit, pocket_d + 1]);
   }
 }
 
@@ -158,7 +173,7 @@ module gear() {
 module show(name) { if (part == "all" || part == name) children(); }
 
 show("motor_plate")   translate([-29, -87, 0]) motor_plate();
-show("base_plate")    translate([-28, 1, 0]) base_plate();
+show("base_plate")    translate([-28, 1, plate_add]) base_plate();
 show("motor_plate_2") translate([-94.18, 13.06, 0]) motor_plate_2();
 show("big_pulley")    translate([-62, -20, 0]) big_pulley();
 show("spool")         for (p = [[81, 41], [81, 72.5], [49, 41], [49, 72.5]]) translate(p) spool();
