@@ -4,7 +4,7 @@
 // Show one part only: set `part` below (or run openscad -D 'part="clip"').
 
 part = "all";   // all, motor_plate, base_plate, motor_plate_2, big_pulley, spool, bracket, clip,
-                // pulley_a, pulley_b, gear
+                // pulley_a, pulley_b, gear, big_pulley_gt2, pulley_m3, idler_washer, paper_ring
 
 $fn = 96;
 screw_d = 3.4;      // M3 clearance hole. The TinkerCad parts used 3.0, which usually prints too tight.
@@ -23,14 +23,25 @@ module toothed(n, prof, h) {
 }
 
 // ---------- motor plate: 120 x 73 x 2, NEMA 17 mount near one end ----------
+// The motor side (top here, underside on the machine) gets a 1 mm pad the size of the motor face so
+// the deeper recess still leaves a 1 mm floor. The motor face sits flat on the pad across all four
+// screws; the outline, holes and the flat print-bed face are unchanged. Screws: 1 mm longer than before.
+mp_recess = 2;      // recess depth for the motor's round boss (NEMA 17: ~2 mm tall, 22 wide). Was 1 (too shallow, Tim)
+mp_pad = 1;         // extra thickness under the motor face (42 x 42, trimmed to the plate outline)
 module motor_plate() {
   t = 2;
   difference() {
-    cube([120, 73, t]);
+    union() {
+      cube([120, 73, t]);
+      intersection() {
+        translate([20 - 21, 36.5 - 21, 0]) cube([42, 42, t + mp_pad]);
+        cube([120, 73, t + mp_pad]);
+      }
+    }
     translate([20, 36.5, 0]) {
-      translate([0, 0, -1]) cylinder(d = 10, h = t + 2);           // shaft
-      translate([0, 0, t - 1]) cylinder(d = 25, h = 2);            // 1 mm recess for the motor collar
-      nema_screws(t);
+      translate([0, 0, -1]) cylinder(d = 10, h = t + mp_pad + 2);                 // shaft
+      translate([0, 0, t + mp_pad - mp_recess]) cylinder(d = 25, h = mp_recess + 1);  // recess for the motor boss
+      nema_screws(t + mp_pad);
     }
   }
 }
@@ -93,6 +104,44 @@ module big_pulley() {
   }
 }
 
+// ---------- big pulley, true GT2: 60 teeth on a 2.00 mm pitch, same bore, flanges and height ----------
+// The `big_pulley` above has a 2.09 mm tooth spacing, so a GT2 belt rides on its tips (components.md §5).
+// GT2 2 mm tooth outline and the tooth placement below are from droftarts' "Parametric Pulley"
+// (Thingiverse thing:16627, CC BY-SA 3.0), the generator most OpenSCAD GT2 pulleys come from.
+// Outside diameter = teeth x pitch / pi - 2 x 0.254 (pitch line offset) = 37.69 mm for 60 teeth.
+gt2_pitch = 2;
+gt2_plo = 0.254;              // pitch line offset (belt pitch line sits this far outside the pulley)
+gt2_tooth_w = 1.494;          // groove width / depth of droftarts' GT2_2mm outline
+gt2_tooth_d = 0.764;
+gt2_extra_w = 0.2;            // droftarts' default: groove 0.2 mm wider for printing
+module gt2_groove(h) {        // one groove, opening at y = 0, pointing to +y (toward the centre)
+  linear_extrude(h) polygon([[0.747183,-0.5],[0.747183,0],[0.647876,0.037218],[0.598311,0.130528],
+    [0.578556,0.238423],[0.547158,0.343077],[0.504649,0.443762],[0.451556,0.53975],[0.358229,0.636924],
+    [0.2484,0.707276],[0.127259,0.750044],[0,0.76447],[-0.127259,0.750044],[-0.2484,0.707276],
+    [-0.358229,0.636924],[-0.451556,0.53975],[-0.504649,0.443762],[-0.547158,0.343077],
+    [-0.578556,0.238423],[-0.598311,0.130528],[-0.647876,0.037218],[-0.747183,0],[-0.747183,-0.5]]);
+}
+module gt2_toothed(n, h) {
+  od = n * gt2_pitch / PI - 2 * gt2_plo;
+  dist = sqrt(pow(od / 2, 2) - pow((gt2_tooth_w + gt2_extra_w) / 2, 2));
+  difference() {
+    cylinder(d = od, h = h, $fn = n * 8);
+    for (i = [1 : n]) rotate(i * 360 / n) translate([0, -dist, -1])
+      scale([(gt2_tooth_w + gt2_extra_w) / gt2_tooth_w, 1, 1]) gt2_groove(h + 2);
+  }
+}
+module big_pulley_gt2() {
+  f = 1.58;
+  difference() {
+    union() {
+      cylinder(d = 44, h = f);
+      translate([0, 0, f - 0.01]) gt2_toothed(60, 10 - 2 * f + 0.02);   // overlap so it fuses to the flanges
+      translate([0, 0, 10 - f]) cylinder(d = 44, h = f);
+    }
+    translate([0, 0, -1]) cylinder(d = 27.9, h = 12);
+  }
+}
+
 // ---------- spool / roller: 28 mm flange, 21.3 mm hub, 8 mm bore (four on the plate) ----------
 spool_bore = 8.0;   // if this goes on an 8 mm rod or 608 bearing, 8.2-8.3 prints with less force
 module spool() {
@@ -145,18 +194,71 @@ module clip() {
 // ---------- small belt pulleys: 20 teeth (GT2 size), 18 mm flanges, 5.15 mm bore ----------
 gt2_20_tooth = [5.181, 5.187, 5.224, 5.301, 5.505, 5.856, 5.971, 6.028,
                 6.050, 6.041, 5.998, 5.908, 5.654, 5.348, 5.247, 5.198];
-module small_pulley(f, h) {
+// pulley_b vs a true GT2 20T (measured from this profile): tips at radius 6.05 vs 6.11, roots 5.18 vs
+// 5.35. Belt pitch circle 39.6 vs 40 mm (1 % short), about 0.2 mm over the 10 teeth in contact: close
+// enough, left as is.
+module small_pulley(f, h, bore = 5.15, hub = 0, hub_d = 0) {
   difference() {
     union() {
       cylinder(d = 18, h = f);
       translate([0, 0, f]) toothed(20, gt2_20_tooth, h - 2 * f);
       translate([0, 0, h - f]) cylinder(d = 18, h = f);
+      if (hub > 0) translate([0, 0, -hub]) cylinder(d = hub_d, h = h + 2 * hub);
     }
-    translate([0, 0, -1]) cylinder(d = 5.15, h = h + 2);
+    translate([0, 0, -hub - 1]) cylinder(d = bore, h = h + 2 * hub + 2);
   }
 }
 module pulley_a() small_pulley(1.41, 10.15);
 module pulley_b() small_pulley(1.39, 10);
+
+// ---------- X idler on an M3 bolt (free stopgap for Tim's cut nail) ----------
+// pulley_a with a 3.3 bore and a short hub each side, so it spins on an M3 bolt through the bracket's
+// 3.1 mm wall holes. The hubs touch the washers close to the bolt (less rubbing than the 18 mm
+// flanges). Two printed washers fill the bracket's 14 mm inner gap and keep the pulley centred.
+// Hardware: M3 x 25 bolt + nut (nylock, snug, not tight). If 3.3 prints tight, drill it with 1/8".
+m3_bore = 3.3;
+idler_hub = 0.5;      // hub sleeve sticking out past each flange
+idler_hub_d = 7;      // hub (and washer) diameter
+idler_gap = 14;       // bracket inner gap (walls at x 0-2 and 16-18)
+idler_play = 0.4;     // total end play so it spins freely
+idler_washer_t = (idler_gap - 10.15 - 2 * idler_hub - idler_play) / 2;   // = 1.225
+module pulley_m3() small_pulley(1.41, 10.15, m3_bore, idler_hub, idler_hub_d);
+module idler_washer() difference() {
+  cylinder(d = idler_hub_d, h = idler_washer_t);
+  translate([0, 0, -1]) cylinder(d = m3_bore, h = idler_washer_t + 2);
+}
+
+// ---------- paper ring: holds the paper's edge flat on the 200 mm platter ----------
+// Thin, so the pen (pen up = 2 mm) can pass near it. Covers the paper from radius 92 to 100: keep
+// drawings inside radius ~90. The platter is aluminium (not magnetic), so magnets in the ring need 4
+// partners glued under the platter rim at the same spots (magnets or steel washers).
+ring_od = 200;        // platter diameter (uxcell 5052 disc, 200 x 1)
+ring_w = 8;           // band width
+ring_t = 1.2;         // band thickness
+ring_magnets = true;  // true: 4 pockets for 6 x 2 mm disc magnets. false: 4 tape tabs instead ($0)
+magnet_d = 6.2;       // pocket for a 6 mm magnet (press fit, add a drop of glue)
+magnet_h = 2;         // magnet thickness = pad height, pocket goes through (magnet flush both faces)
+tab_len = 6;          // tape tab, sticks out past the platter edge
+tab_w = 14;
+module paper_ring() {
+  rm = ring_od / 2 - ring_w / 2;
+  difference() {
+    union() {
+      difference() {
+        cylinder(d = ring_od, h = ring_t, $fn = 240);
+        translate([0, 0, -1]) cylinder(d = ring_od - 2 * ring_w, h = ring_t + 2, $fn = 240);
+      }
+      for (a = [45 : 90 : 315]) rotate(a)
+        if (ring_magnets) intersection() {
+          translate([rm, 0, 0]) cylinder(d = magnet_d + 3.2, h = magnet_h);
+          cylinder(d = ring_od, h = magnet_h, $fn = 240);
+        }
+        else translate([ring_od / 2 - 2, -tab_w / 2, 0]) cube([tab_len + 2, tab_w, ring_t]);
+    }
+    if (ring_magnets) for (a = [45 : 90 : 315]) rotate(a)
+      translate([rm, 0, -1]) cylinder(d = magnet_d, h = magnet_h + 2);
+  }
+}
 
 // ---------- small gear: 15 teeth, 5 tall, 4.2 mm bore with a 7 mm counterbore on top ----------
 gear15_tooth = [7.065, 7.141, 7.267, 7.433, 7.524, 7.518, 7.516, 7.518,
@@ -182,3 +284,8 @@ show("clip")          translate([60, -2, 0]) clip();
 show("pulley_a")      translate([-48, -61.99, 0]) pulley_a();
 show("pulley_b")      translate([-62, -20, 0]) pulley_b();
 show("gear")          translate([47.5, 8.5, 0]) gear();
+// added 2026-10-26 (not on the TinkerCad plate): laid out below it
+show("big_pulley_gt2") translate([-62, -150, 0]) big_pulley_gt2();
+show("pulley_m3")     translate([-25, -150, 0]) pulley_m3();
+show("idler_washer")  for (x = [-8, 2]) translate([x, -150, 0]) idler_washer();
+show("paper_ring")    translate([0, -270, 0]) paper_ring();

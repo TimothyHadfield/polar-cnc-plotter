@@ -113,7 +113,24 @@ screws. The recess takes the round boss on the motor face, so the motor sits fla
 can tighten. **Known issue (Tim):** the recess isn't deep enough on one plate, he thinks the
 largest one. Measured in the SCAD: `motor_plate` recess is **1 mm** deep, `motor_plate_2` is
 **2 mm**. A NEMA 17 boss is normally ~2 mm tall x 22 mm wide (check with calipers), so
-`motor_plate` is the short one. Fix later (Tim: "We'll work on each improvement later").
+`motor_plate` is the short one. **Fixed 2026-10-26:** `motor_plate` recess is now 2 mm
+(`mp_recess`). The plate is only 2 mm thick, so the motor side got a 1 mm pad the size of the motor
+face (42x42, trimmed to the plate edge): the motor sits flat on it across all four screws and the
+recess keeps a 1 mm floor. Outline, holes and the flat print-bed face are unchanged.
+**Hardware:** the four motor screws need to be 1 mm longer than before.
+**Measure first:** the boss height on Tim's motor (calipers from the motor face to the top of the
+round boss). If it is over 2 mm, raise `mp_recess` and `mp_pad` by the same amount.
+
+### New parts added 2026-10-26 (STLs in `build/stl/`)
+| Part | What it is | Hardware | Measure first |
+|---|---|---|---|
+| `pulley_m3` + `idler_washer` (prints 2) | X idler, free stopgap for the cut nail: `pulley_a`'s 20 teeth with a 3.3 bore and a 0.5 mm hub (7 wide) each side, so it spins on an M3 bolt through the bracket's 3.1 holes. The two 1.2 mm washers fill the bracket's 14 mm inner gap (11.15 pulley + 0.4 play) and keep it centred | M3 x 25 bolt + nut (nylock, snug, not tight). If the bore prints tight, drill it with a 1/8" bit | The bracket's inner gap (should be 14 mm). The better fix (bought GT2 20T idler with bearings, §7) stays the recommendation |
+| `big_pulley_gt2` | True GT2 60T: same 27.9 bore, 44 flanges, 10 mm height as `big_pulley`, but GT2 tooth shape on a 2.00 mm pitch. Measured from the STL: outside diameter 37.69 mm, 60 teeth. Tooth outline from droftarts' Parametric Pulley (Thingiverse 16627). `big_pulley` is kept as it was | none | Nothing new; only needed if the belt drive stays (direct drive drops it) |
+| `paper_ring` | Thin ring (200 mm across, 8 mm band, 1.2 mm thick; 2 mm at the 4 magnet pads) that holds the paper's edge flat on the platter. Covers radius 92-100, so drawings must stay inside radius ~90 | `ring_magnets = true`: 8 disc magnets 6x2 mm (4 pressed + glued in the ring, 4 glued under the platter rim at the same spots, since the aluminium platter isn't magnetic; steel washers work for the bottom 4). `ring_magnets = false`: 4 tape tabs instead, $0 | Platter diameter (200?), whether the printer bed fits a 200 mm ring, magnet size if bought |
+
+**No `center_mark`:** the platter top is a plain 1 mm aluminium disc (the CD's hole that centres it
+is underneath, on the spindle) and the paper covers it, so a drop-in mark has nothing to locate on.
+It would need a centre feature first (e.g. a small dimple punched at the exact centre), Tim's call.
 
 Not redrawn by Tim (used from the original or not used): bearing supports, y-supports, PVC screw
 holder, z-axis parts (the green DVD-sled frame in `pen-carriage.jpg` is close to the original's).
@@ -123,7 +140,9 @@ holder, z-axis parts (the green DVD-sled frame in `pen-carriage.jpg` is close to
   radius 20.0 mm, a 2.09 mm tooth spacing; a GT2 belt is 2.00 mm, so a true GT2 60T has a tip
   radius of about 18.85 mm. Over half a wrap (30 teeth) the error adds up to about 3 mm, more than
   one tooth, so the belt rides on the tooth tips instead of seating and can slip. The 20T pulleys
-  are close to GT2 (tip radius 6.05 vs 6.11). This came from the original guide's file.
+  are close to GT2 (tip radius 6.05 vs 6.11, root 5.18 vs 5.35; belt pitch circle 39.6 vs 40 mm,
+  about 0.2 mm over the 10 teeth in contact), so `pulley_b` is left as is. This came from the
+  original guide's file. **Built 2026-10-26:** `big_pulley_gt2` (true GT2 60T, see §4).
   Reasoned: riding on the tips makes the real ratio about 127/40 ≈ 3.2 instead of 3, which may be
   why the original guide needed `$101` ≈ 17.1 instead of its computed 14.2.
 - TinkerCad NEMA screw holes were 3.0 mm (too tight for M3 when printed); the SCAD uses 3.4.
@@ -140,16 +159,18 @@ holder, z-axis parts (the green DVD-sled frame in `pen-carriage.jpg` is close to
 TMC2209 microstep jumpers (MS1, MS2): none = 1/8, MS1 = 1/32, MS2 = 1/64, both = 1/16.
 Without jumpers the formulas above halve (1/8).
 
-## 7. Improvement ideas (not started; Tim decides)
-- Reprint the big pulley as a true GT2 60T (keep the 27.9 bore and 44 flanges).
+## 7. Improvement ideas (Tim decides)
+- **Built 2026-10-26 (§4):** `big_pulley_gt2` (true GT2 60T, 27.9 bore, 44 flanges).
 - Fix the platter centre offset mechanically, or measure it and put it in the app's center gap.
 - Lighter, stiffer carriage plate; belt clamp instead of zip ties.
-- Paper hold-down that doesn't stick up (magnets or a clamp ring) instead of a paper clip.
-- Endstop or a printed centre mark so "Set center" is repeatable.
+- **Built 2026-10-26 (§4):** `paper_ring`, a 1.2 mm clamp ring with magnet pockets or tape tabs,
+  instead of a paper clip.
+- Endstop or a printed centre mark so "Set center" is repeatable. A centre mark was skipped: the
+  platter has no centre feature on top (§4).
 - (Suggested to Tim 2026-10-25) X idler: replace the nail with a bought GT2 20T idler that has
   bearings inside, 3 mm bore, on an M3 bolt + nylock nut through the bracket's 3.1 mm holes
-  (washers either side). Free stopgap: M3 bolt as the axle, printed pulley's 5.15 bore is loose
-  on it, so it spins on the bolt.
+  (washers either side). This is still the better option. **Free stopgap built 2026-10-26 (§4):**
+  `pulley_m3` (3.3 bore + hubs) and two `idler_washer`s on an M3 x 25 bolt.
 - (Suggested to Tim 2026-10-25) Platter: direct drive. Platter hub straight on the NEMA 17 shaft
   (printed hub with a D-shaped 5 mm bore + set screw, or a 5 mm flange coupler); drops the spindle,
   both platter pulleys, the closed belt and the off-centre problem. `$101` becomes
