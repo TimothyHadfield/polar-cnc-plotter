@@ -155,6 +155,36 @@ Without jumpers the formulas above halve (1/8).
   both platter pulleys, the closed belt and the off-centre problem. `$101` becomes
   200 x 16 / 360 = 8.89 steps/degree: 0.11 deg per microstep, 0.2 mm at 100 mm radius (reasoned).
   Fallback if more torque is needed: lazy Susan bearing + a true GT2 pulley pair.
+  - **Built 2026-10-26 (printable, not yet printed):** two new parts in
+    [cad/plotter-parts.scad](../cad/plotter-parts.scad), STLs in `build/stl/`.
+    - `platter_hub` (40 dia x 17 mm): 5 mm D-bore (5.15 round, 4.65 across the flat), M3 set screw
+      onto the shaft's flat with a captive M3 nut pushed up a slot from below, 40 mm flat glue face
+      on top with a 14.7 mm ring that drops into the CD's 15 mm hole, so the platter sits centred.
+      The platter (disc + CD) is glued to that face (super glue or 2-part epoxy); hub and platter
+      then come off the shaft together by loosening the set screw. The steel strip is no longer
+      needed (no magnet). No CD? Set `reg_d = 0` and glue the disc straight on.
+    - `motor_stand` (69 x 49 x 42.5 mm): holds the platter NEMA 17 upright on the board by its four
+      face screws; two side walls (open front and back for the plug), feet with 3.5 mm holes for
+      small wood screws shorter than the board, so nothing pokes out underneath. **No hole in the
+      board and no steel bars.** Place it so the pen's line passes over the shaft.
+    - **Print:** hub collar-down (flat bottom on the bed, glue face up; the flange has a 45° cone
+      under it, so no supports), 100% infill or 6 walls, 0.2 mm layers. Stand upright, feet on
+      the bed, 20-30% infill; its top plate bridges 43 mm, so turn supports on if the printer
+      bridges badly.
+    - **Hardware:** 1 M3 nut + 1 M3 set screw (M3 x 6 grub, or any M3 x 8-10 screw), 4 M3 x 8
+      screws (stand to motor), 4 small wood screws (or hot glue), glue for the platter. $0 if
+      these are in the parts bin.
+    - **New `$101` = 200 x 16 / 360 = 8.89 steps/degree** at 1/16 microstepping (4.44 at 1/8).
+    - **Platter height (reasoned from catalogue sizes):** the shaft tip, not the motor body, sets
+      it. Motor 38 + 0.5 gap + shaft 24 puts the CD's underside at about 61.5 mm and the platter
+      top at about **64 mm** above the board, so about 23 mm higher than the model's current
+      41 mm (the "~6 mm" above was wrong: it left out the shaft). Check that the bearing blocks and
+      carriage still clear the platter and paper clip, and clamp the pen ~23 mm higher in its clip.
+      If they don't clear: Tim's own idea, a taller PVC stand piece.
+    - **Measure first with calipers:** shaft length above the motor face (24 assumed) and how far
+      the D flat runs down from the tip (15 assumed; the set screw sits 12 mm below the tip),
+      across the flat (4.5 assumed), motor body length without the boss (38 assumed), the CD hole
+      (15). Change the numbers at the top of the section if they differ.
 - (Suggested to Tim 2026-10-25) Motor size: Tim noted the steel bars + board hole exist only
   because the 38 mm NEMA is too tall, and offered short motors (42x42x20.5 mm, 13 Ncm; or
   STEPPERONLINE short body 16 Ncm, 1.0 A, 3.5 ohm). Advice: with direct drive keep the 42 Ncm motors

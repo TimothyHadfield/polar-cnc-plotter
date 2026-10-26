@@ -64,7 +64,7 @@ def linear(c):
     """glTF stores base colours in linear light, not sRGB."""
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 PRINTED = ["spool", "carriage_plate", "motor_plate", "motor_plate_2", "big_pulley", "pulley_a", "pulley_b",
-           "bracket", "clip", "gear"]
+           "bracket", "clip", "gear", "platter_hub", "motor_stand"]
 PRINTED_SRC = {"carriage_plate": "base_plate"}   # file name -> module name in plotter-parts.scad
 
 
