@@ -4,7 +4,7 @@
 // Show one part only: set `part` below (or run openscad -D 'part="clip"').
 
 part = "all";   // all, motor_plate, base_plate, motor_plate_2, big_pulley, spool, bracket, clip,
-                // pulley_a, pulley_b, gear
+                // pulley_a, pulley_b, gear, platter_hub, motor_stand
 
 $fn = 96;
 screw_d = 3.4;      // M3 clearance hole. The TinkerCad parts used 3.0, which usually prints too tight.
@@ -169,6 +169,71 @@ module gear() {
   }
 }
 
+// ---------- direct-drive platter (2026-10-26): hub on the NEMA 17 shaft + a stand for the motor ----------
+// Replaces the disc-drive spindle, both platter pulleys and the closed belt (docs/components.md §7).
+// The platter (200 x 1 mm aluminium disc, CD glued underneath) is glued to the hub's top face; the
+// raised ring fits the CD's 15 mm hole so it sits centred. Measure the shaft with calipers first.
+shaft_d    = 5;       // NEMA 17 shaft (17HE15-1504S)
+shaft_flat = 4.5;     // across the D flat (0.5 mm cut)
+bore_fit   = 0.15;    // clearance on the bore and the flat
+hub_d      = 22;      // collar around the shaft
+hub_h      = 16;      // collar + flange height (shaft tip ends flush with the ring's top)
+flange_d   = 40;      // glue face under the CD
+flange_t   = 2.5;     // flange thickness; a 45 degree cone below it, so it prints collar-down with no supports
+reg_d      = 14.7;    // ring that drops into the CD's 15 mm hole (0 = no ring, glue straight to the disc)
+reg_h      = 1.0;     // CD is 1.2 thick, so the ring stays below the disc
+set_z      = 5;       // M3 set screw height above the hub's bottom (on the shaft's flat)
+nut_w      = 5.8;     // M3 nut slot: 5.5 across flats + clearance
+nut_t      = 2.6;     // nut is 2.4 thick
+nut_x      = 4.0;     // slot's inner face, from the shaft axis (leaves ~1.9 mm wall to the flat)
+module platter_hub() {
+  cone_h = (flange_d - hub_d) / 2;
+  fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;           // the flat's distance from the axis
+  difference() {
+    union() {
+      cylinder(d = hub_d, h = hub_h);
+      translate([0, 0, hub_h - flange_t - cone_h]) cylinder(d1 = hub_d, d2 = flange_d, h = cone_h);
+      translate([0, 0, hub_h - flange_t]) cylinder(d = flange_d, h = flange_t);
+      if (reg_d > 0) translate([0, 0, hub_h - 0.01]) cylinder(d = reg_d, h = reg_h + 0.01);
+    }
+    // D bore, through
+    translate([0, 0, -1]) intersection() {
+      cylinder(d = shaft_d + bore_fit, h = hub_h + reg_h + 2, $fn = 64);
+      translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, hub_h + reg_h + 2]);
+    }
+    translate([0, 0, -0.01]) cylinder(d1 = shaft_d + 1.2, d2 = shaft_d + bore_fit, h = 0.6, $fn = 64);   // lead-in
+    // M3 set screw through the flat side, captive nut dropped in from below
+    translate([0, 0, set_z]) rotate([0, 90, 0]) cylinder(d = 3.2, h = hub_d, $fn = 24);
+    translate([nut_x, -nut_w / 2, -1]) cube([nut_t, nut_w, set_z + 1 + 3.25]);
+  }
+}
+
+// Holds the motor upright on the plywood by its four face screws (M3 x 8), so no hole in the board
+// and no steel bars. Two side walls, open front and back for the plug; feet take small wood screws.
+motor_len  = 38;      // 17HE15-1504S body length (without the 2 mm boss)
+stand_gap  = 0.5;     // motor's back end hangs this far above the board, so the face screws pull it tight
+stand_top  = 4;       // top plate thickness; the 2 mm boss sits in its hole
+stand_wall = 3;
+motor_w    = 42.3;
+motor_fit  = 0.4;     // clearance each side of the motor body
+foot_w     = 10;      // foot sticking out past each wall
+foot_t     = 4;
+module motor_stand() {
+  h = motor_len + stand_gap;
+  in = motor_w / 2 + motor_fit;
+  out = in + stand_wall;
+  difference() {
+    union() {
+      for (s = [-1, 1]) translate([s > 0 ? in : -out, -out, 0]) cube([stand_wall, 2 * out, h]);
+      translate([-out, -out, h]) cube([2 * out, 2 * out, stand_top]);
+      for (s = [-1, 1]) translate([s > 0 ? out - 0.01 : -out - foot_w + 0.01, -out, 0]) cube([foot_w, 2 * out, foot_t]);
+    }
+    translate([0, 0, h - 1]) cylinder(d = 23, h = stand_top + 2);     // boss
+    translate([0, 0, h]) nema_screws(stand_top);
+    for (s = [-1, 1], y = [-out + 8, out - 8]) translate([s * (out + foot_w / 2), y, -1]) cylinder(d = 3.5, h = foot_t + 2, $fn = 24);
+  }
+}
+
 // ---------- layout: where each part sat on the TinkerCad plate ----------
 module show(name) { if (part == "all" || part == name) children(); }
 
@@ -182,3 +247,5 @@ show("clip")          translate([60, -2, 0]) clip();
 show("pulley_a")      translate([-48, -61.99, 0]) pulley_a();
 show("pulley_b")      translate([-62, -20, 0]) pulley_b();
 show("gear")          translate([47.5, 8.5, 0]) gear();
+show("platter_hub")   translate([125, -50, 0]) platter_hub();      // new parts, right of the old plate
+show("motor_stand")   translate([145, 30, 0]) motor_stand();
