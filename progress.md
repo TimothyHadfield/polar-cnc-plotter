@@ -30,7 +30,8 @@ the swap didn't fix X. If one coil reads OL on every combination, a wire/coil is
 app's Calibrate tool. Safety: never plug/unplug motors powered; probe only the knob top.
 **2026-10-26:** Tim reported Vrefs 1.0 / 1.2 / 1.3 V (didn't say which driver). Told him: fine for
 the two NEMA 17s (≤0.92 A rms of 1.5 A), but whichever is the Z (micro stage, 100-300 mA) must go
-to ~0.3 V. Ω-test results still not reported.
+to ~0.3 V. Then set: **X 1.0 V, Y 1.0 V, Z 0.3 V** (Tim). Ω-test results still not reported; no
+serial port present at that time (USB unplugged).
 Also 2026-10-26: carriage plate got a 1.5 mm pocket for the micro linear stage (3fed47d); build
 guide electronics redrawn from Tim's photos (blue Uno, red shield, yellow sockets, blue heat sinks,
 Z lead brown/red/orange/yellow, A slot empty).
