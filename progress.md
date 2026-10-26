@@ -28,6 +28,12 @@ the swap didn't fix X. If one coil reads OL on every combination, a wire/coil is
 (2) Y Vref to ~1.0 V (0.4 V ≈ 0.28 A is weak for the platter). (3) Rerun watched test; ask Tim
 "ready" in the question box first, keep jogs small since steps/mm are factory 250. (4) Then the
 app's Calibrate tool. Safety: never plug/unplug motors powered; probe only the knob top.
+**2026-10-26:** Tim reported Vrefs 1.0 / 1.2 / 1.3 V (didn't say which driver). Told him: fine for
+the two NEMA 17s (≤0.92 A rms of 1.5 A), but whichever is the Z (micro stage, 100-300 mA) must go
+to ~0.3 V. Ω-test results still not reported.
+Also 2026-10-26: carriage plate got a 1.5 mm pocket for the micro linear stage (3fed47d); build
+guide electronics redrawn from Tim's photos (blue Uno, red shield, yellow sockets, blue heat sinks,
+Z lead brown/red/orange/yellow, A slot empty).
 
 ## Status
 | Area | State |

@@ -168,37 +168,88 @@ module spindle() {                  // salvaged disc-drive spindle: stator board
     cylinder(d = 10, h = 11.2);
   }
 }
-module uno() {                      // Arduino Uno + CNC shield V3 (shield on 11 mm headers)
+// Arduino Uno clone (blue) + red CNC Shield V3 + 3 TMC2209 drivers with blue heat sinks, laid out
+// from Tim's photos (2026-10-26). Uno frame: x along the 68.6 side (USB end at x = 0), y across.
+sh_z = 11.4;                        // shield underside (sits on the Uno's 8.5 mm headers)
+sh_t = sh_z + 1.6;                  // shield top
+drv = [[11, 9.6], [11, 35.3], [35.5, 35.3]];   // driver footprints' corners: Z (pen), X, Y; A slot empty
+module pin_row(n, h, pitch = 2.54) for (i = [0 : n - 1]) translate([i * pitch - 0.32, -0.32, 0]) cube([0.64, 0.64, h]);
+module uno() {
   piece("uno") difference() {
     cube([68.6, 53.3, 1.6]);
     for (p = [[14, 2.5], [15.3, 50.7], [66.1, 7.6], [66.1, 35.5]]) translate([p[0], p[1], -1]) cylinder(d = 3.2, h = 4, $fn = 12);
   }
-  piece("chips") {
-    translate([30, 8, 1.6]) cube([35, 8, 3.5]);                    // ATmega328P
-    translate([10, 40, 1.6]) cube([28, 2.5, 11.4]);                // headers up to the shield
-    translate([42, 2, 1.6]) cube([24, 2.5, 11.4]);
-    translate([-1.8, 3.3, 1.6]) cube([13.7, 9, 10.9]);             // power jack
+  piece("chips") {                                                 // black parts on the Uno
+    for (h = [[17.4, 50.8, 10], [44.4, 50.8, 8], [26.8, 2.5, 8], [49.5, 2.5, 6]])   // female headers
+      translate([h[0] - 1.27, h[1] - 1.27, 1.6]) cube([h[2] * 2.54, 2.54, 8.5]);
+    translate([29, 7, 1.6]) cube([37, 10.2, 2]);                   // DIP socket + ATmega328P
+    translate([30, 8.3, 3.6]) cube([35, 7.6, 3.2]);
+    translate([-1.8, 3.3, 1.6]) difference() {                     // DC jack
+      cube([13.7, 9, 10.9]);
+      translate([-1, 4.5, 6]) rotate([0, 90, 0]) cylinder(d = 6.3, h = 9, $fn = 24);
+    }
+    translate([62.3, 24.1, 1.6]) cube([5.08, 7.62, 2.5]);          // ICSP header base
+    translate([3, 45.5, 1.6]) cube([6, 6, 3]);                     // reset button body
+    translate([15, 33, 1.6]) cube([5, 5, 1]);                      // USB chip
   }
-  piece("ports") {
-    translate([-6.3, 32, 1.6]) cube([16, 12, 10.9]);               // USB-B
-    translate([20, 22, 1.6]) cylinder(d = 6, h = 10);              // capacitors
-    translate([20, 30, 1.6]) cylinder(d = 6, h = 10);
-    translate([14, 12, 1.6]) cube([11, 4, 3.5]);                   // crystal
+  piece("ports") {                                                 // metal
+    translate([-6.3, 32, 1.6]) difference() {                      // USB-B
+      cube([16, 12, 10.9]);
+      translate([-1, 2, 2]) cube([9, 8, 7]);
+    }
+    translate([14, 12, 1.6]) hull() for (x = [1.8, 9.2]) translate([x, 2, 0]) cylinder(d = 4, h = 3.5, $fn = 20);   // crystal
+    for (p = [[22, 22], [22, 29]]) translate([p[0], p[1], 1.6]) cylinder(d = 6, h = 7, $fn = 24);   // capacitors
+    for (r = [0 : 2]) translate([63.57, 25.37 + r * 2.54, 1.6]) pin_row(2, 8.5);   // ICSP pins
   }
-  piece("shield") difference() {
-    translate([0, 0, 13]) cube([68.6, 53.3, 1.6]);
-    for (p = [[14, 2.5], [66.1, 35.5]]) translate([p[0], p[1], 12]) cylinder(d = 3.2, h = 4, $fn = 12);
+  piece("button") translate([6, 48.5, 4.6]) cylinder(d = 3.5, h = 1, $fn = 20);    // reset cap
+  // ---- CNC shield ----
+  piece("shield") {
+    difference() {
+      translate([0, 0, sh_z]) cube([68.6, 53.3, 1.6]);
+      for (p = [[14, 2.5], [66.1, 35.5]]) translate([p[0], p[1], sh_z - 1]) cylinder(d = 3.2, h = 4, $fn = 12);
+    }
+    for (x = [38.3, 53.5]) translate([x - 1.27, 7.2, sh_t]) cube([2.54, 20.3, 8.5]);   // empty A slot's red sockets
   }
-  piece("pins") for (i = [0 : 2]) translate([19 + i * 17, 40, 14.6]) cube([13, 2.5, 8]);   // motor headers
-  piece("terminal") translate([4, 2, 14.6]) difference() {         // 12 V screw terminal
-    cube([10, 7.5, 10]);
-    for (x = [2.5, 7.5]) translate([x, 3.75, 7]) cylinder(d = 3, h = 4, $fn = 12);
+  piece("sockets") {                                               // yellow driver sockets + yellow pin housings
+    for (d = drv, s = [0, 1]) translate([d[0], d[1] + s * 12.7, sh_t]) cube([20.3, 2.54, 8.5]);
+    translate([5.88, 18.5, sh_t]) cube([5.08, 10.16, 2.5]);        // step/dir header, yellow half
   }
+  piece("terminal") {                                              // blue: 12 V screw terminal, blue pin housings
+    translate([0.5, 6, sh_t]) difference() {
+      cube([7.6, 10, 10]);
+      for (y = [2.5, 7.5]) {
+        translate([3.8, y, 6]) cylinder(d = 3.2, h = 5, $fn = 16);                 // screw wells
+        translate([-1, y - 1.6, 2]) cube([3, 3.2, 3.2]);                          // wire openings
+      }
+    }
+    translate([0.8, 18.5, sh_t]) cube([5.08, 10.16, 2.5]);         // step/dir header, blue half
+  }
+  piece("pins") {                                                  // silver pins on the shield
+    for (r = [0 : 3]) translate([2.07 + r * 2.54, 19.77, sh_t]) rotate(90) pin_row(4, 11);
+    for (d = concat(drv, [[35.5, 9.6]])) translate([d[0] + 22.8, d[1] + 3.81, sh_t]) rotate(90) pin_row(4, 9);   // motor headers
+    for (x = [64.4, 66.94]) translate([x, 10.9, sh_t]) rotate(90) pin_row(12, 8.5);  // endstop / spindle header
+    for (d = drv, s = [0, 1]) translate([d[0] + 1.27, d[1] + 1.27 + s * 12.7, sh_t + 8.5]) pin_row(8, 3.3);   // driver pins
+  }
+  piece("black") {                                                 // caps, reset button, motor plugs
+    for (d = drv) translate([d[0] + 10, d[1] + 7.6, sh_t]) cylinder(d = 6.3, h = 7.5, $fn = 24);
+    translate([45.9, 9, sh_t + 4.2]) rotate([-90, 0, 0]) cylinder(d = 8, h = 16, $fn = 24);   // A slot cap, lying down
+    translate([0.5, 45.5, sh_t]) cube([6, 6, 3.5]);
+    translate([3.5, 48.5, sh_t + 3.5]) cylinder(d = 3.5, h = 1.5, $fn = 20);
+    for (d = concat(drv, [[35.5, 9.6]])) translate([d[0] + 21.53, d[1] + 2.54, sh_t]) cube([2.54, 10.16, 2.5]);   // header bases
+    for (d = drv) translate([d[0] + 21.53, d[1] + 2.54, sh_t + 2.5]) cube([2.54, 10.16, 14]);       // Dupont plugs
+  }
+  piece("white") translate([63.13, 9.63, sh_t]) cube([5.08, 30.48, 2.5]);   // endstop header housing
 }
-module drivers() for (i = [0 : 2]) translate([18 + i * 17, 16, 14.6]) {
-  piece("drivers") { translate([0, 0, 2]) cube([15, 20, 1.6]); for (x = [0.5, 12]) translate([x, 1, 0]) cube([2.5, 18, 2]); }
-  piece("heatsinks") translate([2, 4, 3.6]) for (j = [0 : 5]) translate([j * 2, 0, 0]) cube([1.2, 11, 7]);
-  piece("pots") translate([7.5, 18, 3.6]) cylinder(d = 3, h = 1.5, $fn = 12);
+module drivers() for (d = drv) translate([d[0], d[1], sh_t + 8.5]) {   // TMC2209 boards on the sockets
+  piece("drivers") cube([20.3, 15.24, 1.6]);
+  piece("heatsinks") translate([1.15, 0.6, 1.6]) {                 // blue anodised, fins across the board
+    cube([18, 10.5, 2]);
+    for (j = [0 : 6]) translate([j * 2.83, 0, 2]) cube([1.0, 10.5, 7]);
+  }
+  piece("pots") translate([10, 12.6, 1.6]) difference() {
+    cylinder(d = 2.6, h = 1.2, $fn = 16);
+    translate([-0.2, -1, 0.7]) cube([0.4, 2, 1]);
+  }
 }
 module pen() {                      // Sharpie: black tip, red grip, grey barrel, red cap posted on top
   piece("tip") translate([0, 0, -8]) cylinder(d1 = 1.5, d2 = 3, h = 4);

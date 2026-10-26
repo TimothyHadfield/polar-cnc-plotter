@@ -48,11 +48,14 @@ MATS = {
     "y_belt": BELT,
     "platter": ("#d3d6da", 0.75, 0.38), "paper__sheet": ("#ffffff", 0.0, 0.85), "steel_strip": ("#8d9196", 0.7, 0.45),
     "cd__disc": ("#dfe6ee", 0.45, 0.12), "cd__hub": ("#e9eef3", 0.0, 0.2),
-    "electronics__uno": ("#0b6f8a", 0.0, 0.45), "electronics__chips": BLACK, "electronics__ports": ALU,
-    "electronics__shield": ("#1f4fa8", 0.0, 0.45), "electronics__pins": BLACK,
-    "electronics__terminal": ("#2b8f4f", 0.0, 0.45),
-    "electronics__drivers": ("#3c2c74", 0.0, 0.45), "electronics__heatsinks": ("#b8bcc2", 0.9, 0.35),
-    "electronics__pots": ("#d7d9dc", 0.6, 0.4),
+    # electronics as in Tim's photos (2026-10-26): blue Uno, red shield, yellow sockets, blue heat sinks
+    "electronics__uno": ("#1f4fb4", 0.0, 0.4), "electronics__chips": BLACK, "electronics__ports": ("#cfd3d8", 1.0, 0.3),
+    "electronics__button": ("#e57d8c", 0.0, 0.5),
+    "electronics__shield": ("#d42a20", 0.0, 0.42), "electronics__sockets": ("#f2c21b", 0.0, 0.45),
+    "electronics__terminal": ("#2357d8", 0.0, 0.4), "electronics__pins": ("#d8dadd", 1.0, 0.25),
+    "electronics__black": ("#18191b", 0.0, 0.5), "electronics__white": ("#f3f1ea", 0.0, 0.5),
+    "electronics__drivers": ("#1c1d20", 0.0, 0.5), "electronics__heatsinks": ("#2346d6", 0.6, 0.35),
+    "electronics__pots": ("#ece8dc", 0.0, 0.5),
     "power_jack": BLACK,
 }
 

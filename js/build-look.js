@@ -176,15 +176,18 @@ export function extras(pen_y = -11.5, platter_z = 40) {
   wires.name = 'wires';
   // carriage (X) motor: out of the plug on top, back along the right stand, down to the shield
   wires.add(ribbon('wires__x', [[128, 20.5, 133], [128, 22, 145], [138, 40, 156], [158, 63, 146], [165, 66, 70],
-    [171, 44, 5], [168, 5, 3], [161, -20, 17]]));
+    [171, 44, 5], [170, 5, 6], [168, -12, 40], [159.8, -19.1, 29.8]]));
   // platter (Y) motor: along the board behind the platter to the shield
   wires.add(ribbon('wires__y', [[-68, 15, 13], [-66, 26, 6], [-45, 35, 2.5], [60, 36, 2.5], [112, 22, 2.5],
-    [140, -4, 3], [151, -20, 17]]));
-  // pen-lift (Z) motor: a slack loop from the carriage over to the right stand, then down with the X wires
+    [128, 2, 6], [128, -12, 40], [135.3, -19.1, 29.8]]));
+  // pen-lift (Z) motor: a slack loop from the carriage over to the right stand, then down with the X wires.
+  // Its plug lead is brown/red/orange/yellow, as in Tim's photo of the shield.
   wires.add(ribbon('wires__z', [[0, 27, 155], [0, 30, 172], [25, 48, 190], [85, 63, 182], [140, 68, 165],
-    [161, 69, 140], [167, 69, 70], [174, 46, 5], [170, 2, 3], [134, -20, 17]], WIRE, 0.45));
-  // 12 V from the jack to the screw terminal
-  wires.add(ribbon('wires__power', [[185, 25, 3], [189, 5, 2.5], [188, -40, 3], [184, -54, 22]], [0xd0302a, 0x1b1c1f], 0.7));
+    [161, 69, 140], [167, 69, 70], [178, 46, 5], [180, 2, 8], [170, -38, 42], [159.8, -44.8, 29.8]],
+    [0x6b4226, 0xd0302a, 0xf08a24, 0xf2c418], 0.45));
+  // 12 V from the jack to the shield's blue screw terminal
+  wires.add(ribbon('wires__power', [[185, 25, 3], [189, 5, 2.5], [197, -30, 4], [199, -51, 14], [193.5, -51, 16.6]],
+    [0xd0302a, 0x1b1c1f], 0.7));
 
   // paper clip over the platter edge (as in docs/photos/full-machine.jpg)
   const loop = [[0, 0], [30, 0], [32.5, 2.5], [32.5, 6], [30, 8.5], [3, 8.5], [0.5, 6], [0.5, 2.8], [3, 1.6],
