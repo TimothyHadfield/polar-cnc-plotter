@@ -31,7 +31,15 @@ app's Calibrate tool. Safety: never plug/unplug motors powered; probe only the k
 **2026-10-26:** Tim reported Vrefs 1.0 / 1.2 / 1.3 V (didn't say which driver). Told him: fine for
 the two NEMA 17s (≤0.92 A rms of 1.5 A), but whichever is the Z (micro stage, 100-300 mA) must go
 to ~0.3 V. Then set: **X 1.0 V, Y 1.0 V, Z 0.3 V** (Tim). Ω-test results still not reported; no
-serial port present at that time (USB unplugged).
+serial port present at that time (USB unplugged). Later Tim plugged USB straight into the laptop
+(same cable as before): still no device at all, no PnP event since 2026-10-24 12:36 (the smoke day).
+Suspect the Uno's USB polyfuse / 16U2 or a 5 V short on the shield; asked Tim for ON/L LED state
+with USB only, then with the shield off.
+Upgrade parts built 2026-10-26 by builders (Tim: "send sub-agents to work on the other tasks"),
+merged: platter_hub + motor_stand (direct drive; platter ~23 mm higher, check clearance),
+motor_plate 2 mm recess (+1 mm pad, screws 1 mm longer), pulley_m3 + idler_washer (M3 x 25 bolt),
+big_pulley_gt2 (true GT2 60T), paper_ring (magnets need 8; tape version free). Details in
+docs/components.md §7. Build-guide assembly NOT updated for these.
 Also 2026-10-26: carriage plate got a 1.5 mm pocket for the micro linear stage (3fed47d); build
 guide electronics redrawn from Tim's photos (blue Uno, red shield, yellow sockets, blue heat sinks,
 Z lead brown/red/orange/yellow, A slot empty).
