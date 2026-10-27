@@ -44,6 +44,12 @@ steps/mm may change, fix in Calibrate). The bad drivers likely explain X shaking
 **Next at the machine:** finish that swap, re-measure 5V-GND (kΩ), Ω-test coil pairs of X and Y
 (Tim swapped the middle wires on 10-24, so the order may now be wrong), USB + 12 V, set Vrefs
 (X/Y TMC 1.0 V), then tiny jogs after Tim says "ready".
+**2026-10-27 done:** swap done (X new TMC, Y = old Z TMC, Z = red A4988 at 0.08 V, unknown Rs), both
+NEMA plugs were red-blue-green-black with coils red-green / blue-black -> middle wires swapped on
+both. Claude on COM3 (GRBL 1.1h, Idle, $100-102 = 250): X±2, Y±1, Y±10 all completed per GRBL,
+**Tim: nothing moved, no sound.** With `$1=255` X and Y hold stiff (Z loose) -> power, enable,
+coils OK; step pulses not reaching the drivers. Suspect shield seated one pin off on the Uno
+(reseated today) or bent pins. `$1` restored to 25.
 Upgrade parts built 2026-10-26 by builders (Tim: "send sub-agents to work on the other tasks"),
 merged: platter_hub + motor_stand (direct drive; platter ~23 mm higher, check clearance),
 motor_plate 2 mm recess (+1 mm pad, screws 1 mm longer), pulley_m3 + idler_washer (M3 x 25 bolt),
