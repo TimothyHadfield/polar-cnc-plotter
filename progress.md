@@ -50,6 +50,12 @@ both. Claude on COM3 (GRBL 1.1h, Idle, $100-102 = 250): X±2, Y±1, Y±10 all co
 **Tim: nothing moved, no sound.** With `$1=255` X and Y hold stiff (Z loose) -> power, enable,
 coils OK; step pulses not reaching the drivers. Suspect shield seated one pin off on the Uno
 (reseated today) or bent pins. `$1` restored to 25.
+Later 10-27: power was not fully connected; after that **X works perfectly** (Tim, in the app).
+Y driver got misinserted (one pin row off) and ran hot -> dead. Tim measured every driver (his
+meter, same points): good = black ~8 kΩ, red ~13 kΩ; dead = 1 black ~20 Ω, 2 red ~10 Ω, 2 red
+~100 Ω (told him to bin them). Now **3 black TMC2209: X 1.0 V, Y 1.0 V, Z 0.3 V**; 1 good red
+A4988 spare. Clicking on any jog = all motors re-enabled ($1=25), harmless. Y and Z not yet
+re-tested with the good drivers.
 Upgrade parts built 2026-10-26 by builders (Tim: "send sub-agents to work on the other tasks"),
 merged: platter_hub + motor_stand (direct drive; platter ~23 mm higher, check clearance),
 motor_plate 2 mm recess (+1 mm pad, screws 1 mm longer), pulley_m3 + idler_washer (M3 x 25 bolt),
