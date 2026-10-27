@@ -35,6 +35,15 @@ serial port present at that time (USB unplugged). Later Tim plugged USB straight
 (same cable as before): still no device at all, no PnP event since 2026-10-24 12:36 (the smoke day).
 Suspect the Uno's USB polyfuse / 16U2 or a 5 V short on the shield; asked Tim for ON/L LED state
 with USB only, then with the shield off.
+**Found 2026-10-26 (Tim's meter, unpowered, shield 5V-GND):** shield off -> Uno fine (COM3 seen).
+All drivers in: 4 Ω (USB fuse tripped, ON LED on then off). No drivers: OL (shield OK). Z alone
+2.3 kΩ (good). **X driver dead (4 Ω)** -> replaced with the last spare TMC2209, Z+X 2.2 kΩ.
+**Y driver damaged (44 Ω)**: no TMC2209 spares left. Plan given to Tim: move the good Z TMC2209 to
+Y, red A4988 on Z (Vref for 0.2 A: R100 0.16 V / R050 0.08 V / R200 0.32 V; Z direction and
+steps/mm may change, fix in Calibrate). The bad drivers likely explain X shaking and Y not moving.
+**Next at the machine:** finish that swap, re-measure 5V-GND (kΩ), Ω-test coil pairs of X and Y
+(Tim swapped the middle wires on 10-24, so the order may now be wrong), USB + 12 V, set Vrefs
+(X/Y TMC 1.0 V), then tiny jogs after Tim says "ready".
 Upgrade parts built 2026-10-26 by builders (Tim: "send sub-agents to work on the other tasks"),
 merged: platter_hub + motor_stand (direct drive; platter ~23 mm higher, check clearance),
 motor_plate 2 mm recess (+1 mm pad, screws 1 mm longer), pulley_m3 + idler_washer (M3 x 25 bolt),
