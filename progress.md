@@ -1,152 +1,116 @@
-# Polar CNC Plotter: progress
+# Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-Last updated 2026-10-25. Read `CLAUDE.md` (what the project is, file map, how to test), then this
-file. The README is the public showcase; its Status section is Tim's own words about the machine.
+_Last updated 2026-10-27. For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+"Authorized next steps" below is approved work._
+1. Read `CLAUDE.md` (project, file map, tests), then this file.
+2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
+   `docs/archive/progress-2026-10-27.md`.
+3. Parts, settings formulas, upgrade parts: `docs/components.md` (§3 bought parts, §6 expected `$`
+   settings + Vref, §7 improvements incl. what the builders made 2026-10-26).
 
 ## Goal right now
-Get the motors moving. 2026-10-24: Tim connected the app; jogs did nothing. Claude talked to GRBL
-directly on COM3 (PowerShell SerialPort, app disconnected first): Idle, no alarm, GRBL 1.1h, and
-jogs X±5 / Y±10 ran to completion per GRBL's own position reports. Tim: nothing moved, no sound,
-driver heat sinks warm. Suspect the 12 V **0.5 A** supply (too weak for 2 steppers + pen lifter);
-Tim is looking for a bigger one. Also: EEPROM holds GRBL factory defaults ($100-102 = 250), so
-calibration must be redone once motors move.
-Later 2026-10-24: new 12 V 5 A supply on the shield's screw terminal (12.5 V measured, 5 V pin 4.5 V)
-changed nothing; motors loose even with `$1=255` (set for the hand test, restored to `$1=25` at
-end of session). Drivers are **TMC2209** (not A4988): knob Vref target ~1.0 V X/Y, ~0.3 V Z
-(I ≈ 0.71·Vref). Found by meter: drivers were plugged in **rotated 180°**; Tim flipped them, then
-motors held. One driver smoked (probe/screwdriver slip shorted pins) and was replaced with a spare.
-Arduino survived. Tim swapped the two middle wires of the X and Y motor plugs (were black, blue,
-green, red).
+Get all three axes moving, then run the app's Calibrate tool. **X (carriage) works.** Y (platter)
+and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Claude guides.
 
-**State at end of 2026-10-24 (Tim took a break):** Vref X 1.3 V, Y 0.4 V, Z 0.4 V. Watched test
-(X ±8, Y ±90 jogs): **carriage (X) shakes back and forth** instead of moving, both before and after
-the middle-wire swap; **platter (Y) doesn't move**; Z untested.
-**Next session, in order:** (1) power off, Ω-test each motor's wires to find the real coil pairs
-(few Ω = pair, OL = not) and put one pair on plug pins 1-2, the other on 3-4. Don't trust colours:
-the swap didn't fix X. If one coil reads OL on every combination, a wire/coil is broken.
-(2) Y Vref to ~1.0 V (0.4 V ≈ 0.28 A is weak for the platter). (3) Rerun watched test; ask Tim
-"ready" in the question box first, keep jogs small since steps/mm are factory 250. (4) Then the
-app's Calibrate tool. Safety: never plug/unplug motors powered; probe only the knob top.
-**2026-10-26:** Tim reported Vrefs 1.0 / 1.2 / 1.3 V (didn't say which driver). Told him: fine for
-the two NEMA 17s (≤0.92 A rms of 1.5 A), but whichever is the Z (micro stage, 100-300 mA) must go
-to ~0.3 V. Then set: **X 1.0 V, Y 1.0 V, Z 0.3 V** (Tim). Ω-test results still not reported; no
-serial port present at that time (USB unplugged). Later Tim plugged USB straight into the laptop
-(same cable as before): still no device at all, no PnP event since 2026-10-24 12:36 (the smoke day).
-Suspect the Uno's USB polyfuse / 16U2 or a 5 V short on the shield; asked Tim for ON/L LED state
-with USB only, then with the shield off.
-**Found 2026-10-26 (Tim's meter, unpowered, shield 5V-GND):** shield off -> Uno fine (COM3 seen).
-All drivers in: 4 Ω (USB fuse tripped, ON LED on then off). No drivers: OL (shield OK). Z alone
-2.3 kΩ (good). **X driver dead (4 Ω)** -> replaced with the last spare TMC2209, Z+X 2.2 kΩ.
-**Y driver damaged (44 Ω)**: no TMC2209 spares left. Plan given to Tim: move the good Z TMC2209 to
-Y, red A4988 on Z (Vref for 0.2 A: R100 0.16 V / R050 0.08 V / R200 0.32 V; Z direction and
-steps/mm may change, fix in Calibrate). The bad drivers likely explain X shaking and Y not moving.
-**Next at the machine:** finish that swap, re-measure 5V-GND (kΩ), Ω-test coil pairs of X and Y
-(Tim swapped the middle wires on 10-24, so the order may now be wrong), USB + 12 V, set Vrefs
-(X/Y TMC 1.0 V), then tiny jogs after Tim says "ready".
-**2026-10-27 done:** swap done (X new TMC, Y = old Z TMC, Z = red A4988 at 0.08 V, unknown Rs), both
-NEMA plugs were red-blue-green-black with coils red-green / blue-black -> middle wires swapped on
-both. Claude on COM3 (GRBL 1.1h, Idle, $100-102 = 250): X±2, Y±1, Y±10 all completed per GRBL,
-**Tim: nothing moved, no sound.** With `$1=255` X and Y hold stiff (Z loose) -> power, enable,
-coils OK; step pulses not reaching the drivers. Suspect shield seated one pin off on the Uno
-(reseated today) or bent pins. `$1` restored to 25.
-Later 10-27: power was not fully connected; after that **X works perfectly** (Tim, in the app).
-Y driver got misinserted (one pin row off) and ran hot -> dead. Tim measured every driver (his
-meter, same points): good = black ~8 kΩ, red ~13 kΩ; dead = 1 black ~20 Ω, 2 red ~10 Ω, 2 red
-~100 Ω (told him to bin them). Now **3 black TMC2209: X 1.0 V, Y 1.0 V, Z 0.3 V**; 1 good red
-A4988 spare. Clicking on any jog = all motors re-enabled ($1=25), harmless. Y and Z not yet
-re-tested with the good drivers.
-Upgrade parts built 2026-10-26 by builders (Tim: "send sub-agents to work on the other tasks"),
-merged: platter_hub + motor_stand (direct drive; platter ~23 mm higher, check clearance),
-motor_plate 2 mm recess (+1 mm pad, screws 1 mm longer), pulley_m3 + idler_washer (M3 x 25 bolt),
-big_pulley_gt2 (true GT2 60T), paper_ring (magnets need 8; tape version free). Details in
-docs/components.md §7. Build-guide assembly NOT updated for these.
-Also 2026-10-26: carriage plate got a 1.5 mm pocket for the micro linear stage (3fed47d); build
-guide electronics redrawn from Tim's photos (blue Uno, red shield, yellow sockets, blue heat sinks,
-Z lead brown/red/orange/yellow, A slot empty).
+**Machine state at end of 2026-10-27 (Tim's reports, not seen by Claude):**
+- Coil order fixed: both NEMA plugs were red-blue-green-black, coils red-green / blue-black, so the
+  middle wires were swapped. Carriage works on X. **Platter motor on the X header: turns smoothly**
+  after its middle wires were swapped (before that: glitchy back and forth).
+- **The Y channel sends nothing:** carriage motor on the Y header doesn't move; platter on Y doesn't
+  move whatever the wire order. Motors hold stiff with `$1=255` (seen 10-27 morning), so enable +
+  12 V reach the drivers; step pulses apparently don't reach Y (and Z).
+- **Last test, result unclear:** motors back on their own headers -> carriage jerky, platter
+  nothing. Not known whether Tim had also swapped the X and Y drivers (Claude asked; Tim
+  interrupted to checkpoint). **Ask him first.**
+  - Drivers swapped: the old Y driver is weak/bad (jerky on X) AND the Y slot is dead.
+  - Not swapped: the carriage got jerky for another reason (recheck its wire order/seating).
+- Drivers left after triage (Tim's meter, same two points on each driver: good black ~8 kΩ, good red
+  ~13 kΩ; low Ω = shorted, binned): 2 good black TMC2209 + 1 red A4988, all in use, **no spares**.
+  A black reading 3 kΩ made the Uno drop off USB, so it was swapped for the red (slot not recorded).
+  Vref: TMC2209 X/Y 1.0 V, Z 0.3 V (I ≈ 0.71·Vref); red A4988 on Z 0.08-0.10 V, on Y ~0.6 V
+  (I = Vref/(8·Rs), Rs unreadable, assume R100).
+- GRBL 1.1h, EEPROM still factory (`$100-102` = 250), `$1=25` (restored).
+
+**Next at the machine, in order:**
+1. Ask Tim whether the drivers were swapped in the last test.
+2. Driver vs slot: a driver that works on X goes in the Y slot.
+3. If the Y slot is dead: is it the shield socket (then clone Y onto the **A slot** with its 2
+   jumpers; check the jumper layout from a photo first) or the Uno's D3/D6? A clone can't fix a
+   dead Uno pin. A new shield/Uno is ~$10-15 = Tim's call (money).
+4. Z: same check, then Ω-test its 4 wires (expect ~10-40 Ω per coil), smallest jogs (factory
+   `$102` = 250 is too fast for the 20 step/rev stage).
+5. Then Calibrate (`$100` ≈ 100, `$101` ≈ 26.67 belt / 8.89 direct drive, at 1/16).
 
 ## Status
-| Area | State |
-|---|---|
-| Site icon (tab + iPhone home screen) | Added 2026-10-17: polar arm with a red pen dot on the app's blue; `icon.svg` + `apple-touch-icon.png` |
-| Machine (mechanics, wiring, GRBL, calibration) | Built (per README) |
-| Plotter app | Live on GitHub Pages, all node tests pass |
-| Real drawings with the app | NOT verified (needs Tim at the machine) |
-| 2026-10-16 sweep | Bug fixes + handoff files, see Decisions |
-
-## CAD (started 2026-10-25)
-Tim's TinkerCad print plate (`Downloads/Polar Potter Custom.stl`, 16 bodies) is redrawn as
-modules in `cad/plotter-parts.scad` (laid out where they sat on his plate; `part=` shows one).
-Checked per part against the original mesh (volume within 0.2%, except bracket -1.5%; teeth are
-measured one-tooth profiles, rotated slightly vs original). Deliberate changes: NEMA screw holes
-3.0 -> 3.4; peg caps attached (`cap_gap`, original floated 0.33 mm = mid-air print); a 0.1 mm
-sliver body and a 0.09 mm disk on one pulley dropped. OpenSCAD 2021.01 installed (winget); Tim
-watches with Design -> Automatic Reload and Preview. Headless render: `openscad -o x.png`.
-Scratch Python env with trimesh: `C:/Users/timha/AppData/Local/Temp/claude/venv3d`.
-
-## Components reference (2026-10-25)
-[docs/components.md](docs/components.md): every part (original guide, Tim's bought/salvaged parts,
-printed parts) with its job, measured findings (big 60T pulley is NOT GT2 pitch: 2.09 vs 2.00 mm),
-expected `$100-102`, improvement ideas and open questions for Tim.
-
-## 3D build guide (built 2026-10-25)
-Tim: "assume everything I have is identical to what the instructables describes ... steps for each
-part with only the items in each step shown. Add all approriate links ... so a user can only use
-this singular cite as all instructions". Live at `build.html` (linked "Build guide" in the app
-header). Read as: guide's layout + Tim's bought parts (Amazon list) + Tim's printed parts.
-- `cad/plotter-assembly.scad` = whole machine, one `show("name")` per part; positions not measured
-  on the real machine are approximate. `tools/make-build-model.py` (venv
-  `C:/Users/timha/AppData/Local/Temp/claude/venv3d`, trimesh) -> `build/plotter.glb` + `build/stl/`.
-- `js/build-steps.js` = all wording, parts, links (edit here); `js/build.js` = three.js 0.160 viewer.
-- Amazon search links (no exact listing found): TMC2209 5-pack, spiral wrap, 12 V supply. Gmail
-  connector needed re-auth, so Tim's order links weren't pulled.
-- Choices Tim didn't make: page title "Build the Plotter", step list/wording, colours, tap-a-part
-  highlight, "Build guide" link placement.
-- Realism + tap-to-select round (2026-10-25). Tim: "be able to select the actual items and have it
-  be highlighted and have a description of it pulled up" + "work really hard to make everything look
-  like it does in real life". Multi-colour parts are split into GLB pieces `<part>__<piece>`
-  (SCAD `sub=` + `piece()`; materials in `MATS` in the exporter, sRGB->linear). `js/build-look.js`
-  paints textures (wood, PLA layer lines, STEPPERONLINE label, red rose drawing on the paper), studio
-  environment, and adds wires + paper clips. Tap a part (or list row) -> blue glow + card with
-  `about` text (`PARTS[k].about` in build-steps.js). X motor now in front of the right stand as in
-  `docs/photos/`. Verified: phone-view WebKit 393px + 1440px, tap -> "Marker pen" card, all 10 steps
-  render, no console errors.
-- X belt fix (Tim, 2026-10-25): "pully nearly directly under the two metel bars ... bottom side of
-  the belt is wrapped around and zip tied to the two little poles on the pen carraige". Belt plane
-  now = rod plane (`belt_y = rod_y`), lower run cut and looped round the carriage pegs with zip
-  ties (`open_belt`, pieces `x_belt__belt` / `x_belt__ties`); idler axle added as his cut nail +
-  tape (`idler_axle`). Step 5 also shows the carriage plate so the pegs are visible.
-- Tim asked for better designs for the idler axle and the platter drive: suggestions recorded in
-  `docs/components.md` §7 (bearing idler on an M3 bolt; direct-drive platter). Not built.
-- Choices Tim didn't make this round: colours/finishes, the rose drawing on the paper, card position
-  (bottom-left of the 3D view), wire routing, the blue highlight colour.
+| Area | State | Notes |
+|---|---|---|
+| Plotter app | live | node tests: see Map |
+| Machine X axis | works (Tim, 10-27) | uncalibrated |
+| Machine Y / Z | not moving | Y channel (driver or slot) suspected; see Goal |
+| 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
+| Carriage plate pocket for micro stage | live STL (3fed47d) | 81.9 x 25.5 x 1.5 mm; Tim to caliper the stage |
+| Upgrade parts (builders, 10-26) | STLs merged | platter_hub, motor_stand, motor_plate 2 mm recess, pulley_m3 + idler_washer, big_pulley_gt2, paper_ring; nothing printed or fitted |
+| Real drawings with the app | NOT verified | needs a working machine |
 
 ## Authorized next steps
-None.
+- 2026-10-26 · "send sub-agents to work on the other tasks" (done: upgrade parts merged).
+- 2026-10-27 · Moving the machine with tiny jogs from Claude's serial session, after a "ready" in
+  the question box each time.
 
-## Standing instructions
-- None recorded for this project yet (no quotes from Tim in the repo). Global rules apply.
+## Standing instructions (Tim's words)
+- "replace my current pen holder with the nicer one I desigend and bought" (the micro linear
+  stage) + "make the arduino and shield V3 and motor drivers in the 3D model look nearly identical
+  to what they actually look like" (done 10-26).
+- Global rules apply (`~/.claude/CLAUDE.md`).
 
 ## Traps
+- **Power off = 12 V AND USB unplugged** before touching drivers or motor plugs. USB alone powers
+  the drivers' 5 V logic. Tim unplugged a motor while powered once (10-27) and misinserted a driver
+  one pin row off (it died).
+- A shorted driver pulls the shield's 5V-GND down to a few Ω, trips the Uno's USB polyfuse (ON LED
+  on, then off), and the laptop sees no COM port at all. Find it by measuring 5V-GND with drivers
+  added one at a time.
+- Clicking from the NEMAs on any jog (even Z) = GRBL re-enabling all drivers (`$1=25`). Harmless.
 - Y axis is platter degrees, not mm (`$101` = steps per degree).
-- Plot/resume tests use FakeGrbl with real timers: slow (minutes) and can time out on a busy machine.
+- Claude can drive the plotter: COM3 at 115200 via PowerShell `System.IO.Ports.SerialPort`, only
+  while the browser app is disconnected. Opening the port resets the Uno: wait ~2.5 s. Ask Tim
+  "ready" in the question box before any move.
+- Plot/resume tests use FakeGrbl with real timers: slow and can time out on a busy machine.
 - `svg.js`, `app.js` UI and `machine.js` are browser-only: verify with phone-view, not node.
-- Claude can reach the plotter itself: COM3 at 115200 via PowerShell `System.IO.Ports.SerialPort`,
-  but only while the browser app is disconnected ("Access denied" otherwise). Ask Tim before moving it.
 - The app hides r/θ until Set center, so before that you can't see whether a jog registered.
+- Model rebuild (`tools/make-build-model.py`) rewrites every STL in `build/stl`; `git checkout --`
+  the ones you didn't change. OpenSCAD from PowerShell needs `-D 'part=\"x\"'`.
+- Worktree folders under `C:/Users/timha/AppData/Local/Temp/claude/wt/` can't always be removed
+  (Permission denied); the weekly sweep handles them.
 
 ## Decisions
-- 2026-10-16 sweep: SVG hidden layers (`display:none` on a group, as Inkscape hides layers) are no
-  longer plotted; a path cut short mid-command now stops there instead of making NaN G-code;
-  Settings number boxes now keep to their own min/max (speed 0 and huge drawing widths were
-  accepted); pasting a web address into the Text box now pastes it instead of fetching a picture;
-  aria-labels on the console and calibrate inputs; blank favicon link to stop a 404.
+- D1 · 2026-10-16 · sweep: hidden SVG layers not plotted; a cut-short path stops instead of NaN
+  G-code; Settings number boxes clamp; pasting a URL in Text pastes it; aria-labels; blank favicon.
+- D2 · 2026-10-25 · 3D build guide = original guide's layout + Tim's bought + printed parts;
+  multi-colour parts as GLB pieces `<part>__<piece>`, materials in `MATS`.
+- D3 · 2026-10-25 · X belt in the rod plane, lower run zip-tied round the carriage pegs, nail idler.
+- D4 · 2026-10-26 · carriage plate pocket 1.5 mm deep, plate +1 mm on that face, sizes from the
+  VXB/Amazon listing (81.3 x 24.9) + 0.3 mm clearance per side.
+- D5 · 2026-10-26 · recommended direct-drive platter (hub on the NEMA shaft, motor stands on the
+  board) and an M3-bolt idler; platter ends ~23 mm higher (clearance unchecked).
+- D6 · 2026-10-27 · red A4988 goes on Z (least demanding axis); TMC2209s on X/Y.
 
 ## NOT verified
-- Anything on the real plotter (USB streaming, pen changes, calibration steps) since 2026-09-29.
-- Web Serial flows were only exercised with `?demo` (FakeGrbl).
-- Build guide: assembly positions are reasoned from the guide photos, not measured; build-step
-  wording not checked by Tim.
+- Anything about the real machine is Tim's report; Claude only sees GRBL's replies.
+- Build guide assembly positions are reasoned from photos, not measured; step wording not checked
+  by Tim.
+- Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
+- Web Serial flows only exercised with `?demo` (FakeGrbl).
 
 ## Rejected / parked
-- (none)
+- ~~Short NEMA motors~~ · 2026-10-25 · with direct drive keep the 42 Ncm motors (details §7).
+
+## Map
+- App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
+  `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
+- Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
+- Tests: `node --test tests/*.test.mjs` · last run 2026-10-27: 96 passed / 0 failed (54 s)
+- Live: https://timothyhadfield.github.io/polar-cnc-plotter/ (`build.html` = guide) · GitHub Pages
+  from `main`; every push redeploys.
+- Python venv for the model: `C:/Users/timha/AppData/Local/Temp/claude/venv3d`.
