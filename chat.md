@@ -21,3 +21,14 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
 - **Open:** ask Tim whether the last test had X/Y drivers swapped; driver-vs-slot for Y (A-slot
   clone if the socket is dead); Z wiring; Calibrate; Tim to caliper the stage + shaft and check
   platter clearance; magnets vs tape for paper_ring (money = Tim).
+
+## 2026-10-28 · motor troubleshooting, plotter being disassembled
+- **Asked:** why the platter went jerky again; "Is anything ruined?" (pulled the Y plug powered);
+  how to free the epoxied platter; "okay back to the troubleshooting".
+- **Decided:** both NEMA plugs at 1-3-2-4; Y channel dead (carriage works on X, not on Y);
+  platter jerk is electrical (spins freely by hand), suspect Tim's extension/plug; bench-test plan.
+- **Built:** nothing (notes only).
+- **Verified how:** Tim's meter and observations only; no COM port present today (USB unplugged).
+  Tests not rerun (no code change since 10-27: 96/96).
+- **Open:** Tim redesigned parts (unknown what) and is disassembling; bench test platter motor
+  direct on X; driver-board swap X<->Y; Z; Calibrate.

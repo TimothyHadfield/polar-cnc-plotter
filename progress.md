@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-10-27. For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-10-28. For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -12,6 +12,23 @@ _Last updated 2026-10-27. For Claude only; Tim doesn't read this. Catch-up autho
 ## Goal right now
 Get all three axes moving, then run the app's Calibrate tool. **X (carriage) works.** Y (platter)
 and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Claude guides.
+
+**Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
+- **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
+  changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat
+  (60-120 °C) + twist to free it; spindle is expendable with direct drive.
+- Both NEMA cables now at plug order **1-3-2-4** (coils on 1-2 / 3-4). Carriage motor: perfect on
+  the X header, **nothing on the Y header** -> Y channel (driver or slot) dead. Driver-board swap
+  between X and Y slots still NOT done (Tim swapped cables instead): that's the open test.
+- **Platter motor on the X header: jerky in both wire orders** (once turned smoothly, then not).
+  Spins freely by hand unpowered, holds when powered -> not mechanical. Suspect an intermittent
+  coil connection in Tim's own orange/yellow extension or a plug pin. Next: bench test, motor
+  plugged straight into X with no extension; wiggle test with Ω (red-green, blue-black ~3 Ω).
+- Tim pulled the Y plug once while powered (idle); afterwards drivers measured unpowered X 9 kΩ,
+  Y 7 kΩ, Z 2 kΩ = not shorted. (He also measured once with power on: readings meaningless.)
+- Bench plan given (in order): 1 platter motor direct on X; 2 driver-board swap X<->Y with the
+  carriage on X (stops = Y driver bad, red spare at ~0.6 V; still works = Y slot bad -> photo of
+  shield, A-slot clone, which can't fix a dead Uno D3/D6); 3 Z last.
 
 **Machine state at end of 2026-10-27 (Tim's reports, not seen by Claude):**
 - Coil order fixed: both NEMA plugs were red-blue-green-black, coils red-green / blue-black, so the
@@ -71,6 +88,10 @@ and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Cla
 - A shorted driver pulls the shield's 5V-GND down to a few Ω, trips the Uno's USB polyfuse (ON LED
   on, then off), and the laptop sees no COM port at all. Find it by measuring 5V-GND with drivers
   added one at a time.
+- Ω readings only mean something with 12 V AND USB unplugged. The test only catches shorts (few Ω
+  to ~100 Ω); readings differ with probe points/polarity, so it can't prove a driver works.
+- Tim says "X motor"/"Y motor" for carriage/platter motor, and sometimes "swapped X and Y" for the
+  cables when the driver boards were meant: confirm which.
 - Clicking from the NEMAs on any jog (even Z) = GRBL re-enabling all drivers (`$1=25`). Harmless.
 - Y axis is platter degrees, not mm (`$101` = steps per degree).
 - Claude can drive the plotter: COM3 at 115200 via PowerShell `System.IO.Ports.SerialPort`, only
