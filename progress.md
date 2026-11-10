@@ -13,6 +13,68 @@ _Last updated 2026-10-28. For Claude only; Tim doesn't read this. Catch-up autho
 Get all three axes moving, then run the app's Calibrate tool. **X (carriage) works.** Y (platter)
 and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Claude guides.
 
+**Update 2026-11-10 (Tim at the machine; he drives the jogs, Claude advises — "I'll tell you what's
+happening with everything and you tell me what to do"):** not rebuilt yet, "get the motors correct
+before I fully rebuild". Hookup: X header = platter motor, Y = carriage, Z = pen; both NEMA cables
+middle-swapped (1-3-2-4). Jogging: only the platter moves, jerking back and forth; carriage and pen
+nothing. Tim rejected the Ω/wiggle test (rightly: both coils read 3 Ω on 10-27 and the platter ran
+smoothly on X right after). Re-read of the 10-27/28 transcript: carriage on X perfect (10-28 19:11);
+then Tim pulled a motor plug off the X header while powered (19:13); X never re-proven since. Next:
+(1) carriage motor on X — smooth = X fine, difference is the platter motor/cable (swap the cables at
+the motor end); jerky too = X driver hurt by the hot-unplug; (2) X/Y driver-board swap for the dead
+Y channel.
+**Result 11-10:** carriage on X ALSO jerks -> X driver (or X slot) is the fault, not the platter
+motor. Next: Y's TMC2209 into the X slot, carriage on X, jog X. Smooth = old X driver dead (bin; then
+Y's trouble is the slot/Uno pin, not its driver). Still jerky = X slot / Uno X pins.
+Tim then: swapping the middle wires "usually works". So first: swap the carriage plug's middle
+wires on X; if smooth, X driver is fine -> have him write down the working colour order pin 1->4
+for each motor (likely the "swapped/not swapped" state got lost across many plug moves).
+Result: carriage on X jerky in BOTH middle-wire orders -> X driver/slot confirmed. Next = driver
+board swap (Y's black TMC2209 into X slot).
+Result: Y's driver in X slot + carriage on X = NO movement at all -> Y driver likely dead (would
+explain the dead Y channel); X driver = jerky (half-damaged). Next: old X driver into the Y slot,
+carriage on Y header, jog Y (jerky = Y slot works, so both black drivers are bad -> new TMC2209s =
+money, Tim's call).
+Result: X driver in Y slot = nothing, BUT Tim inserted it with power still connected (may have
+killed it). Next: X driver back in X slot, carriage on X: jerky = it survived -> Y slot dead (no
+driver ever moves on Y) + Y driver dead; nothing = hot-insert killed it.
+Result: X driver back in X slot, carriage (middle-swapped) on X = PERFECT. Same driver/slot/motor
+jerked in both orders earlier -> intermittent CONTACT (driver pins in the shield sockets, or the
+motor plug), fixed by reseating; not a dead driver. Y driver's "nothing" in the X slot may also be
+seating. Next: label carriage plug colours; platter motor on X (find + label its order); then Y
+driver pressed firmly into the Y slot, carriage on Y, jog Y.
+State then: X drv+carriage on X (works); Y drv+platter on Y = nothing; Z drv+pen on Z = nothing.
+Next: the now-proven X driver into the Y slot (power OFF), carriage on Y header, jog Y: moves = Y
+slot fine, Y driver dead; nothing = Y slot / Uno Y pins dead. Same method for Z after.
+Result: X driver in Y slot (platter left on Y header) = platter JERKS -> Y slot works; old Y driver
+dead. Next: swap platter plug middle wires; still jerky both ways -> reseat driver, then carriage on Y.
+Result: platter plug "wasn't fully connected"; reseated -> platter PERFECT on Y (with the X driver).
+**Both NEMA motors + X and Y slots proven. Old Y driver dead. Only one proven driver** (the old X
+one, now in Y) -> carriage needs a driver: new TMC2209s = money, Tim's call (flagged 11-10).
+Lesson: most "jerky" was half-seated plugs/drivers. Next: Z (pen) — Ω its 4 wires (brown/red/orange/
+yellow) for the pairs (never done), pairs on 1-2 / 3-4, plug fully seated, small Z jogs (app Z feed
+200 mm/min); ask which driver is on Z and its Vref.
+Tim then jogged the pen motor on the X driver (Vref 1.2 V ≈ 0.85 A): "moved a little the first
+time". Told him: very unlikely damaged ($1=25 -> current only during the move + 25 ms); check it's
+not hot and both pairs still read their Ω. Next: pen back on its own Z driver at low Vref (red
+A4988 ~0.15-0.2 V ≈ 0.19-0.25 A; it was 0.08 V = too weak -> the 10-27 "hum, no move").
+Correction (Tim): Z driver is a BLACK TMC2209 (Vref ~0.3 V); it never moved the pen. Pen moved with
+the X driver in the Z slot -> Z slot + pen motor OK; X driver back in X. Next: Z driver into the X
+slot with the carriage (known-good slot+motor): any motion = driver OK (seating/low current: reseat
+in Z, Vref ~0.4 V); nothing = dead like Y -> 2 new drivers needed.
+Simplified (Z driver Vref ~0.2 V, too low to judge on the carriage): Z driver reseated in Z, Vref up
+to ~0.4 V (≈0.28 A), pen on Z, smallest jog. Moves = done; nothing = Z driver dead.
+Result: Z driver at 0.5 V, seated in Z, pen still nothing -> **Z black driver DEAD**. Drivers now:
+X black = only proven one; Y black dead; Z black dead; red A4988 (13 kΩ, never proven) spare.
+Recommended: red A4988 on Z at ~0.15-0.2 V; buy TMC2209s (money = Tim's call) for the second NEMA.
+Tim asked for a for-sure check. Given: (1) one-variable swap = suspect driver in the X slot at the
+good X driver's Vref (1.0 V), carriage on X; (2) hold test: `$1=255` in the app's Settings console,
+shaft stiff = driver powers the coils, free = output dead (10-27 hold test already had Z loose);
+`$1=25` after.
+Result (same X slot + carriage, only the driver changed): Z 1.0 V / 7 kΩ no move; Y 1.3 V / 14 kΩ no
+move; X 1.2 V / 12 kΩ perfect. **Y and Z black drivers confirmed dead** (Ω/Vref only test the
+reference + shorts, not the output stage). Waiting on Tim: buy TMC2209s; red A4988 on Z meanwhile.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat
