@@ -74,6 +74,24 @@ shaft stiff = driver powers the coils, free = output dead (10-27 hold test alrea
 Result (same X slot + carriage, only the driver changed): Z 1.0 V / 7 kΩ no move; Y 1.3 V / 14 kΩ no
 move; X 1.2 V / 12 kΩ perfect. **Y and Z black drivers confirmed dead** (Ω/Vref only test the
 reference + shorts, not the output stage). Waiting on Tim: buy TMC2209s; red A4988 on Z meanwhile.
+Then: GOOD X driver on Z slot, 0.4 V, pen = the NEW micro linear stage (20 steps/rev, 100-300 mA)
+-> still no move. Likely the jog is just too small to see: `$102`=250 factory, app 0.1 step = 25
+microsteps ≈ 1.5 full steps ≈ 0.04 mm (Claude had said "smallest step" — wrong advice). Also the
+slider may be parked at an end of travel. Next: step 10, both directions, watch the lead screw,
+feel for buzz; Ω its pairs (expect ~17-50 Ω each).
+Result: step 10 still nothing, no sound. Claude on COM3: settings factory ($100-102=250, $1=25), Idle;
+4 Z jogs (±2 mm F60, ±5 mm F200) all "ok", MPos Z went 2 -> 0 -> 0 -> GRBL sends Z steps; Tim saw
+nothing. Next: carriage NEMA on the Z header (good driver in Z slot, 0.4 V): moves = Z slot fine ->
+pen motor wiring/pairs; nothing = Z slot / Uno Z pins.
+Result: carriage on Z header: first 5 mm move perfect, then jerky (0.4 V ≈ 0.28 A is weak for a
+belted NEMA, or contact) -> **Z slot works**. Problem = the new pen motor or its wiring. Next: Ω its
+4 wires, pairs on 1-2 / 3-4, seat, retest.
+Result: pen coils = wires 1-3 and 2-4, 20 Ω each (split across the plug). Middle wires swapped ->
+**pen stage MOVES** (Claude's ±5 mm Z jogs F150/F60, Tim watched). END OF 11-10: all 3 motors and
+all 3 slots proven; Y + Z black drivers dead; only 1 good black + red A4988 (untested). Rule
+learned: every motor plug needs its coil pairs on 1-2 / 3-4 (all three were middle-swapped), and
+plugs/drivers pushed fully home. Next: Tim buys TMC2209s (his call); meanwhile red A4988 on Z
+(~0.15-0.2 V); then `$102` from measured travel per rev, then Calibrate.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
