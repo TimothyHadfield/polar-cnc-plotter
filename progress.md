@@ -92,6 +92,16 @@ all 3 slots proven; Y + Z black drivers dead; only 1 good black + red A4988 (unt
 learned: every motor plug needs its coil pairs on 1-2 / 3-4 (all three were middle-swapped), and
 plugs/drivers pushed fully home. Next: Tim buys TMC2209s (his call); meanwhile red A4988 on Z
 (~0.15-0.2 V); then `$102` from measured travel per rev, then Calibrate.
+**2026-11-11:** Tim installed NEW TMC2209s (same Teyleten 5-pack): all 3 motors move, but the platter
+on Y jerks back and forth. Advice: (1) set the new Y driver's Vref (~1.0 V; new boards come
+unset); (2) power off, reseat the platter plug fully, coil pairs on 1-2/3-4 (swap middle wires);
+(3) still jerky -> platter plug on the X header: smooth = Y driver/seating, jerky = platter cable.
+Vref X/Y 1.3 V, Z 0.4 V (fine). Platter jerky in BOTH orders on Y AND on X -> platter plug/cable/
+motor. Next: Ω the plug holes to find the real pairs (a 1-4/2-3 pairing can't be fixed by the
+middle swap — that's how the pen was found); then wiggle; then bypass the orange/yellow extension.
+**Result 11-11: a middle wire of the platter plug wasn't fully connected; fixed. ALL 3 AXES WORK on
+their own headers with their own drivers (Tim).** Next: finish the rebuild, then `$102` for the pen
+stage (measure travel per rev), then the app's Calibrate (`$100`, `$101`).
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what

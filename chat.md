@@ -32,3 +32,14 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   Tests not rerun (no code change since 10-27: 96/96).
 - **Open:** Tim redesigned parts (unknown what) and is disassembling; bench test platter motor
   direct on X; driver-board swap X<->Y; Z; Calibrate.
+
+## 2026-11-10..11 · bench debug to all three axes working
+- **Asked:** "let's keep working on it" (motors before the full rebuild); for-sure driver test;
+  which drivers to buy; returns.
+- **Decided:** Tim drives the jogs, Claude advises; same Teyleten TMC2209 5-pack (Tim bought it).
+- **Found:** Y and Z black drivers dead (one-variable swap in the proven X slot); most "jerky" =
+  half-seated plugs/drivers or split coil pairs; new pen stage coils were 1-3 / 2-4 (middle swap
+  fixed it, verified with Claude's Z jogs on COM3); platter plug middle wire loose.
+- **Verified how:** Tim's observations + GRBL replies on COM3 (settings factory, Z jogs "ok").
+- **Open:** rebuild; `$102` for the stage; Calibrate; Claude's earlier "smallest step" advice was
+  wrong (0.1 mm jog ≈ invisible with factory `$102`).
