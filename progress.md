@@ -102,6 +102,22 @@ middle swap — that's how the pen was found); then wiggle; then bypass the oran
 **Result 11-11: a middle wire of the platter plug wasn't fully connected; fixed. ALL 3 AXES WORK on
 their own headers with their own drivers (Tim).** Next: finish the rebuild, then `$102` for the pen
 stage (measure travel per rev), then the app's Calibrate (`$100`, `$101`).
+**Rebuild ideas (11-11, Tim: "Let me know your ideas before we design anything" = NOTHING
+DESIGNED).** Tim fully disassembled; Z stage + X motor plate good; he REMOVED the two iron bars under
+the board (sharp edge, extra material). His list: Y gears/platter connection, board depth, X idler
+(was a cut nail), PVC-to-board joints, pen line exactly over the platter centre. Proposed: direct
+drive (hub + stand) with the platter SCREWED to the hub (3 M3, not glue); motor stand with slots
+across the pen line for centring + a draw-and-rotate-180° check; printed PVC foot sockets screwed
+from the top (wood screws shorter than the board, so no bars needed) + 4 printed feet; X idler =
+bought bearing GT2 idler (money, his call) or the printed pulley_m3 on an M3 bolt; heights set from
+his measurements. Waiting on his picks + measurements.
+**11-11 later:** Tim rejected screws (heads break the smooth drawing face) AND glue (not removable),
+and said neither centres the plate. New proposal (still NOTHING DESIGNED): one-piece PRINTED platter
+(~200 mm, 3-4 mm + ribs, printed drawing-face-down so the bed side is the smooth top; aluminium disc
+retired) with an integral cone socket underneath that drops onto a cone hub on the motor shaft (set
+screw); a flat on the cone carries torque; self-centring, lifts off. Magnets optional (money = Tim).
+Tim has Bambu printers big enough for anything here. Artifact:
+https://claude.ai/artifact/SPtQF4veYqcU6sS6VpSr3p (v2 shows it).
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
