@@ -123,6 +123,11 @@ https://claude.ai/artifact/SPtQF4veYqcU6sS6VpSr3p (v2 shows it).
 alone (edge support stops flex/wobble at the rim; centres on the edge; keeps the aluminium disc).
 Recommend 3 arms (3 points can't rock; self-centring like a 3-jaw chuck), lips flush with the top,
 slightly springy for snap-on/lift-off. Need: disc diameter + roundness + thickness. NOTHING DESIGNED.
+**11-11 Tim: platter now sits higher, add ~2" to the PVC legs?** Claude: yes it must rise, but by
+~23-25 mm (reasoned, components.md §7: motor 38 + shaft 24 → top ≈64 mm vs 41 before), not 2".
+Recommend making the printed PVC foot sockets the spacer (exact height, no extra joint), sized from
+Tim's measurement: motor + hub + plate stacked on the board → plate top height, plus the carriage's
+lowest point above the board today.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
