@@ -283,7 +283,7 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   fit_test STL stays). plate3 + plate4 re-exported. Slicer (X1C, 0.20 Standard, PLA Basic — Tim's
   last-used presets): p1 11 min/5 g, p2 ~3 h/130 g with supports, p3 3 h 57/198 g, p4 2 h 55/133 g,
   p5 24 min/14 g. plotter-v2.glb REBUILT.
-- Checklist artifact for Tim: https://claude.ai/artifact/… (see chat.md 11-12). Hardware artifact
+- Checklist artifact for Tim: https://claude.ai/artifact/7FoeWjaJ7hR36dzydvh4PC. Hardware artifact
   (F83nn95VXsk6BVKmLUT6v3) updated to match.
 - Still open: pen clip/knob for the new slider (need Tim's caliper numbers: slider size + proud of
   the stage, its holes, pen diameter, idler width, pad thickness, plate back face to slider front).
