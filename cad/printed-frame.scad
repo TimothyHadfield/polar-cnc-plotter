@@ -14,7 +14,8 @@
 // stands -> slide stands + rods onto the base's rails from the front, together, until they stop
 // -> carriage plate onto the blocks, belt on its pegs -> Uno slides into its pocket from the back
 // (set driver currents now; the wheel covers the board) -> platter motor slides into its cage
-// from the front, 4 screws from the top -> wheel onto the shaft, 2 set screws on the flat ->
+// from the front, 4 screws from the top -> shaft collar on, flush with the shaft tip, 2 grub
+// screws on the flat -> wheel pressed down onto the collar's hex taper ->
 // pad, paper, clamp ring snapped over (hooks between the key ribs).
 //
 // Prints: fit_test first (15 min). frame_base (flat; supports from the bed ONLY under the motor
@@ -345,8 +346,9 @@ module cage_demo() {
 }
 
 // 15-minute test print before the big ones: a piece of base rail (printed flat, like the base), the
-// matching stand groove and one rod hole (printed standing, like the stands), and the hub bore with
-// one set screw. Check: groove slides on the rail, a rod goes in snug, the shaft goes in the bore.
+// matching stand groove and one rod hole (printed standing, like the stands), and a slice of the wheel
+// hub's hex socket. Print the collar with it. Check: groove slides on the rail, a rod goes in snug,
+// the shaft goes in the collar, the collar presses into the socket.
 module fit_test() {
   translate([-100, -45, 6]) intersection() { frame_base(); translate([101, 45, -6.5]) cube([23, 25, 7.5]); }
   translate([33, 0, 124]) rotate([0, 90, 0]) translate([0, -45, 0])

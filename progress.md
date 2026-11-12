@@ -210,6 +210,21 @@ Link given: E-outstanding 2-pack B08J9W4PJT (listed 8.5 mm tall = idler_w). 11-1
 we attach the bearing to the stand?" -> kept the fork + M3x25 + nut, made bolt hole and nut pocket
 slots `idler_slot = 4` outward = belt tensioner (pull out, tighten; takes up 8 mm). Nut pocket d6.6
 hex (5.7 flats, slides, can't turn). frame_stand_left.stl re-exported. Artifact v11 shows it.
+Tim asked "are these bearings sure to fit my belt?" -> yes: his X belt is GT2 6 mm, idler listed
+GT2 20T, 6.5 mm tooth width (from listings; product page 503'd).
+
+**11-12 hub: SHAFT COLLAR redesign** (found while animating for Tim's "confused about the Y axis hub
+connection"): the wheel's set screws sat ~95 mm in from the rim, unreachable by any key. Now
+`shaft_collar()` (hex, 18 -> 16.6 mm across flats taper, D bore, 2 M3 grubs at set_z [5, 13] + nuts
+in a slot) goes on the shaft first, flush with the tip (ASSUMES shaft_len 24); wheel hub has a
+matching hex taper socket and presses on. Taper sets wheel height: +-0.1 mm print error ~ +-1 mm
+height, socket ceiling 0.6 above collar top. New frame_collar.stl; frame_wheel.stl changed.
+Artifact v13: 4-step animated webp + collar, tightening close-up, underside socket, plan cut views.
+Scratchpad pipeline (lost on reset): hubmk.scad pre-cuts meshes (preview colours), hub.scad animates.
+**V1/V2 tabs + 3D simulator** (Tim's 11-12 request: build page tabs V1/V2, V2 same format + all
+changes, 3D on left moving/drawing with all 3 axes, machine controls on right) delegated to a builder
+on branch `sim-v2`, worktree C:/Users/timha/AppData/Local/Temp/claude/wt/polar-cnc-plotter-sim.
+If that branch isn't merged, check it before redoing anything.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
