@@ -62,6 +62,7 @@ dt_fit = 0.2;                  // clearance per face
 dt_stop = 5;                   // rail ends this far before the back edge = the stop
 motor_w = 42.3;  motor_fit = 0.4;  cage_wall = 3;
 slide   = 3;
+stop_w  = 6;                   // back-stop rib width (motor plug passes between the ribs)
 ard_x = 40;  ard_y = 76;       // Uno: left edge, USB end (USB + 12 V jack face the back)
 uno_holes = [[14, 2.5], [15.3, 50.7], [66.1, 7.6], [66.1, 35.5]];
 uno_pad = 3;                   // board sits 3 mm up (its solder pins clear)
@@ -77,6 +78,10 @@ module motor_cage() {          // origin = motor axis on the base top
     union() {
       for (s = [-1, 1]) translate([s > 0 ? in : -out, -ly, 0]) cube([cage_wall, 2 * ly, face_z]);
       translate([-out, -ly, face_z]) cube([2 * out, 2 * ly, cage_top]);
+      // back stop (Tim 11-11: "push it in ... until it hits the edge and it's in the perfect
+      // position"): two ribs at the back corners stop the motor with its shaft exactly on the
+      // design centre. The middle stays open for the motor's plug.
+      for (s = [-1, 1]) translate([s > 0 ? in - stop_w : -in, in, 0]) cube([stop_w, ly - in, face_z]);
     }
     // boss + shaft slot, open to the front: the motor slides in from the front with its shaft up
     translate([-11.75, -ly - 1, face_z - 1]) cube([23.5, ly + 1 + slide, cage_top + 2]);
@@ -88,16 +93,23 @@ module motor_cage() {          // origin = motor axis on the base top
   }
 }
 
-module tray() {                // Uno presses onto 4 pegs in its own mounting holes; rim on 3 sides
-  x0 = ard_x - 2.5;  x1 = ard_x + 53.3 + 2.5;  y0 = ard_y - 68.6 - 2.5;
+// Uno slides in (Tim 11-11: "an indent or something where it can fit nicely ... a little overhang
+// so that we can slide the arduino in"): a snug pocket open at the back (USB end), two overhanging
+// lips along the long sides, and the closed front wall is the stop. No pegs, no screws.
+// Lips cover 0.5 mm of board edge; the Uno's headers start ~1.2 mm in from its long edges.
+uno_w = 53.34;  uno_l = 68.58;  uno_fit = 0.3;  uno_wall = 2;
+lip_over = 0.8;  lip_t = 1.2;  lip_from = 18;    // lips start 18 mm from the USB end (clear the jacks)
+module tray() {
+  x0 = ard_x - uno_fit - uno_wall;  x1 = ard_x + uno_w + uno_fit + uno_wall;
+  yf = ard_y - uno_l - uno_fit;                      // inner face of the front wall (the stop)
+  zb = uno_pad + 1.6 + 0.2;                          // lip underside, just above the board
   difference() {
-    translate([x0, y0, 0]) cube([x1 - x0, ard_y - y0, uno_pad + 1.6 + 1.5]);
-    translate([x0 + 2, y0 + 2, -1]) cube([x1 - x0 - 4, ard_y - y0, 9]);
+    translate([x0, yf - uno_wall, 0]) cube([x1 - x0, ard_y - yf + uno_wall, zb + lip_t]);
+    translate([x0 + uno_wall, yf, -1]) cube([x1 - x0 - 2 * uno_wall, ard_y - yf + 1, zb + lip_t + 2]);
   }
-  for (p = uno_holes) translate([ard_x + p[1], ard_y - p[0], 0]) {
-    cylinder(d = 5.5, h = uno_pad);
-    cylinder(d = 2.8, h = uno_pad + 1.6 + 0.6, $fn = 24);                       // peg, holes are 3.2
-  }
+  for (s = [0, 1]) translate([s == 0 ? x0 + uno_wall - 0.01 : ard_x + uno_w + uno_fit - lip_over, yf, zb])
+    cube([lip_over + 0.01, ard_y - lip_from - yf, lip_t]);                     // the overhangs
+  for (p = uno_holes) translate([ard_x + p[1], ard_y - p[0], 0]) cylinder(d = 5.5, h = uno_pad);  // pads
 }
 
 module frame_base() difference() {
@@ -168,6 +180,13 @@ bead_out = 102.5;  bead_z = w_h - 6;   // catch for the clamp ring's hooks (flat
 shaft_d = 5;  shaft_flat = 4.5;  bore_fit = 0.15;
 nut_x = 4.0;  nut_t = 2.6;  nut_w = 5.8;
 set_z = [3.5, w_h - 4.5];
+// Tim 11-11: the disc was only held by friction. Default now: the platter face is PART OF THE
+// WHEEL (a solid top skin, printed face-down on the bed so it comes out flat). Paper is pinched
+// between that face and the clamp ring, and the ring's hooks sit between ribs on the wheel, so
+// nothing can slip. platter = "disc" brings back the aluminium-disc version (lip + friction).
+platter = "printed";
+top_t   = 2;                           // printed platter skin; its top is where the disc top was
+hook_ang = [0, 90, 180, 270];          // clamp ring hooks (16 degrees wide each)
 module platter_wheel() {
   fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
   difference() {
@@ -175,16 +194,24 @@ module platter_wheel() {
       cylinder(d = 22, h = w_h);
       for (a = [30 : 60 : 330]) rotate(a) translate([0, -2.5, 0]) cube([ring_in + 1, 5, w_h]);
       difference() { cylinder(r = ring_out, h = w_h, $fn = 240); translate([0, 0, -1]) cylinder(r = ring_in, h = w_h + 2, $fn = 240); }
-      translate([0, 0, w_h - 0.01]) difference() { cylinder(r = ring_out, h = lip_h + 0.01, $fn = 240); translate([0, 0, -1]) cylinder(r = lip_in, h = 3, $fn = 240); }
+      if (platter == "disc")
+        translate([0, 0, w_h - 0.01]) difference() { cylinder(r = ring_out, h = lip_h + 0.01, $fn = 240); translate([0, 0, -1]) cylinder(r = lip_in, h = 3, $fn = 240); }
+      else
+        translate([0, 0, w_h + disc_t - top_t]) cylinder(r = ring_out, h = top_t, $fn = 240);   // the platter face
       rotate_extrude($fn = 240) polygon([[ring_out - 0.01, bead_z], [bead_out, bead_z], [bead_out, bead_z + 1], [ring_out - 0.01, bead_z + 2]]);
+      // key ribs either side of each hook: the clamp ring can't turn on the wheel
+      for (a = hook_ang, s = [-1, 1]) rotate(a + s * 8.6) translate([ring_out - 0.01, s > 0 ? 0 : -2, bead_z + 2])
+        cube([bead_out - 0.1 - ring_out + 0.01, 2, w_h + (platter == "disc" ? 0 : disc_t) - bead_z - 2]);
     }
+    // the bore stops under the platter face (shaft tip is 1 mm below the old disc seat)
+    cap = platter == "disc" ? w_h + 1 : w_h + disc_t - top_t;
     translate([0, 0, -1]) intersection() {
-      cylinder(d = shaft_d + bore_fit, h = w_h + 2);
-      translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, w_h + 2]);
+      cylinder(d = shaft_d + bore_fit, h = cap + 1);
+      translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, cap + 1]);
     }
     for (z = set_z) translate([0, 0, z]) rotate([0, 90, 0]) cylinder(d = 3.2, h = 110, $fn = 24);
     translate([nut_x, -nut_w / 2, -1]) cube([nut_t, nut_w, set_z[0] + 1 + 3.25]);
-    translate([nut_x, -nut_w / 2, set_z[1] - 3.25]) cube([nut_t, nut_w, 10]);
+    translate([nut_x, -nut_w / 2, set_z[1] - 3.25]) cube([nut_t, nut_w, cap - set_z[1] + 3.25]);
   }
 }
 
@@ -197,7 +224,7 @@ preload = 0.2;                         // hooks are this much short, so they pul
 module clamp_ring() {
   hook_top = -(disc_t + paper_t + (bead_z - w_h) * -1) + preload;   // catch's top face, below the ring
   difference() { cylinder(r = cr_out, h = cr_t, $fn = 240); translate([0, 0, -1]) cylinder(r = cr_in, h = cr_t + 2, $fn = 240); }
-  for (a = [0 : 90 : 270]) rotate(a - 8) rotate_extrude(angle = 16, $fn = 240)
+  for (a = hook_ang) rotate(a - 8) rotate_extrude(angle = 16, $fn = 240)
     polygon([[cr_out, 0.01], [cr_out, hook_top - 1.6], [bead_out - 0.1, hook_top - 1.6],
              [bead_out - 0.8, hook_top - 0.9], [bead_out - 0.8, hook_top], [bead_out + 0.2, hook_top], [bead_out + 0.2, 0.01]]);
 }
@@ -210,9 +237,9 @@ module assembly() {
   color(c_print) stand_left();
   color(c_wheel) translate([0, pen_y, wheel_z0]) platter_wheel();
   if (show_disc) {
-    color(c_metal) translate([0, pen_y, wheel_top]) cylinder(d = disc_d, h = disc_t, $fn = 160);
-    color("white") translate([0, pen_y, plate_top]) cylinder(d = disc_d - 4, h = paper_t, $fn = 160);
-    color(c_wheel) translate([0, pen_y, plate_top + paper_t]) clamp_ring();
+    if (platter == "disc") color(c_metal) translate([0, pen_y, wheel_top]) cylinder(d = disc_d, h = disc_t, $fn = 160);
+    color("white") translate([0, pen_y, plate_top + 0.05]) cylinder(d = disc_d - 4, h = paper_t, $fn = 160);
+    color("#1f5f7a") translate([0, pen_y, plate_top + paper_t + 0.1]) clamp_ring();
   }
   color(c_dark) translate([0, pen_y, face_z]) nema17();
   color(c_dark) translate([mx, col_y0, belt_z]) rotate([-90, 0, 0]) rotate([0, 0, 180]) nema17();
@@ -246,6 +273,14 @@ module rim_section() intersection() {
     color("#1f5f7a") translate([0, 0, w_h + disc_t + paper_t]) rotate(8) clamp_ring();
   }
 }
+// one hook of the clamp ring lifted above its slot between the two key ribs
+module key_demo() intersection() {
+  translate([70, -30, -5]) cube([40, 60, 50]);
+  union() {
+    color(c_wheel) platter_wheel();
+    color("#1f5f7a") translate([0, 0, w_h + disc_t + 12]) clamp_ring();
+  }
+}
 // motor going into its cage from the front
 module cage_demo() {
   color(c_print) intersection() { frame_base(); translate([-60, -80, -10]) cube([120, 110, 70]); }
@@ -255,6 +290,7 @@ module cage_demo() {
 
 module print_stand_right() translate([0, 0, col_x1]) rotate([0, 90, 0]) stand_right();
 module print_stand_left()  translate([0, 0, col_x1]) rotate([0, -90, 0]) stand_left();
+module print_wheel()       translate([0, 0, w_h + disc_t]) rotate([180, 0, 0]) platter_wheel();   // platter face on the bed
 module print_clamp_ring()  translate([0, 0, cr_t]) rotate([180, 0, 0]) clamp_ring();
 
 if (part == "assembly")    assembly();
@@ -269,3 +305,5 @@ if (part == "clamp_ring")  clamp_ring();
 if (part == "print_stand_right") print_stand_right();
 if (part == "print_stand_left")  print_stand_left();
 if (part == "print_clamp_ring")  print_clamp_ring();
+if (part == "print_wheel")       print_wheel();
+if (part == "key")               key_demo();

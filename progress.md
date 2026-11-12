@@ -160,6 +160,16 @@ front** (motor slides in shaft-up, 4 screws from above). Uno on **4 pegs** + 3-s
 4 hooks snap under bead with 0.2 preload. Remaining non-motor screws: 2 wheel set screws + idler M3
 axle. All 5 STLs manifold. Artifact v5. Not checked: dovetail fit in print, hook strength/fit.
 
+**11-11 proto 2 rev (artifact v6).** Tim: "add a edge to one side of the slide ... push it ... until it
+hits the edge and it's in the perfect position" → cage gets 2 back-corner stop ribs (stop_w 6, plug
+passes between); stands already stop (closed groove). Tim: Arduino comments not applied → Uno now
+slides into a pocket from the back (fit 0.3, 0.8 mm overhang lips along long sides from 18 mm past
+the USB end, front wall = stop, 4 pads, no pegs). Tim: disc "relies on friction rather than physical
+connection" → **aluminium disc dropped** (`platter = "printed"`; "disc" restores old lip version):
+wheel has a 2 mm solid top at the old disc-top height, printed face-down (`print_wheel`, the
+frame_wheel.stl); clamp-ring hooks sit between key ribs. Bore/nut slot stop under the skin. Not
+checked: printed face flatness vs the disc, Uno lip clearance to headers (assumed ~1.2 mm).
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat
