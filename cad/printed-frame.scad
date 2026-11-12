@@ -11,18 +11,22 @@
 //
 // Assembly order (pre-print check 11-11): X motor onto the right stand (4 x M3x8 from behind) and
 // the idler onto the left fork (M3x25 + nut) -> 4 bearing blocks onto the 2 rods -> rods into both
-// stands -> slide stands + rods onto the base's rails from the front, together, until they stop
+// stands -> slide stands + rods onto the base's rails from the BACK, pushing forward, together,
+// until they stop (each groove is closed at its back end, which meets the rail's back end)
 // -> carriage plate onto the blocks, belt on its pegs -> Uno slides into its pocket from the back
 // (set driver currents now; the wheel covers the board) -> platter motor slides into its cage
-// from the front, 4 screws from the top -> shaft collar on, flush with the shaft tip, 2 M3x8
-// pan-head screws on the flat -> wheel pressed down onto the collar's hex taper (the screw heads
-// slide up its channel) ->
+// from the front, 4 screws from the top (M3x6, or M3x8 with a printed washer under each head) ->
+// setting gauge on the cage top, shaft collar pushed down onto it, 2 M3x8 pan-head screws on the
+// flat, gauge out -> wheel pressed down onto the collar's hex taper (the screw heads slide up its
+// channel) ->
 // pad, paper, clamp ring snapped over (hooks between the key ribs).
 //
-// Prints: fit_test first (~50 min on Tim's Bambu). frame_base (flat; supports from the bed ONLY under the motor
-// cage's roof), stand_right + stand_left (each lies on its outer face, so every wall grows
+// Prints: (fit_test is optional, ~50 min on Tim's Bambu; Tim skipped it 11-12.) frame_base (flat; supports are needed in ONE place, under
+// the motor cage's roof. They stand on the base itself, so Bambu's "On build plate only" must be
+// UNTICKED or none are made: checked with a headless Bambu Studio slice 11-12), stand_right + stand_left (each lies on its outer face, so every wall grows
 // straight up and the rod holes print vertical and round), wheel (platter face down), clamp_ring
-// (top face down). The stands, wheel and ring need no supports.
+// (top face down), collar (upright), collar_gauge + motor_washers (flat). The stands, wheel and
+// ring need no supports (the stand groove's upper side is relieved for that, see dt_groove).
 // World: X along the rods, Y toward the back, Z up. Base top z = 0, platter centre at x = 0.
 // One part: openscad -D 'part="stand_right"' ...
 
@@ -35,7 +39,9 @@ $fn = 64;
 
 // ---------- numbers to measure (assumed until Tim measures) ----------
 rod_len   = 300;      // the 8 mm rods. Rod holes end 2 mm past +-rod_len/2 (rods may float 4 mm)
-shaft_len = 24;       // platter motor shaft above its face
+shaft_len = 23.5;     // platter motor shaft above its face. STEPPERONLINE 17HE15-1504S product page:
+                      // 23.5 long, D flat 20 long (the flat starts 3.5 above the face). Not used for
+                      // any size any more: the collar's height is set by collar_gauge.
 disc_d    = 200;      // aluminium platter disc
 disc_t    = 1;
 // Pen line (Tim 11-11: "make sure it's all aligned perfectly"). Front-to-back chain from the rods:
@@ -54,9 +60,14 @@ motor_len = 38;  stand_gap = 0.5;
 cage_top  = 6;
 face_z    = motor_len + stand_gap;     // 38.5: motor face, under the cage top
 cage_z    = face_z + cage_top;         // 44.5
-wheel_z0  = cage_z + 1;
-wheel_top = face_z + shaft_len + 1;    // 63.5: the disc rests here
-plate_top = wheel_top + disc_t;        // 64.5
+// Design review 11-12: the wheel seats on a taper, and where it seats moves ~1.2 mm per 0.1 mm of
+// print error on the hex (see the collar). 2 mm over the cage (was 1) so it can never rub; the
+// height no longer hangs on the shaft's length.
+wheel_gap = 2;
+w_h       = 18;                        // wheel height under its top skin
+wheel_z0  = cage_z + wheel_gap;        // 46.5
+wheel_top = wheel_z0 + w_h;            // 64.5: the disc rests here
+plate_top = wheel_top + disc_t;        // 65.5
 lift      = plate_top - 41;            // everything on the rods rises this much
 rod_lo = 75 + lift;
 rod_hi = 137 + lift;
@@ -86,6 +97,19 @@ module obround(d, h, ext) hull() for (y = [-ext, ext]) translate([0, y, 0]) cyli
 module dt_profile(c = 0) polygon([[dt_x - dt_wb / 2 - c, -dt_h - 0.01], [dt_x + dt_wb / 2 + c, -dt_h - 0.01],
                                   [dt_x + dt_wt / 2 + c, c], [dt_x - dt_wt / 2 - c, c]]);
 module along_y(y0, y1) translate([0, y1, 0]) rotate([90, 0, 0]) linear_extrude(y1 - y0) children();
+// The groove cut into a stand (drawn for the right one). Design review 11-12: a stand prints lying
+// on its outer face, so -x is up on the printer and the groove's inner side is a ceiling. As a
+// mirror of the rail's undercut, that side started printing at its free tip, in mid-air, 135 mm
+// long, on a 0.25 mm sliding fit. Now only the OUTER flank is undercut (it prints as a plain slope,
+// and it is the one that holds the stand down); the inner side is a 0.4 mm land against the rail's
+// top corner (it stops the stand moving outward, so the outer hook can't come unhooked), then a
+// 45 degree relief that prints clean.
+dt_land = 0.4;      // one print line wide: any more hangs in the air and sags into the fit
+module dt_groove(c = dt_fit) {
+  xi = dt_x - dt_wt / 2 - c;  zl = c - dt_land;
+  polygon([[dt_x + dt_wb / 2 + c, -dt_h - 0.01], [dt_x + dt_wt / 2 + c, c], [xi, c], [xi, zl],
+           [xi - (zl + dt_h), -dt_h - 0.01]]);
+}
 
 module motor_cage() {          // origin = motor axis on the base top
   in = motor_w / 2 + motor_fit;  out = in + cage_wall;  ly = out + slide;
@@ -166,9 +190,14 @@ module idler_spacer() difference() { cylinder(d = 5.2, h = spacer_t, $fn = 48); 
 module tri_x(x0, w, pts) translate([x0, 0, 0]) rotate([90, 0, 90]) linear_extrude(w) polygon(pts);
 module m3_nut_pocket(depth) cylinder(d = 6.4, h = depth, $fn = 6);
 
+// Design review 11-12: the stand's two faces that look at the base's step (x = 100) and at the
+// base's outer edge (x = 125, where the base's first layers squash outward on the bed) were drawn
+// touching, so any print error there ate the rail's 0.25 clearance. They now stand foot_gap clear;
+// the rail alone places the stand.
+foot_gap = 0.3;
 module stand_body() {
-  translate([lap_x, base_y0, -lap_low]) cube([base_x - lap_x + 0.01, base_y1 - base_y0, lap_low + tongue_top]);
-  translate([base_x, base_y0, -base_t]) cube([col_x1 - base_x, base_y1 - base_y0, base_t + tongue_top]);
+  translate([lap_x + foot_gap, base_y0, -lap_low]) cube([base_x - lap_x + 0.01, base_y1 - base_y0, lap_low + tongue_top]);
+  translate([base_x + foot_gap, base_y0, -base_t]) cube([col_x1 - base_x - foot_gap, base_y1 - base_y0, base_t + tongue_top]);
   translate([col_x0, col_y0, 0]) cube([col_x1 - col_x0, col_y1 - col_y0, rod_hi + arm_h / 2]);
   for (z = [rod_lo, rod_hi]) translate([arm_x0, col_y0, z - arm_h / 2]) cube([col_x0 - arm_x0 + 0.01, col_y1 - col_y0, arm_h]);
   // front gusset: one 10 mm web on the outer side (x 160..170 = on the bed when the stand prints). An inner one at
@@ -181,7 +210,9 @@ module stand_holes() {
     cylinder(d = rod_hole, h = rod_len / 2 - arm_x0 + 2, $fn = 96);    // 2 mm spare: rods up to 304 fit
     cylinder(d1 = rod_hole + 1.2, d2 = rod_hole, h = 0.6, $fn = 96);
   }
-  along_y(base_y0 - 1, base_y1 - dt_stop) dt_profile(dt_fit);   // end flush with the rail end: rods land exactly on rod_y         // groove, closed at the back
+  along_y(base_y0 - 1, base_y1 - dt_stop) dt_groove();   // groove, closed at the back: its end meets the rail's end, so the rods land exactly on rod_y
+  // flared mouth at the front (the end that goes onto the rail first), so both stands start easily
+  hull() { along_y(base_y0 - 1, base_y0 - 0.9) dt_groove(dt_fit + 0.8); along_y(base_y0 + 5, base_y0 + 5.1) dt_groove(); }
 }
 module motor_flange() difference() {
   translate([mx - motor_w / 2, col_y0, belt_z - motor_w / 2]) cube([col_x0 - (mx - motor_w / 2) + 0.01, 4, motor_w]);
@@ -206,7 +237,6 @@ module stand_right() difference() { union() { stand_body(); motor_flange(); } st
 module stand_left() mirror([1, 0, 0]) difference() { union() { stand_body(); idler_fork(); } stand_holes(); }
 
 // ---------- platter wheel ----------
-w_h  = wheel_top - wheel_z0;           // 18
 ring_in = 96;  ring_out = 101.5;
 lip_in  = disc_d / 2 + 0.15;           // the disc drops into this lip: centred to 0.15 mm
 lip_h   = disc_t - 0.2;                // lip stays 0.2 below the disc top, so the clamp presses the disc
@@ -215,14 +245,20 @@ bead_out = 102.5;  bead_z = w_h - 6;   // catch for the clamp ring's hooks (flat
 // (small upright holes print ~0.1-0.2 under), nut slot 2.6 -> 2.8 thick, screw holes 3.2 -> 3.4.
 shaft_d = 5;  shaft_flat = 4.5;  bore_fit = 0.25;
 nut_x = 4.0;  nut_t = 2.8;  nut_w = 5.8;
-// Shaft collar (separate print). Wheel coordinates: z 0 = wheel underside. The collar's top is
-// flush with the shaft tip (easy to set by feel), so it spans z col_z0..col_z1 = 1..15.5.
-// Its outside is a hexagon tapering from 18 to 16.6 across the flats (~2.8 degrees a side).
-// Socket and collar are drawn the same size, so the taper must wedge before the collar's top hits
-// the socket ceiling, or the hex turns with play. 11-12: collar top lowered 1.5 (ceiling gap 0.6 ->
-// 2.1), so even a socket printed ~0.1 a side too big still wedges. Printed holes run small, which
-// only makes the wheel ride a little higher (harmless). Shaft now needs 22.5 mm out of the motor.
-col_z0 = 1;  col_z1 = w_h - 2.5;  col_af0 = 18;  col_af1 = 16.6;
+// Shaft collar (separate print). Wheel coordinates: z 0 = wheel underside. It spans
+// z col_z0..col_z1 = 1..15.5. Socket and collar are drawn the same size, so the taper must wedge
+// before the collar's top hits the socket ceiling (2.1 above it), or the hex turns with play.
+// Design review 11-12:
+// - The taper was 2.8 degrees a side, where 0.1 mm of print error per side moves the wheel 2 mm.
+//   Now 19 -> 16.5 across the flats (4.9 degrees a side: 1.2 mm per 0.1 mm, still self-locking,
+//   easier to pull off). Printed sockets run small, so expect the wheel 0.5-2 mm above nominal:
+//   harmless (the pen's height is set in its clip).
+// - The collar's height on the shaft is set by collar_gauge (collar underside wheel_gap + col_z0
+//   above the cage top), not by the shaft tip. Tim's 23.5 shaft then ends flush with the collar's
+//   top; any shaft from 21 to 25.4 works (top screw still on it / tip still under the wheel skin).
+// - Its bottom edge is chamfered: the first layers squash outward on the bed, and a flared foot
+//   would be the only thing touching the socket (wheel rocks).
+col_z0 = 1;  col_z1 = w_h - 2.5;  col_af0 = 19;  col_af1 = 16.5;
 sock_top = w_h - 0.4;                  // socket ceiling, under the wheel's top skin
 set_z = [col_z0 + 4, col_z1 - 4];      // collar screws, 6.5 mm apart (4 and 10.5 below the shaft tip)
 // Collar screws (Tim 11-12: "I just got 8 M3 8mm screws", pan-head Phillips, used instead of grub
@@ -232,13 +268,17 @@ set_z = [col_z0 + 4, col_z1 - 4];      // collar screws, 6.5 mm apart (4 and 10.
 scr_len = 8;  scr_head_d = 5.6;  scr_head_k = 2.4;
 chan_w  = scr_head_d + 1.4;                          // channel width (y)
 chan_x  = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2 + scr_len + scr_head_k + 1;   // head top + 1 = 13.5
-chan_z  = set_z[1] + scr_head_d / 2 + 0.8;           // channel top, above the upper head
+chan_z  = set_z[1] + scr_head_d / 2 + 2.2;           // channel top: as much room over the upper head as
+                                                     // the collar has under the socket ceiling
 hub_d   = 2 * (chan_x + 3);                          // 3 mm of wall outside the channel (33)
 function col_af(z) = col_af0 + (col_af1 - col_af0) * (z - col_z0) / (col_z1 - col_z0);
 module collar_shape(z0, z1) hull() for (z = [z0, z1]) translate([0, 0, z]) rotate(30)
   cylinder(d = col_af(z) * 2 / sqrt(3), h = 0.01, $fn = 6);     // flats face +-x
 module shaft_collar() difference() {     // built in wheel coordinates
-  collar_shape(col_z0, col_z1);
+  hull() {
+    collar_shape(col_z0 + 0.6, col_z1);
+    translate([0, 0, col_z0]) rotate(30) cylinder(d = (col_af(col_z0) - 1) * 2 / sqrt(3), h = 0.01, $fn = 6);
+  }
   fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
   translate([0, 0, col_z0 - 1]) intersection() {
     cylinder(d = shaft_d + bore_fit, h = col_z1 - col_z0 + 2);
@@ -283,6 +323,8 @@ module platter_wheel() {
     // wedges tight, so there is no play and no tilt. Pull up to take the wheel off.
     translate([0, 0, -0.01]) collar_shape(0, sock_top + 0.01);
     translate([0, -chan_w / 2, -0.01]) cube([chan_x, chan_w, chan_z + 0.01]);   // screw-head channel
+    // room for a shaft tip up to 0.8 above the socket ceiling (0.6 of skin stays, printed on the bed)
+    if (platter != "disc") translate([0, 0, sock_top - 0.01]) cylinder(d = shaft_d + 0.8, h = w_h + disc_t - 0.6 - sock_top + 0.01);
   }
 }
 
@@ -375,6 +417,22 @@ module fit_test() {
   translate([88, 16, 0]) intersection() { platter_wheel(); cylinder(d = hub_d + 1, h = 10); }   // the collar's socket
 }
 
+// Setting gauge (design review 11-12): lies on the cage top across the shaft slot; the collar is
+// pushed down onto it, its screws tightened, and the gauge pulled out toward the front. Puts the
+// collar's underside wheel_gap + col_z0 above the cage whatever the shaft's length. 14 mm wide, so
+// it passes between the cage's screw heads (y = +-15.5). Origin = the shaft; the tab is the handle.
+module collar_gauge() difference() {
+  translate([-22, -7, 0]) cube([62, 14, wheel_gap + col_z0]);
+  hull() for (y = [0, 10]) translate([0, y, -1]) cylinder(d = shaft_d + 1, h = wheel_gap + col_z0 + 2);
+}
+// Washers for the platter motor's 4 screws (design review 11-12): the cage roof is 2.5 mm under
+// the sunk heads, so an M3x8 would reach 5.5 mm into the motor, whose threads are ~4.5 deep: it
+// bottoms out and the motor stays loose. With one of these under each head it reaches 4.0.
+// Not needed with M3x6 screws. 6 = 4 + 2 spares.
+washer_t = 1.5;
+module motor_washers() for (i = [0 : 5]) translate([i * 8, 0, 0])
+  difference() { cylinder(d = 6, h = washer_t, $fn = 48); translate([0, 0, -1]) cylinder(d = 3.4, h = washer_t + 2, $fn = 24); }
+
 module print_stand_right() translate([0, 0, col_x1]) rotate([0, 90, 0]) stand_right();
 module print_stand_left()  translate([0, 0, col_x1]) rotate([0, -90, 0]) stand_left();
 module print_wheel()       translate([0, 0, w_h + disc_t]) rotate([180, 0, 0]) platter_wheel();   // platter face on the bed
@@ -398,3 +456,5 @@ if (part == "fit_test")          fit_test();
 if (part == "collar")            shaft_collar();
 if (part == "print_collar")      translate([0, 0, -col_z0]) shaft_collar();
 if (part == "idler_spacers")     for (x = [0, 8]) translate([x, 0, 0]) idler_spacer();
+if (part == "collar_gauge")      collar_gauge();
+if (part == "motor_washers")     motor_washers();

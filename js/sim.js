@@ -27,11 +27,12 @@ const MACHINES = {
   },
   2: {   // cad/printed-frame.scad assembly()
     url: 'build/plotter-v2.glb', extras: () => extrasV2(),
-    centre: [0, -11], travel: [-78, 98],
+    // travel: the carriage plate meets the idler fork at 93.5 (OpenSCAD intersection, 11-12), the motor flange at 78
+    centre: [0, -11], travel: [-78, 93],
     platter: ['wheel', 'collar', 'pad', 'paper', 'clamp_ring', 'y_motor__shaft'],
     motor: null,                                                                       // direct drive
-    pulleys: [{ name: 'x_pulley', at: [128, 129.5], r: 5.09 }, { name: 'idler', at: [-133, 129.5], r: 6.37 }],
-    belt: { from: -133, to: 128, z: 129.5 },
+    pulleys: [{ name: 'x_pulley', at: [128, 130.5], r: 5.09 }, { name: 'idler', at: [-133, 130.5], r: 6.37 }],
+    belt: { from: -133, to: 128, z: 130.5 },                                           // z = belt_z in the scad
   },
 };
 const P = (x, y, z) => new THREE.Vector3(x, z, -y);   // cad mm -> three.js (Y up)

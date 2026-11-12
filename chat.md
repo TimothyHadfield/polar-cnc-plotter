@@ -43,3 +43,19 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
 - **Verified how:** Tim's observations + GRBL replies on COM3 (settings factory, Z jogs "ok").
 - **Open:** rebuild; `$102` for the stage; Calibrate; Claude's earlier "smallest step" advice was
   wrong (0.1 mm jog ≈ invisible with factory `$102`).
+
+## 2026-11-12 · fasteners, no fit test, then a full engineering review
+- **Asked:** which screws/nuts and where to buy (Ace, Orem); use his M3 × 8 pan heads on the
+  collar; "I'm not gonna do a test print"; after switching model: "let's do all of that. I have the
+  base plate design actively printing right now but that's it."
+- **Decided:** base untouched (printing); stands, wheel, collar free to change; fit test dropped
+  from plate 1; printed washers instead of buying M3 × 6.
+- **Built:** stand groove relief + foot clearance, steeper collar taper, collar gauge, motor
+  washers, wheel 2 mm over the cage (lift +1), guide wording fixes (stands from the back, supports
+  setting, gauge, 1.0 V, GRBL speeds), sim travel 93, plotter-v2.glb rebuilt, plates 1/3/4.
+- **Verified how:** OpenSCAD intersections (seated, sliding in, stop, lift, travel 93/94, screw
+  sweep, spinning envelope vs everything fixed: all as expected); headless Bambu Studio slices of
+  all 5 plates with Tim's X1C presets; 101/101 node tests; phone-view 393 px + 1440 px of
+  build.html?v=2 and sim.html?v=2 on localhost.
+- **Open:** did the base print have supports under the cage roof (see progress.md); pen clip for
+  the new slider needs Tim's measurements; nothing printed from the changed parts yet.

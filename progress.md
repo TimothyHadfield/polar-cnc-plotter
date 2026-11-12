@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-10-28. For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-12 (engineering review block, search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -250,6 +250,49 @@ slot 2.6 -> 2.8, collar screw holes 3.2 -> 3.4, collar top lowered 1.5 (col_z1 1
 out. Rod holes kept 8.2 (vertical, snug wanted). All frame STLs + 5 plates re-exported; clash check
 still empty. plotter-v2.glb still not rebuilt.
 
+**11-12 ENGINEERING REVIEW (Tim switched to Fable 5.2: "let's do all of that. I have the base plate
+design actively printing right now but that's it").** Base (plate 2) was printing: NOT changed
+(re-export is geometrically identical). Everything else changed freely. Read this before touching CAD.
+- **BASE SUPPORTS (open, Tim to answer):** the old wording "supports from the bed only" was WRONG.
+  Headless Bambu Studio slice: "On build plate only" ticked = 0 supports under the motor cage roof
+  (they'd stand on the base, not the bed); unticked = a column under the roof, nowhere else. Told
+  Tim mid-print to look for supports inside the cage. If he printed without: roof (two 9.8 mm
+  cantilever strips + 43 mm bridge, the motor's seat) sags -> reprint or trim; ask him.
+- **Stand groove:** as a mirror of the rail it was a ceiling when printed (stand lies on its outer
+  face); the slicer wanted a support wall along all 135 mm (measured, old STL). Now `dt_groove`:
+  outer flank undercut as before, inner side = 0.4 land + 45° relief, flared mouth at the front.
+  Slicer now puts supports only at the motor-flange recess and the idler slot (ignore; not needed).
+- **Stand foot:** faces at x 100 and x 125 were drawn touching the base (0 clearance) -> `foot_gap 0.3`.
+- **Stands go on from the BACK, pushed forward** (groove closed at the back). Guide/header said
+  "from the front": wrong, fixed. Checked: stands +60 in y = no clash; -60 = clash.
+- **Collar/wheel:** taper 18->16.6 became 19->16.5 (4.9°/side; 0.1 mm error = 1.2 mm of wheel
+  height, was 2 mm); collar bottom chamfered (elephant foot); `wheel_gap = 2`, `w_h = 18` fixed, so
+  **lift 24.5, belt_z 130.5, plate_top 65.5** (all +1; stands only). Collar height now set by new
+  `collar_gauge` (3 mm fork on the cage top), not "flush with the shaft tip". Shaft per OMC page:
+  23.5 long, 20 flat (was assumed 24); works 21-25.4. Tip pocket in the wheel skin; chan_z +1.4.
+- **Platter motor screws:** roof is 2.5 under the heads, M3x8 would go 5.5 into ~4.5 deep threads
+  -> new `motor_washers` (1.5 thick, x6) or M3x6. Tim needs 10 short screws (has ~8 + old ones) and
+  1 more nut.
+- **Travel toward the idler = 93.5** (carriage plate's raised block meets the fork cheek; empty at
+  93, clash at 94), not ~98. sim.js travel [-78, 93], belt z 130.5.
+- **Motion (reasoned, not measured):** wheel+pad+ring ~1.25e-3 kg·m², ~230x the rotor; rings at
+  ~14-19 Hz. Start `$110=6000 $111=7200 $120=500 $121=300` (in the guide). Vref X/Y back to 1.0 V in
+  the V2 guide (was 1.3): 0.9 A in a PLA cage runs the motor near PLA's softening point; torque
+  needed is ~3% of what 0.7 A gives.
+- **Plates:** plate1 is now `plate1_collar_gauge_and_washers.3mf` (fit test dropped from it; the
+  fit_test STL stays). plate3 + plate4 re-exported. Slicer (X1C, 0.20 Standard, PLA Basic — Tim's
+  last-used presets): p1 11 min/5 g, p2 ~3 h/130 g with supports, p3 3 h 57/198 g, p4 2 h 55/133 g,
+  p5 24 min/14 g. plotter-v2.glb REBUILT.
+- Checklist artifact for Tim: https://claude.ai/artifact/… (see chat.md 11-12). Hardware artifact
+  (F83nn95VXsk6BVKmLUT6v3) updated to match.
+- Still open: pen clip/knob for the new slider (need Tim's caliper numbers: slider size + proud of
+  the stage, its holes, pen diameter, idler width, pad thickness, plate back face to slider front).
+- Tools (scratchpad, lost on reset; rebuild from this): headless slice =
+  `bambu-studio.exe --slice 0 --arrange 0 --orient 0 --load-settings "machine.json;process.json"
+  --load-filaments filament.json --outputdir . --export-3mf out.3mf in.3mf` with the three presets
+  FLATTENED first (walk `inherits` in `%APPDATA%/BambuStudio/system/BBL/{machine,process,filament}`;
+  unflattened it silently uses defaults). No window opens. Count `; FEATURE: Support` in the gcode.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat
@@ -368,7 +411,8 @@ still empty. plotter-v2.glb still not rebuilt.
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-10-27: 96 passed / 0 failed (54 s)
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-12: 101 passed / 0 failed (26 s)
 - Live: https://timothyhadfield.github.io/polar-cnc-plotter/ (`build.html` = guide) · GitHub Pages
   from `main`; every push redeploys.
-- Python venv for the model: `C:/Users/timha/AppData/Local/Temp/claude/venv3d`.
+- Python venv for the model: `C:/Users/timha/AppData/Local/Temp/claude/venv3d` (Temp gets swept:
+  if it says "No pyvenv.cfg", `python -m venv --clear` it and `pip install trimesh numpy`).
