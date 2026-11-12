@@ -187,6 +187,20 @@ rejected: the face prints on the bed, so the pocket floor would be in mid-air. A
 D-bore 0.15 loose, 17 mm engagement, 2 set screws 10 apart on the flat + trapped nuts, tightening
 order. Reasoned: 0.5° / 0.9 mm edge lean without the screws, removed when both are tight.
 
+**11-11 pre-print check (artifact v9).** Tim: "go through every single part ... until you're confident".
+Measured with OpenSCAD intersections (scratchpad clash.scad: carriage stack translated to cx vs each
+frame part) + an STL overhang scan (faces within 30° of flat-down, off the bed). Found + fixed:
+pen reach — app only uses s >= 0 (polar.js) and needs 90; blocks hit the idler fork at cx -78 and
+the plate hits the X motor flange at +78 -> `ix = rod_len/2 - 17` (133): idler side clear at -92,
+contact ~-98. **Pen draws on the idler (left) side**; flip GRBL `$3` X bit if direction is wrong.
+Inner front gusset (x 148..154) printed over air -> one `tri_x(160, 10)`. Motor cage roof = 10 mm
+flat overhang -> base needs supports "build plate only" (only there). Hooks at 0° covered the
+set-screw holes -> `hook_ang` 45/135/225/315. Rod holes now end 2 mm past rod_len/2. New part
+`fit_test` (frame_fit_test.stl): rail slice, groove slice, rod hole, hub bore, same orientations.
+OK as is: belt plane, idler centred (1.9 play/side), plugs (X up; platter out the back between ribs),
+wheel ~10 mm over drivers (set Vref before the wheel). Groove's upper flank = 3 mm 20° overhang
+(may sag; fit test). Hardware: X motor 4×M3x8, platter 4×M3x6, idler M3x25+nut, 2 M3 grubs+nuts.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat

@@ -9,14 +9,18 @@
 // platter motor must actually go into its cage -> cage top slotted open to the front; the disc
 // is held by a snap-on clamp ring instead of edge fingers ("I don't see how they're useful").
 //
-// Assembly order: rods (with the bearing blocks on) into both stands -> slide the stands + rods
-// onto the base's two rails from the front, together, until they stop -> platter motor slides
-// into its cage from the front, 4 screws from the top -> wheel onto the shaft, 2 set screws ->
-// disc into the wheel's lip, paper on top, clamp ring snapped over -> Uno pressed onto its pegs.
+// Assembly order (pre-print check 11-11): X motor onto the right stand (4 x M3x8 from behind) and
+// the idler onto the left fork (M3x25 + nut) -> 4 bearing blocks onto the 2 rods -> rods into both
+// stands -> slide stands + rods onto the base's rails from the front, together, until they stop
+// -> carriage plate onto the blocks, belt on its pegs -> Uno slides into its pocket from the back
+// (set driver currents now; the wheel covers the board) -> platter motor slides into its cage
+// from the front, 4 screws from the top -> wheel onto the shaft, 2 set screws on the flat ->
+// pad, paper, clamp ring snapped over (hooks between the key ribs).
 //
-// Prints: frame_base (flat), stand_right + stand_left (each lies on its outer face, so every wall
-// grows straight up and the rod holes print vertical and round), platter_wheel (right side up),
-// clamp_ring (top face down). No supports.
+// Prints: fit_test first (15 min). frame_base (flat; supports from the bed ONLY under the motor
+// cage's roof), stand_right + stand_left (each lies on its outer face, so every wall grows
+// straight up and the rod holes print vertical and round), wheel (platter face down), clamp_ring
+// (top face down). The stands, wheel and ring need no supports.
 // World: X along the rods, Y toward the back, Z up. Base top z = 0, platter centre at x = 0.
 // One part: openscad -D 'part="stand_right"' ...
 
@@ -28,7 +32,7 @@ show_disc = true;      // false: the assembly without disc, paper and clamp ring
 $fn = 64;
 
 // ---------- numbers to measure (assumed until Tim measures) ----------
-rod_len   = 300;      // the 8 mm rods. Rod holes end 0.5 mm past +-rod_len/2
+rod_len   = 300;      // the 8 mm rods. Rod holes end 2 mm past +-rod_len/2 (rods may float 4 mm)
 shaft_len = 24;       // platter motor shaft above its face
 disc_d    = 200;      // aluminium platter disc
 disc_t    = 1;
@@ -141,7 +145,11 @@ arm_x0 = rod_len / 2 - 22;
 arm_h  = 22;
 rod_hole = 8.2;
 mx = 128;
-ix = rod_len / 2 - 30.88;
+// Pre-print check 11-11: the app only ever puts the pen on ONE side of the centre (s >= 0 in
+// polar.js) and needs 90 mm of it (180 mm drawing). With the idler at 119 the bearing blocks hit
+// its fork at 78 mm; at 133 that side is clear to ~99 mm (where the plate meets the arm). The
+// motor side stops at 78 mm (plate meets the motor flange), so the pen draws on the IDLER side.
+ix = rod_len / 2 - 17;
 cheek_t = 4;  idler_gap = 14;
 
 module tri_x(x0, w, pts) translate([x0, 0, 0]) rotate([90, 0, 90]) linear_extrude(w) polygon(pts);
@@ -152,12 +160,14 @@ module stand_body() {
   translate([base_x, base_y0, -base_t]) cube([col_x1 - base_x, base_y1 - base_y0, base_t + tongue_top]);
   translate([col_x0, col_y0, 0]) cube([col_x1 - col_x0, col_y1 - col_y0, rod_hi + arm_h / 2]);
   for (z = [rod_lo, rod_hi]) translate([arm_x0, col_y0, z - arm_h / 2]) cube([col_x0 - arm_x0 + 0.01, col_y1 - col_y0, arm_h]);
-  for (g = [[148, 6], [164, 6]]) tri_x(g[0], g[1], [[col_y0 + 0.01, tongue_top - 0.01], [-40, tongue_top - 0.01], [col_y0 + 0.01, 94]]);
+  // front gusset: one 10 mm web on the outer side (x 160..170 = on the bed when the stand prints). An inner one at
+  // x 148..154 printed as a 6 mm slab hanging over air (pre-print check 11-11), so it went.
+  tri_x(160, 10, [[col_y0 + 0.01, tongue_top - 0.01], [-40, tongue_top - 0.01], [col_y0 + 0.01, 94]]);
   tri_x(164, 6, [[col_y1 - 0.01, tongue_top - 0.01], [base_y1, tongue_top - 0.01], [col_y1 - 0.01, 50]]);
 }
 module stand_holes() {
   for (z = [rod_lo, rod_hi]) translate([arm_x0 - 0.01, rod_y, z]) rotate([0, 90, 0]) {
-    cylinder(d = rod_hole, h = rod_len / 2 - arm_x0 + 0.5, $fn = 96);
+    cylinder(d = rod_hole, h = rod_len / 2 - arm_x0 + 2, $fn = 96);    // 2 mm spare: rods up to 304 fit
     cylinder(d1 = rod_hole + 1.2, d2 = rod_hole, h = 0.6, $fn = 96);
   }
   along_y(base_y0 - 1, base_y1 - dt_stop) dt_profile(dt_fit);   // end flush with the rail end: rods land exactly on rod_y         // groove, closed at the back
@@ -196,7 +206,8 @@ set_z = [3.5, w_h - 4.5];
 // nothing can slip. platter = "disc" brings back the aluminium-disc version (lip + friction).
 platter = "printed";
 top_t   = 2;                           // printed platter skin; its top is where the disc top was
-hook_ang = [0, 90, 180, 270];          // clamp ring hooks (16 degrees wide each)
+hook_ang = [45, 135, 225, 315];        // clamp ring hooks (16 degrees wide each); off the set-screw
+                                       // holes at 0 degrees, so the key reaches them with the ring on
 // Soft pad under the paper (Tim 11-11: vinyl "so that the pen can push slightly further"). It lies
 // on the flat face, cut to the platter's size, and the clamp ring pinches pad + paper together, so
 // the hooks are pad_t longer. (A pocket for it was tried and dropped: the face prints on the bed,
@@ -292,7 +303,7 @@ module rim_section() intersection() {
 }
 // one hook of the clamp ring lifted above its slot between the two key ribs
 module key_demo() intersection() {
-  translate([70, -30, -5]) cube([40, 60, 50]);
+  rotate(45) translate([70, -30, -5]) cube([40, 60, 50]);
   union() {
     color(c_wheel) platter_wheel();
     color("#1f5f7a") translate([0, 0, w_h + disc_t + 12]) clamp_ring();
@@ -303,6 +314,18 @@ module cage_demo() {
   color(c_print) intersection() { frame_base(); translate([-60, -80, -10]) cube([120, 110, 70]); }
   color(c_dark) translate([0, pen_y - 55, face_z]) nema17();
   color("#2f8fb3") translate([0, pen_y - 30, face_z + 30]) rotate([90, 0, 0]) linear_extrude(1) text("slides in", size = 7, halign = "center");
+}
+
+// 15-minute test print before the big ones: a piece of base rail (printed flat, like the base), the
+// matching stand groove and one rod hole (printed standing, like the stands), and the hub bore with
+// one set screw. Check: groove slides on the rail, a rod goes in snug, the shaft goes in the bore.
+module fit_test() {
+  translate([-100, -45, 6]) intersection() { frame_base(); translate([101, 45, -6.5]) cube([23, 25, 7.5]); }
+  translate([33, 0, 124]) rotate([0, 90, 0]) translate([0, -45, 0])
+    intersection() { stand_right(); translate([101, 45, -lap_low - 1]) cube([23, 25, lap_low + tongue_top + 2]); }
+  translate([50, 0, 155]) rotate([0, 90, 0]) translate([0, -40, -rod_lo])
+    intersection() { stand_right(); translate([127, 40, rod_lo - 8]) cube([28, 20, 16]); }
+  translate([85, 12, 0]) intersection() { platter_wheel(); cylinder(d = 26, h = 9); }
 }
 
 module print_stand_right() translate([0, 0, col_x1]) rotate([0, 90, 0]) stand_right();
@@ -324,3 +347,4 @@ if (part == "print_stand_left")  print_stand_left();
 if (part == "print_clamp_ring")  print_clamp_ring();
 if (part == "print_wheel")       print_wheel();
 if (part == "key")               key_demo();
+if (part == "fit_test")          fit_test();
