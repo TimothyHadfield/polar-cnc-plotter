@@ -136,6 +136,18 @@ the full shaft length, seated ~1 mm above the boss; arms tall at the root, taper
 outer ring joining the arm tips (wheel, 6 spokes, top face printed on the bed) because the 1 mm disc
 flexes between 3 arms; grip = 3 thin springy fingers on the ring, inner face ~0.3 mm under the disc
 dia and leaning 2-3° inward so the squeeze pins the plate down; PLA. NOTHING DESIGNED.
+**11-11 PROTOTYPE 1 DESIGNED (Tim: "scrap the wooden board ... and maybe the PVC pipes ... print them
+in 3 separate components (each stand and the bottom plate) ... show me your first prototype/design").**
+`cad/printed-frame.scad` → build/stl/frame_base, frame_stand_right, frame_stand_left (print
+orientation: on the outer face), frame_wheel. Base 250x135 with motor cage (slots ±3 mm in Y for
+pen-line centring, heads sunk 3.5) + Uno tray (USB to the back); stands lap onto stepped base ends,
+3 M3x12 + nuts each; rod holes 8.2 x 22 deep (vertical in print); right stand front face = X motor
+plate; left = idler fork (M3x25, pulley_m3 + 2 idler_washers). Wheel: 6 spokes + ring, 18 deep,
+3 fingers 0.15 mm inside the disc, 2 set screws on the flat 10 apart (clamp dropped: unreachable
+inside the spokes), key holes through the ring. Lift 23.5 → rods 98.5/160.5. All < 256 mm, no
+supports; all 4 STLs manifold (OpenSCAD). Artifact v4 shows renders. NOT printed. Assumed: rod 300,
+shaft 24, disc 200x1, pen_y -11.5, bed 256. Not checked: pen reach ±~90 (reasoned), collisions
+beyond eyeballed renders, horizontal 3.4 holes in stands.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
