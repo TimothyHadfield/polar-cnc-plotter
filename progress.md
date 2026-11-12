@@ -201,6 +201,12 @@ OK as is: belt plane, idler centred (1.9 play/side), plugs (X up; platter out th
 wheel ~10 mm over drivers (set Vref before the wheel). Groove's upper flank = 3 mm 20° overhang
 (may sag; fit test). Hardware: X motor 4×M3x8, platter 4×M3x6, idler M3x25+nut, 2 M3 grubs+nuts.
 
+**11-12 idler: Tim chose to BUY a bearing idler** (question box; he'd found the nail idler loud and
+high-friction). GT2 20T, 3 mm bore, 6 mm belt, ~$7-10 per pack of 5 (his money call, made).
+`idler_spacer` (d5.2, presses only the inner race) x2 = frame_idler_spacers.stl; `idler_w = 8.5`
+ASSUMED: measure his idler and re-export. Printed pulley_m3 retired. Platter has no belt now (direct
+drive), so this idler is the only free-spinning belt part; the X motor pulley is bought aluminium.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat

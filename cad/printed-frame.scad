@@ -151,6 +151,13 @@ mx = 128;
 // motor side stops at 78 mm (plate meets the motor flange), so the pen draws on the IDLER side.
 ix = rod_len / 2 - 17;
 cheek_t = 4;  idler_gap = 14;
+// Idler (Tim 11-12: buy a bearing idler; the printed pulley on bolt threads hums and wears, like the
+// old nail). Bought GT2 20T idler, 3 mm bore, ball bearings inside. Two printed spacers fill the
+// fork's gap and press ONLY on the bearing's inner ring (small diameter), so the bolt can be done up
+// tight while the outside spins. MEASURE the idler's total width and set idler_w (8.5 assumed).
+idler_w  = 8.5;
+spacer_t = (idler_gap - idler_w) / 2 - 0.1;   // 0.2 total play
+module idler_spacer() difference() { cylinder(d = 5.2, h = spacer_t, $fn = 48); translate([0, 0, -1]) cylinder(d = 3.4, h = spacer_t + 2, $fn = 24); }
 
 module tri_x(x0, w, pts) translate([x0, 0, 0]) rotate([90, 0, 90]) linear_extrude(w) polygon(pts);
 module m3_nut_pocket(depth) cylinder(d = 6.4, h = depth, $fn = 6);
@@ -348,3 +355,4 @@ if (part == "print_clamp_ring")  print_clamp_ring();
 if (part == "print_wheel")       print_wheel();
 if (part == "key")               key_demo();
 if (part == "fit_test")          fit_test();
+if (part == "idler_spacers")     for (x = [0, 8]) translate([x, 0, 0]) idler_spacer();
