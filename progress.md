@@ -236,6 +236,13 @@ Sim: Set center now lifts pen + returns to platter centre first (bc3ac5a, live).
 plate, left stand rotated 90°, 4 mm gap checked on a 2 mm occupancy grid). Tim has printed ONLY the
 carriage plate. Told him: plate1 first; check shaft >= 24 mm before the wheel; pen clip/knob are his
 old design (fit on the new slider unknown). Not opened in Bambu Studio (no headless slicer).
+**Collar screws -> M3x8 pan heads (11-12):** Tim bought 8 × M3x8 pan-head Phillips (Ace) and asked to
+use them instead of grub screws; nothing printed yet (correction: he has printed NOTHING, not even the
+carriage plate). Wheel socket got a screw-head channel on +x (7 wide, to x 13.5, z 0..16.6, open at
+the bottom); hub_d 30 -> 33. Sweep check: screws moved straight down never touch the wheel (empty
+intersection). Re-exported frame_wheel/frame_fit_test + plate1/plate4. plotter-v2.glb NOT rebuilt
+(3D guide wheel lacks the channel). His bag: 1 M3x25 socket, 2 nuts, ~8 M3x8 pan. Still needs 1 nut and
+4 × M3x6 for the platter motor (8 is ~1 mm too long through the 2.5 mm cage roof floor).
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what

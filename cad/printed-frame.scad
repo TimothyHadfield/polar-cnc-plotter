@@ -14,8 +14,9 @@
 // stands -> slide stands + rods onto the base's rails from the front, together, until they stop
 // -> carriage plate onto the blocks, belt on its pegs -> Uno slides into its pocket from the back
 // (set driver currents now; the wheel covers the board) -> platter motor slides into its cage
-// from the front, 4 screws from the top -> shaft collar on, flush with the shaft tip, 2 grub
-// screws on the flat -> wheel pressed down onto the collar's hex taper ->
+// from the front, 4 screws from the top -> shaft collar on, flush with the shaft tip, 2 M3x8
+// pan-head screws on the flat -> wheel pressed down onto the collar's hex taper (the screw heads
+// slide up its channel) ->
 // pad, paper, clamp ring snapped over (hooks between the key ribs).
 //
 // Prints: fit_test first (15 min). frame_base (flat; supports from the bed ONLY under the motor
@@ -216,8 +217,16 @@ nut_x = 4.0;  nut_t = 2.6;  nut_w = 5.8;
 // Its outside is a hexagon tapering from 18 to 16.6 across the flats (2.5 degrees a side).
 col_z0 = 1;  col_z1 = w_h - 1;  col_af0 = 18;  col_af1 = 16.6;
 sock_top = col_z1 + 0.6;               // socket ceiling 0.6 above the collar: the taper wedges first
-hub_d = 30;
-set_z = [col_z0 + 4, col_z1 - 4];      // collar set screws (M3 x 4-5 grub screws), 8 mm apart
+set_z = [col_z0 + 4, col_z1 - 4];      // collar screws, 8 mm apart
+// Collar screws (Tim 11-12: "I just got 8 M3 8mm screws", pan-head Phillips, used instead of grub
+// screws). Tightened, the tip sits on the shaft's flat, so the head stands proud of the collar's
+// +x face; the wheel's socket has a channel, open at the bottom, that the heads slide up into
+// (they also key the wheel to the collar). Sizes: ISO 7045 M3 pan head, 5.6 wide x 2.4 tall.
+scr_len = 8;  scr_head_d = 5.6;  scr_head_k = 2.4;
+chan_w  = scr_head_d + 1.4;                          // channel width (y)
+chan_x  = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2 + scr_len + scr_head_k + 1;   // head top + 1 = 13.5
+chan_z  = set_z[1] + scr_head_d / 2 + 0.8;           // channel top, above the upper head
+hub_d   = 2 * (chan_x + 3);                          // 3 mm of wall outside the channel (33)
 function col_af(z) = col_af0 + (col_af1 - col_af0) * (z - col_z0) / (col_z1 - col_z0);
 module collar_shape(z0, z1) hull() for (z = [z0, z1]) translate([0, 0, z]) rotate(30)
   cylinder(d = col_af(z) * 2 / sqrt(3), h = 0.01, $fn = 6);     // flats face +-x
@@ -238,8 +247,8 @@ module shaft_collar() difference() {     // built in wheel coordinates
 // nothing can slip. platter = "disc" brings back the aluminium-disc version (lip + friction).
 platter = "printed";
 top_t   = 2;                           // printed platter skin; its top is where the disc top was
-hook_ang = [45, 135, 225, 315];        // clamp ring hooks (16 degrees wide each); off the set-screw
-                                       // holes at 0 degrees, so the key reaches them with the ring on
+hook_ang = [45, 135, 225, 315];        // clamp ring hooks (16 degrees wide each); off the collar
+                                       // screws at 0 degrees
 // Soft pad under the paper (Tim 11-11: vinyl "so that the pen can push slightly further"). It lies
 // on the flat face, cut to the platter's size, and the clamp ring pinches pad + paper together, so
 // the hooks are pad_t longer. (A pocket for it was tried and dropped: the face prints on the bed,
@@ -266,6 +275,7 @@ module platter_wheel() {
     // tightened in the open, then the wheel is pressed down onto it: the hex turns it, the taper
     // wedges tight, so there is no play and no tilt. Pull up to take the wheel off.
     translate([0, 0, -0.01]) collar_shape(0, sock_top + 0.01);
+    translate([0, -chan_w / 2, -0.01]) cube([chan_x, chan_w, chan_z + 0.01]);   // screw-head channel
   }
 }
 
@@ -355,7 +365,7 @@ module fit_test() {
     intersection() { stand_right(); translate([101, 45, -lap_low - 1]) cube([23, 25, lap_low + tongue_top + 2]); }
   translate([50, 0, 155]) rotate([0, 90, 0]) translate([0, -40, -rod_lo])
     intersection() { stand_right(); translate([127, 40, rod_lo - 8]) cube([28, 20, 16]); }
-  translate([88, 16, 0]) intersection() { platter_wheel(); cylinder(d = 34, h = 10); }   // the collar's socket
+  translate([88, 16, 0]) intersection() { platter_wheel(); cylinder(d = hub_d + 1, h = 10); }   // the collar's socket
 }
 
 module print_stand_right() translate([0, 0, col_x1]) rotate([0, 90, 0]) stand_right();

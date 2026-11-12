@@ -36,7 +36,7 @@ export const PARTS = {
   ties:      V1.ties,
   wheel:     { name: 'Platter wheel (printed)', qty: 1, model: ['wheel'], buy: ['STL', stl('frame_wheel')],
                about: 'Six spokes and a rim. Its solid top is the drawing face, printed on the bed so it comes out flat.' },
-  collar:    { name: 'Shaft collar (printed) + 2 M3 set screws', qty: 1, model: ['collar'], buy: ['STL', stl('frame_collar')],
+  collar:    { name: 'Shaft collar (printed) + 2 M3 × 8 screws + 2 nuts', qty: 1, model: ['collar'], buy: ['STL', stl('frame_collar')],
                about: 'Clamps the motor shaft. The wheel presses onto its hex taper: it turns the wheel with no play, and lifts off.' },
   pad:       { name: 'Soft pad ~1 mm (vinyl or rubber)', qty: 1, model: ['pad'], buy: ['Amazon', amazonSearch('1mm rubber sheet')],
                about: 'Under the paper, so the pen can press slightly past the surface.' },
@@ -52,7 +52,7 @@ export const PARTS = {
   supply:    V1.supply,
   cable:     V1.cable,
   wrap:      V1.wrap,
-  screws:    { name: 'M3 screws: 4 × 8, 4 × 6, 2 grub screws + nuts', qty: 1, buy: V1.screws.buy },
+  screws:    { name: 'M3 screws: 6 × 8, 4 × 6, 1 × 25, 3 nuts', qty: 1, buy: V1.screws.buy },
 };
 
 export const STEPS = [
@@ -143,8 +143,8 @@ export const STEPS = [
     title: 'Platter', show: ['y_motor', 'collar', 'wheel', 'pad', 'paper', 'clamp_ring'], view: [20, 30],
     do: [
       'Collar onto the shaft first, top flush with the shaft tip.',
-      'Tighten its 2 set screws on the shaft\'s flat.',
-      'Press the wheel down onto the collar\'s hex taper. Pull up to take it off.',
+      'Nuts into its slot, then tighten its 2 M3 × 8 screws onto the shaft\'s flat.',
+      'Press the wheel down onto the collar\'s hex taper, screw heads in its channel. Pull up to take it off.',
       'Pad, then paper, then snap the clamp ring over the rim, hooks between the key ribs.',
     ],
     parts: ['collar', 'wheel', 'pad', 'paper', 'ring'],
