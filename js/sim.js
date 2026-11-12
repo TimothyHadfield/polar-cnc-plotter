@@ -207,5 +207,7 @@ window.plotterSim = {
   },
   // true while the pen is still right over the platter centre (radius 0), as it is when the page opens
   atCenter: () => Math.abs(phys[0]) < 0.01,
+  // the G-code that puts the pen back over the real platter centre (radius 0), in GRBL's work coordinates
+  centerMove: () => link && `G90 G0 X${(-offset[0] - link.wco[0]).toFixed(3)}`,
 };
 await import('./app.js');

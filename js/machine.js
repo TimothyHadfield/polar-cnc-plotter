@@ -178,7 +178,13 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     step = +b.dataset.step;
     $('steps').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   });
-  $('setCenter').addEventListener('click', () => run(grbl.setCenter().then(() => { say('Center set.'); refresh(); })));
+  $('setCenter').addEventListener('click', () => run((async () => {
+    const back = sim?.centerMove?.();   // simulator: lift the pen and carry it to the platter centre first
+    if (back) { await grbl.send(`G90 G0 Z${getSettings().penUp}`); await grbl.send(back); }
+    await grbl.setCenter();
+    say(back ? 'Pen moved to the centre. Center set.' : 'Center set.');
+    refresh();
+  })()));
 
   // ---------- plot ----------
   // from = 0: the whole drawing. from > 0: pick up a plot that ended early at that line.
