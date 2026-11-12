@@ -210,7 +210,27 @@ lip_h   = disc_t - 0.2;                // lip stays 0.2 below the disc top, so t
 bead_out = 102.5;  bead_z = w_h - 6;   // catch for the clamp ring's hooks (flat underside)
 shaft_d = 5;  shaft_flat = 4.5;  bore_fit = 0.15;
 nut_x = 4.0;  nut_t = 2.6;  nut_w = 5.8;
-set_z = [3.5, w_h - 4.5];
+// Shaft collar (separate print). Wheel coordinates: z 0 = wheel underside. The collar's top is
+// flush with the shaft tip (easy to set by feel), so it spans z col_z0..col_z1 = 1..17.
+// Its outside is a hexagon tapering from 18 to 16.6 across the flats (2.5 degrees a side).
+col_z0 = 1;  col_z1 = w_h - 1;  col_af0 = 18;  col_af1 = 16.6;
+sock_top = col_z1 + 0.6;               // socket ceiling 0.6 above the collar: the taper wedges first
+hub_d = 30;
+set_z = [col_z0 + 4, col_z1 - 4];      // collar set screws (M3 x 4-5 grub screws), 8 mm apart
+function col_af(z) = col_af0 + (col_af1 - col_af0) * (z - col_z0) / (col_z1 - col_z0);
+module collar_shape(z0, z1) hull() for (z = [z0, z1]) translate([0, 0, z]) rotate(30)
+  cylinder(d = col_af(z) * 2 / sqrt(3), h = 0.01, $fn = 6);     // flats face +-x
+module shaft_collar() difference() {     // built in wheel coordinates
+  collar_shape(col_z0, col_z1);
+  fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
+  translate([0, 0, col_z0 - 1]) intersection() {
+    cylinder(d = shaft_d + bore_fit, h = col_z1 - col_z0 + 2);
+    translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, col_z1 - col_z0 + 2]);
+  }
+  for (z = set_z) translate([0, 0, z]) rotate([0, 90, 0]) cylinder(d = 3.2, h = 20, $fn = 24);
+  // one nut slot from the collar's underside up past the top screw: top nut first, then the bottom
+  translate([nut_x, -nut_w / 2, col_z0 - 1]) cube([nut_t, nut_w, set_z[1] + 3 - col_z0 + 1]);
+}
 // Tim 11-11: the disc was only held by friction. Default now: the platter face is PART OF THE
 // WHEEL (a solid top skin, printed face-down on the bed so it comes out flat). Paper is pinched
 // between that face and the clamp ring, and the ring's hooks sit between ribs on the wheel, so
@@ -228,7 +248,7 @@ module platter_wheel() {
   fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
   difference() {
     union() {
-      cylinder(d = 22, h = w_h);
+      cylinder(d = hub_d, h = w_h);
       for (a = [30 : 60 : 330]) rotate(a) translate([0, -2.5, 0]) cube([ring_in + 1, 5, w_h]);
       difference() { cylinder(r = ring_out, h = w_h, $fn = 240); translate([0, 0, -1]) cylinder(r = ring_in, h = w_h + 2, $fn = 240); }
       if (platter == "disc")
@@ -240,15 +260,11 @@ module platter_wheel() {
       for (a = hook_ang, s = [-1, 1]) rotate(a + s * 8.6) translate([ring_out - 0.01, s > 0 ? 0 : -2, bead_z + 2])
         cube([bead_out - 0.1 - ring_out + 0.01, 2, w_h + (platter == "disc" ? 0 : disc_t) - bead_z - 2]);
     }
-    // the bore stops under the platter face (shaft tip is 1 mm below the old disc seat)
-    cap = platter == "disc" ? w_h + 1 : w_h + disc_t - top_t;
-    translate([0, 0, -1]) intersection() {
-      cylinder(d = shaft_d + bore_fit, h = cap + 1);
-      translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, cap + 1]);
-    }
-    for (z = set_z) translate([0, 0, z]) rotate([0, 90, 0]) cylinder(d = 3.2, h = 110, $fn = 24);
-    translate([nut_x, -nut_w / 2, -1]) cube([nut_t, nut_w, set_z[0] + 1 + 3.25]);
-    translate([nut_x, -nut_w / 2, set_z[1] - 3.25]) cube([nut_t, nut_w, cap - set_z[1] + 3.25]);
+    // Hex taper socket for the shaft collar (11-12: the set screws used to be in this hub, 95 mm in
+    // from the rim, which no normal hex key reaches). The collar goes on the shaft first, screws
+    // tightened in the open, then the wheel is pressed down onto it: the hex turns it, the taper
+    // wedges tight, so there is no play and no tilt. Pull up to take the wheel off.
+    translate([0, 0, -0.01]) collar_shape(0, sock_top + 0.01);
   }
 }
 
@@ -273,6 +289,7 @@ module assembly() {
   color(c_print) stand_right();
   color(c_print) stand_left();
   color(c_wheel) translate([0, pen_y, wheel_z0]) platter_wheel();
+  color("#e0a020") translate([0, pen_y, wheel_z0]) shaft_collar();
   if (show_disc) {
     if (platter == "disc") color(c_metal) translate([0, pen_y, wheel_top]) cylinder(d = disc_d, h = disc_t, $fn = 160);
     pz = plate_top + (platter == "disc" ? 0 : pad_t);
@@ -336,7 +353,7 @@ module fit_test() {
     intersection() { stand_right(); translate([101, 45, -lap_low - 1]) cube([23, 25, lap_low + tongue_top + 2]); }
   translate([50, 0, 155]) rotate([0, 90, 0]) translate([0, -40, -rod_lo])
     intersection() { stand_right(); translate([127, 40, rod_lo - 8]) cube([28, 20, 16]); }
-  translate([85, 12, 0]) intersection() { platter_wheel(); cylinder(d = 26, h = 9); }
+  translate([88, 16, 0]) intersection() { platter_wheel(); cylinder(d = 34, h = 10); }   // the collar's socket
 }
 
 module print_stand_right() translate([0, 0, col_x1]) rotate([0, 90, 0]) stand_right();
@@ -359,4 +376,6 @@ if (part == "print_clamp_ring")  print_clamp_ring();
 if (part == "print_wheel")       print_wheel();
 if (part == "key")               key_demo();
 if (part == "fit_test")          fit_test();
+if (part == "collar")            shaft_collar();
+if (part == "print_collar")      translate([0, 0, -col_z0]) shaft_collar();
 if (part == "idler_spacers")     for (x = [0, 8]) translate([x, 0, 0]) idler_spacer();
