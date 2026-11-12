@@ -232,6 +232,10 @@ VINCA DCLA-0605 calipers. Endstop: offered X switch + app "Find centre" (no GRBL
 Pen-stage cable (120 mm wires, messy splice): suggested 1 m 4-pin Dupont cable + solder + heat shrink,
 zip-tie strain relief, slack loop; Tim holding off ("see what I can do"). Offered carriage zip-tie anchor.
 Sim: Set center now lifts pen + returns to platter centre first (bc3ac5a, live).
+**Print plates (8d900bd):** build/print/plate1..5 *.3mf (own 3MF writer, 256 bed; stands nested on one
+plate, left stand rotated 90°, 4 mm gap checked on a 2 mm occupancy grid). Tim has printed ONLY the
+carriage plate. Told him: plate1 first; check shaft >= 24 mm before the wheel; pen clip/knob are his
+old design (fit on the new slider unknown). Not opened in Bambu Studio (no headless slicer).
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
