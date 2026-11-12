@@ -133,7 +133,8 @@ export function dress(mesh) {
   if (name === 'board__wood') { boxUV(mesh.geometry, 260); m.map = tex.wood; m.color.set(0xffffff); }
   else if (/__label$/.test(name)) { decalUV(mesh.geometry, name.startsWith('y_')); m.map = tex.label; m.color.set(0xffffff); }
   else if (name === 'paper__sheet') { decalUV(mesh.geometry); m.map = tex.drawing; m.color.set(0xffffff); }
-  else if (m.color.g > 0.3 && m.color.r < 0.1 && m.color.b < 0.1) {   // printed PLA green
+  else if ((m.color.g > 0.3 && m.color.r < 0.1 && m.color.b < 0.1)   // printed PLA green
+    || /^(frame_base|stand_right|stand_left|wheel|collar|clamp_ring|idler_spacers)$/.test(name)) {   // V2's printed frame
     boxUV(mesh.geometry, 6); m.bumpMap = tex.layers; m.bumpScale = 0.4;
   }
   if (name === 'stands') return physical(m, { clearcoat: 0.5, clearcoatRoughness: 0.35 });
@@ -203,4 +204,25 @@ export function extras(pen_y = -11.5, platter_z = 40) {
     clip.add(mesh);
   }
   return [wires, clip];
+}
+
+// V2 (cad/printed-frame.scad): the Uno lies in its pocket at the back of the base, under the wheel's
+// rim, so the leads come in low from outside the wheel and drop onto the shield's motor headers.
+// Everything on the rods sits 23.5 mm higher than V1. No paper clip: the clamp ring holds the paper.
+export function extrasV2() {
+  const wires = new THREE.Group();
+  wires.name = 'wires';
+  // carriage (X) motor: plug on top of the motor, over and down the outside of the right stand
+  wires.add(ribbon('wires__x', [[128, 16, 157], [128, 17, 166], [150, 22, 175], [176, 30, 160], [178, 42, 90],
+    [178, 55, 12], [150, 74, 7], [104, 64, 9], [89, 50, 40], [82.9, 44, 38], [82.9, 42.2, 32.8]]));
+  // platter (Y) motor: out of the back of the cage between the stop ribs, then up onto the shield
+  wires.add(ribbon('wires__y', [[0, 16, 22], [0, 24, 20], [12, 31, 9], [30, 31, 8], [45, 28, 38], [70, 20, 40],
+    [82.9, 19, 38], [82.9, 17.7, 32.8]]));
+  // pen-lift (Z) motor: slack loop from the carriage over the right stand, down with the X leads
+  wires.add(ribbon('wires__z', [[0, 27, 178.5], [0, 30, 195.5], [25, 48, 213.5], [85, 63, 205], [140, 68, 188],
+    [176, 70, 170], [181, 62, 90], [181, 50, 12], [152, 77, 8], [100, 67, 10], [66, 52, 40], [57.2, 44, 38], [57.2, 42.2, 32.8]],
+    [0x6b4226, 0xd0302a, 0xf08a24, 0xf2c418], 0.45));
+  // 12 V from behind the base into the shield's screw terminal (its wire openings face the back)
+  wires.add(ribbon('wires__power', [[51, 105, 2.5], [51, 90, 3], [51, 81, 12], [51, 76.5, 19.6]], [0xd0302a, 0x1b1c1f], 0.7));
+  return [wires];
 }

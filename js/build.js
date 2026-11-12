@@ -1,98 +1,60 @@
-// Build guide page: 3D model (build/plotter.glb) showing only the current step's parts.
-// Tap a part (in the model or the list) to highlight it and show what it does.
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PARTS, STEPS } from './build-steps.js';
-import { dress, extras, studio } from './build-look.js';
+// Build guide page: 3D model (build/plotter.glb for V1, build/plotter-v2.glb for V2) showing only the
+// current step's parts. Tap a part (in the model or the list) to highlight it and show what it does.
+import { createView, THREE } from './build-view.js';
+import * as V1 from './build-steps.js';
+import * as V2 from './build-steps-v2.js';
+import { extras, extrasV2 } from './build-look.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('view'), stage = $('stage');
+const view = createView(canvas, stage);
 
-// ---------- scene ----------
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.8;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-const scene = new THREE.Scene();
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(studio(), 0.02).texture;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x9a968e, 0.3));
-const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(-250, 500, 300);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.bias = -0.0005;
-sun.shadow.normalBias = 0.6;
-Object.assign(sun.shadow.camera, { left: -320, right: 320, top: 320, bottom: -320, near: 50, far: 1500 });
-scene.add(sun);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.ShadowMaterial({ opacity: 0.18 }));
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-window.buildView = { camera, controls };   // for headless close-up checks
-const MODEL_NAMES =new Set(STEPS.flatMap(s => s.show === 'all' ? [] : s.show));
+const VERSIONS = {
+  1: { ...V1, url: 'build/plotter.glb', extras: () => extras() },
+  2: { ...V2, url: 'build/plotter-v2.glb', extras: () => extrasV2() },
+};
+let ver = new URLSearchParams(location.search).get('v') === '2' ? 2 : 1;
+let PARTS, STEPS;
 const base = n => n.split('__')[0];
-const nodes = {};          // glb node name ("x_motor__caps") -> Object3D
-let current = 0, tween = null, selected = null;
+let nodes = {};            // glb node name ("x_motor__caps") -> Object3D, for the shown version
+let current = 0, selected = null, loading = 0;
 
-function resize() {
-  const { clientWidth: w, clientHeight: h } = stage;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+// ---------- version tabs (V1 | V2) ----------
+function setVersion(v, jump = true) {
+  if (selected) select(selected);
+  ver = v;
+  ({ PARTS, STEPS } = VERSIONS[v]);
+  const url = new URL(location.href);
+  if (v === 2) url.searchParams.set('v', '2'); else url.searchParams.delete('v');
+  history.replaceState(null, '', url);
+  $('ver').querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === v));
+  $('simLink').href = `sim.html?v=${v}`;
+  $('steps').replaceChildren(...STEPS.map((s, i) => {
+    const b = el('button', '', i === 0 ? 'i' : String(i));
+    b.type = 'button';
+    b.title = s.title;
+    b.onclick = () => go(i);
+    return b;
+  }));
+  nodes = {};
+  go(Math.min(current, STEPS.length - 1), jump);
+  const mine = ++loading;
+  $('loading').hidden = false;
+  $('loading').textContent = 'Loading model…';
+  const { url: glb, extras: ex } = VERSIONS[v];
+  view.load(glb, ex).then(root => {
+    if (mine !== loading) return;            // switched again meanwhile
+    const names = new Set(STEPS.flatMap(s => s.show === 'all' ? [] : s.show));
+    root.traverse(o => { if (names.has(base(o.name))) nodes[o.name] ??= o; });
+    view.show(root);
+    $('loading').hidden = true;
+    go(current, jump);
+  }, () => { if (mine === loading) $('loading').textContent = 'Could not load the 3D model.'; });
 }
-new ResizeObserver(resize).observe(stage);
-
-renderer.setAnimationLoop(t => {
-  if (tween) {
-    const k = Math.min(1, (t - tween.t0) / 600), e = k * k * (3 - 2 * k);
-    camera.position.lerpVectors(tween.p0, tween.p1, e);
-    controls.target.lerpVectors(tween.c0, tween.c1, e);
-    if (k === 1) tween = null;
-  }
-  controls.update();
-  renderer.render(scene, camera);
+$('ver').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b && +b.dataset.v !== ver) setVersion(+b.dataset.v, false);
 });
-
-new GLTFLoader().load('build/plotter.glb', gltf => {
-  gltf.scene.add(...extras());
-  gltf.scene.traverse(o => {
-    if (o.isMesh) {
-      if (!o.geometry.parameters) o.geometry = toCreasedNormals(o.geometry, THREE.MathUtils.degToRad(35));   // smooth curves, sharp edges
-      o.material = o.material.clone();                                           // own copy, for highlighting
-      o.material.side = THREE.DoubleSide;
-      o.material = dress(o);
-      o.castShadow = o.receiveShadow = true;
-    }
-    if (MODEL_NAMES.has(base(o.name))) nodes[o.name] ??= o;
-  });
-  scene.add(gltf.scene);
-  ground.position.y = new THREE.Box3().setFromObject(gltf.scene).min.y - 0.1;
-  $('loading').hidden = true;
-  go(current, true);
-}, undefined, () => { $('loading').textContent = 'Could not load the 3D model.'; });
-
-// ---------- camera ----------
-function fit(objs, [az, el] = [-30, 25], jump = false) {
-  const box = new THREE.Box3();
-  objs.forEach(o => box.expandByObject(o));
-  if (box.isEmpty()) return;
-  const sphere = box.getBoundingSphere(new THREE.Sphere());
-  const fov = THREE.MathUtils.degToRad(camera.fov) / 2;
-  const dist = sphere.radius / Math.sin(Math.min(fov, Math.atan(Math.tan(fov) * camera.aspect))) * 1.05;
-  const a = THREE.MathUtils.degToRad(az), e = THREE.MathUtils.degToRad(el);
-  const dir = new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e));
-  const p1 = sphere.center.clone().addScaledVector(dir, dist);
-  if (jump) { camera.position.copy(p1); controls.target.copy(sphere.center); return; }
-  tween = { t0: performance.now(), p0: camera.position.clone(), p1, c0: controls.target.clone(), c1: sphere.center.clone() };
-}
 
 // ---------- selecting a part ----------
 const nodesOf = key => Object.entries(nodes)
@@ -121,7 +83,7 @@ const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
 function hit(e) {
   const r = canvas.getBoundingClientRect();
   ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
-  ray.setFromCamera(ptr, camera);
+  ray.setFromCamera(ptr, view.camera);
   for (const h of ray.intersectObjects(Object.values(nodes), true)) {
     if (!h.object.visible) continue;
     for (let o = h.object; o; o = o.parent) if (nodes[o.name] === o) return partOf(o.name);
@@ -150,13 +112,6 @@ function link([label, href]) {
   return a;
 }
 
-STEPS.forEach((s, i) => {
-  const b = el('button', '', i === 0 ? 'i' : String(i));
-  b.type = 'button';
-  b.title = s.title;
-  b.onclick = () => go(i);
-  $('steps').append(b);
-});
 $('prev').onclick = () => go(current - 1);
 $('next').onclick = () => go(current + 1);
 document.addEventListener('keydown', e => {
@@ -206,5 +161,7 @@ function go(i, jump = false) {
   if (!Object.keys(nodes).length) return;
   const shown = s.show === 'all' ? null : new Set(s.show);
   Object.entries(nodes).forEach(([n, o]) => { o.visible = !shown || shown.has(base(n)); });
-  fit(Object.values(nodes).filter(o => o.visible), s.view, jump);
+  view.fit(Object.values(nodes).filter(o => o.visible), s.view, jump);
 }
+
+setVersion(ver);

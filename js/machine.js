@@ -23,7 +23,8 @@ function penChanges(gcode) {
 }
 
 export function initMachine({ getJob, getSettings, onPen, api }) {
-  const demo = new URLSearchParams(location.search).has('demo');
+  const sim = window.plotterSim;   // sim.html: the 3D pretend plotter (js/sim.js) instead of USB
+  const demo = !!sim || new URLSearchParams(location.search).has('demo');
   if (!('serial' in navigator) && !demo) return null;
   $('machine').hidden = false;
   $('consoleBox').hidden = false;
@@ -116,7 +117,8 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   async function connect() {
     try {
       say('Connecting…');
-      if (demo) link = new FakeGrbl({ lineMs: 16, moveTicks: 1 });
+      if (sim) link = sim.connect();
+      else if (demo) link = new FakeGrbl({ lineMs: 16, moveTicks: 1 });
       else link = await openSerial(await navigator.serial.requestPort(), () => lost());
       grbl = new Grbl(link, {
         onStatus: showStatus,
