@@ -1,13 +1,17 @@
 """Export the 3D build guide model and the printable STLs.
 
-    python tools/make-build-model.py
+    python tools/make-build-model.py        V1 (as before): build/plotter.glb + build/stl/*.stl
+    python tools/make-build-model.py v2     V2 only: build/plotter-v2.glb (no STLs are touched)
+    python tools/make-build-model.py all    both
 
 Needs OpenSCAD and Python with trimesh + numpy. Writes:
   build/plotter.glb     every assembly part as a named node with a PBR material (read by js/build.js).
                         A part with several colours is split into pieces named "<part>__<piece>".
   build/stl/<part>.stl  Tim's printed parts, one file each, ready to slice
+  build/plotter-v2.glb  prototype 2 (cad/printed-frame.scad assembly()), same node naming. Its
+                        printed frame STLs (build/stl/frame_*.stl) are exported from printed-frame.scad.
 """
-import os, subprocess, sys, tempfile
+import os, re, subprocess, sys, tempfile
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import trimesh
@@ -69,40 +73,159 @@ PRINTED = ["spool", "carriage_plate", "motor_plate", "motor_plate_2", "big_pulle
 PRINTED_SRC = {"carriage_plate": "base_plate"}   # file name -> module name in plotter-parts.scad
 
 
-def scad(src, name, out):
+def scad(src, name, out, key="part"):
     part, _, sub = name.partition("__")
-    r = subprocess.run([OPENSCAD, "-o", out, "-D", f'part="{part}"', "-D", f'sub="{sub}"', src],
+    r = subprocess.run([OPENSCAD, "-o", out, "-D", f'{key}="{part}"', "-D", f'sub="{sub}"', src],
                        capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(out):
         sys.exit(f"openscad failed for {name}:\n{r.stderr}")
     return out
 
 
-def main():
-    tmp = tempfile.mkdtemp()
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
-        stls = dict(zip(MATS, pool.map(lambda p: scad(ASSEMBLY, p, os.path.join(tmp, p + ".stl")), MATS)))
-        os.makedirs(os.path.join(ROOT, "build", "stl"), exist_ok=True)
-        list(pool.map(lambda p: scad(PARTS, PRINTED_SRC.get(p, p), os.path.join(ROOT, "build", "stl", p + ".stl")), PRINTED))
-
+def to_glb(stls, mats, out):
     scene = trimesh.Scene()
     for name, path in stls.items():
         m = trimesh.load(path, force="mesh")
         m.merge_vertices()
-        color, metal, rough = MATS[name]
+        color, metal, rough = mats[name]
         rgba = [linear(int(color[i:i + 2], 16) / 255) for i in (1, 3, 5)] + [1.0]
         m.visual = trimesh.visual.TextureVisuals(material=PBRMaterial(
             name=name, baseColorFactor=rgba, metallicFactor=metal, roughnessFactor=rough))
         # glTF is Y-up: turn the Z-up model so it stands upright in the viewer
         m.apply_transform(trimesh.transformations.rotation_matrix(-np.pi / 2, [1, 0, 0]))
         scene.add_geometry(m, node_name=name, geom_name=name)
-    out = os.path.join(ROOT, "build", "plotter.glb")
     scene.export(out)
+    print(f"{out}: {os.path.getsize(out) // 1024} KB, {len(stls)} pieces")
+
+
+# ---------- V2: prototype 2, the printed frame (cad/printed-frame.scad) ----------
+FRAME = os.path.join(ROOT, "cad", "printed-frame.scad")
+PRINT_FRAME = ("#e07a35", 0.0, 0.5)     # frame prints in the CAD renders' colours (filament not chosen yet)
+PRINT_WHEEL = ("#2f8fb3", 0.0, 0.5)
+_SAME = ["rods", "blocks", "carriage_plate", "stage__frame", "stage__screw", "stage__rails", "stage__motor",
+         "stage__flex", "slider__block", "slider__nut", "pen_clip", "knob", "pen__body", "pen__cap", "pen__tip",
+         "x_pulley", "x_belt__belt", "x_belt__ties", "paper__sheet"] + [k for k in MATS if k.startswith("electronics__")]
+MATS_V2 = {
+    "frame_base": PRINT_FRAME, "stand_right": PRINT_FRAME, "stand_left": PRINT_FRAME,
+    "wheel": PRINT_WHEEL, "collar": ("#e0a020", 0.0, 0.5), "clamp_ring": ("#1f5f7a", 0.0, 0.5),
+    "pad": ("#3a3c40", 0.0, 0.9),
+    "idler": ALU, "idler_spacers": PRINT_FRAME, "idler_bolt": STEEL,
+    **NEMA("x_motor"), **NEMA("y_motor"),
+    **{k: MATS[k] for k in _SAME},
+}
+# numbers read out of printed-frame.scad, so the V2 model follows any change there
+V2_VARS = ["pen_y", "wheel_z0", "face_z", "plate_top", "pad_t", "paper_t", "disc_d", "lift", "mx", "col_y0",
+           "belt_z", "ix", "rod_y", "rod_lo", "rod_hi", "rod_len", "ard_x", "ard_y", "uno_pad", "idler_w", "spacer_t",
+           "idler_gap", "cheek_t"]
+
+
+def frame_numbers(tmp):
+    src = os.path.join(tmp, "v2vars.scad")
+    with open(src, "w") as f:
+        f.write(f'include <{FRAME.replace(os.sep, "/")}>\npart = "none";\n'
+                f'echo(V2 = [{", ".join(V2_VARS)}], P = platter);\n')
+    out = os.path.join(tmp, "v2vars.echo")
+    r = subprocess.run([OPENSCAD, "-o", out, src], capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.exists(out):
+        sys.exit(f"openscad failed reading printed-frame numbers:\n{r.stderr}")
+    text = open(out).read()
+    nums = re.search(r"V2 = \[([^\]]*)\]", text).group(1).split(",")
+    v = dict(zip(V2_VARS, (float(n) for n in nums)))
+    if '"printed"' not in text:
+        sys.exit("plotter-v2.glb assumes platter = \"printed\" in printed-frame.scad")
+    return v
+
+
+# The assembly as in printed-frame.scad assembly(), split into named parts. The bought bearing
+# idler, its two printed spacers and the M3 bolt (11-12) replace the retired printed pulley_m3, and
+# the belt is re-run round the idler at -ix.
+V2_SCAD = """
+use <{frame}>
+include <{assembly}>
+part = "none";
+v2 = "";
+$fn = 64;
+module v2show(n) if (v2 == n) children();
+module bearing_idler() {{          // bought GT2 20T idler, 3 mm bore: toothed body between 18 mm flanges, z = axis
+  w = {idler_w};
+  difference() {{
+    union() {{
+      for (z = [-w / 2, w / 2 - 1]) translate([0, 0, z]) cylinder(d = 18, h = 1);
+      translate([0, 0, -w / 2]) difference() {{
+        cylinder(d = 12.2, h = w);
+        for (i = [0 : 19]) rotate(i * 18) translate([6.1, 0, 0.9]) cylinder(d = 1.2, h = w - 1.8, $fn = 8);
+      }}
+    }}
+    translate([0, 0, -w / 2 - 1]) cylinder(d = 3.2, h = w + 2, $fn = 24);
+  }}
+}}
+v2show("frame_base") frame_base();
+v2show("stand_right") stand_right();
+v2show("stand_left") stand_left();
+v2show("wheel") translate([0, {pen_y}, {wheel_z0}]) platter_wheel();
+v2show("collar") translate([0, {pen_y}, {wheel_z0}]) shaft_collar();
+v2show("pad") translate([0, {pen_y}, {plate_top}]) cylinder(d = {disc_d}, h = {pad_t}, $fn = 160);
+v2show("paper") piece("sheet") translate([0, {pen_y}, {pz} + 0.05]) cylinder(d = {disc_d} - 4, h = {paper_t}, $fn = 160);
+v2show("clamp_ring") translate([0, {pen_y}, {pz} + {paper_t} + 0.1]) clamp_ring();
+v2show("y_motor") translate([0, {pen_y}, {face_z}]) nema17();
+v2show("x_motor") translate([{mx}, {col_y0}, {belt_z}]) rotate([-90, 0, 0]) rotate([0, 0, 180]) nema17();
+v2show("rods") for (z = [{rod_lo}, {rod_hi}]) translate([-{rod_len} / 2, {rod_y}, z]) rotate([0, 90, 0]) cylinder(d = 8, h = {rod_len});
+v2show("idler") translate([-{ix}, {rod_y}, {belt_z}]) rotate([90, 0, 0]) bearing_idler();
+v2show("idler_spacers") for (y = [{rod_y} - {idler_w} / 2 - {spacer_t}, {rod_y} + {idler_w} / 2])
+  translate([-{ix}, y, {belt_z}]) rotate([-90, 0, 0]) idler_spacer();
+v2show("idler_bolt") translate([-{ix}, 0, {belt_z}]) rotate([-90, 0, 0]) {{   // M3 x 25, head in front, nut in its pocket
+  y0 = {rod_y} - {idler_gap} / 2 - {cheek_t};
+  translate([0, 0, y0 - 3]) cylinder(d = 5.5, h = 3, $fn = 24);
+  translate([0, 0, y0]) cylinder(d = 3, h = 25, $fn = 16);
+  translate([0, 0, {rod_y} + {idler_gap} / 2 + {cheek_t} - 2.5]) cylinder(d = 6.2, h = 2.4, $fn = 6);
+}}
+translate([0, 0, {lift}]) {{
+  v2show("blocks") blocks();
+  v2show("carriage_plate") carriage_plate();
+  v2show("stage") stage();
+  v2show("slider") slider();
+  v2show("pen_clip") pen_clip();
+  v2show("knob") knob();
+  v2show("pen") the_pen();
+  v2show("x_pulley") x_pulley();
+}}
+v2show("x_belt") translate([0, {rod_y} + 3, {belt_z}]) rotate([90, 0, 0])
+  open_belt(-{ix}, 6.37, {mx}, 5.09, [-peg_x, peg_x], peg_z - belt_z, 3.2);
+v2show("electronics") translate([{ard_x}, {ard_y}, {uno_pad}]) rotate(-90) {{ uno(); drivers(); }}
+"""
+
+
+def build_v2(tmp):
+    v = frame_numbers(tmp)
+    src = os.path.join(tmp, "plotter-v2.scad")
+    with open(src, "w") as f:
+        f.write(V2_SCAD.format(frame=FRAME.replace(os.sep, "/"), assembly=ASSEMBLY.replace(os.sep, "/"),
+                               pz=v["plate_top"] + v["pad_t"], **v))
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
+        stls = dict(zip(MATS_V2, pool.map(lambda p: scad(src, p, os.path.join(tmp, "v2_" + p + ".stl"), "v2"), MATS_V2)))
+    to_glb(stls, MATS_V2, os.path.join(ROOT, "build", "plotter-v2.glb"))
+
+
+def main():
+    target = sys.argv[1] if len(sys.argv) > 1 else "v1"
+    if target in ("v2", "all"):
+        build_v2(tempfile.mkdtemp())
+    if target in ("v1", "all"):
+        build_v1()
+
+
+def build_v1():
+    tmp = tempfile.mkdtemp()
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
+        stls = dict(zip(MATS, pool.map(lambda p: scad(ASSEMBLY, p, os.path.join(tmp, p + ".stl")), MATS)))
+        os.makedirs(os.path.join(ROOT, "build", "stl"), exist_ok=True)
+        list(pool.map(lambda p: scad(PARTS, PRINTED_SRC.get(p, p), os.path.join(ROOT, "build", "stl", p + ".stl")), PRINTED))
+
+    to_glb(stls, MATS, os.path.join(ROOT, "build", "plotter.glb"))
     # printed STLs: binary instead of OpenSCAD's ASCII (about 5x smaller)
     for p in PRINTED:
         f = os.path.join(ROOT, "build", "stl", p + ".stl")
         trimesh.load(f, force="mesh").export(f)
-    print(f"{out}: {os.path.getsize(out) // 1024} KB, {len(stls)} pieces")
 
 
 if __name__ == "__main__":

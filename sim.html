@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plotter Simulator</title>
+<meta name="description" content="A 3D polar pen plotter that moves and draws like the real one, driven by the plotter app's own controls.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/build.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main class="app sim">
+  <section class="stage" id="stage">
+    <canvas id="view" aria-label="3D plotter"></canvas>
+    <div class="loading" id="loading">Loading model…</div>
+    <div class="inset">
+      <canvas id="preview" aria-label="Plot preview"></canvas>
+      <div class="placebar" id="placeBar" style="visibility:hidden">
+        <button class="btn sm" id="crop" type="button">Crop</button>
+        <button class="btn sm" id="resetPlace" type="button" hidden>Reset</button>
+      </div>
+    </div>
+    <div class="drop-hint" id="dropHint">Drop a drawing or picture here</div>
+    <div class="simbar">
+      <span class="seg" id="simSpeed" aria-label="Simulation speed"><button type="button" data-speed="1" class="on">1×</button><button type="button" data-speed="5">5×</button><button type="button" data-speed="20">20×</button><button type="button" data-speed="100">100×</button></span>
+      <button class="btn sm" id="newPaper" type="button">New paper</button>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <header class="top">
+      <h1>Simulator</h1>
+      <a class="link build-link" href="./">Plotter app</a>
+      <button class="icon" id="openSettings" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.7h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
+    </header>
+    <div class="vers">
+      <span class="seg" id="ver" role="tablist" aria-label="Version"><button type="button" data-v="1" class="on">V1</button><button type="button" data-v="2">V2</button></span>
+      <a class="btn sm" id="buildLink" href="build.html">Build guide</a>
+    </div>
+
+    <div class="row">
+      <label class="btn" for="file">Open picture</label>
+      <input type="file" id="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
+      <button class="btn" id="openText">Text</button>
+      <button class="btn" id="openPattern">Pattern</button>
+      <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button></span>
+    </div>
+
+    <div class="file" id="fileName">No drawing yet <span class="hint">· or paste one (Ctrl+V)</span></div>
+
+    <div class="pair">
+      <label class="slider">
+        <span>Size <b id="sizeOut">100%</b></span>
+        <input type="range" id="size" min="10" max="100" step="1" value="100">
+      </label>
+      <label class="slider">
+        <span>Turn <b id="turnOut">0°</b></span>
+        <input type="range" id="turn" min="-180" max="180" step="1" value="0">
+      </label>
+    </div>
+
+    <label class="slider" id="darkRow" style="visibility:hidden">
+      <span>Darkness <button class="q" type="button" data-q="darkHelp" aria-label="What is this?">?</button> <b id="darkOut"></b></span>
+      <input type="range" id="dark" min="1" max="254" step="1" value="128">
+    </label>
+    <p class="help" id="darkHelp" hidden>How dark a pixel must be to count as ink. Starts at the best split for this picture.</p>
+
+    <div class="stats" id="stats"></div>
+
+    <button class="btn primary" id="download" disabled>Download G-code</button>
+    <p class="err" id="err" role="alert"></p>
+
+    <section class="machine" id="machine" hidden>
+      <div class="row" id="offline">
+        <button class="btn wide" id="connect">Connect plotter</button>
+        <button class="q" type="button" data-q="connectHelp" aria-label="What is this?">?</button>
+      </div>
+      <p class="help" id="connectHelp" hidden>A pretend plotter that moves like the real one. Connecting restarts it, so set center again each time.</p>
+
+      <div class="live" id="live" hidden>
+        <div class="mstatus"><span class="dot" id="mDot"></span><b id="mState">…</b><span id="mPos"></span><button class="link" id="calOpen">Calibrate</button><button class="link" id="disconnect">Disconnect</button></div>
+        <div class="pad">
+          <span class="lbl">Move</span>
+          <button class="btn sm" data-jog="X-" title="Carriage toward center">In</button>
+          <button class="btn sm" data-jog="X+" title="Carriage outward">Out</button>
+          <button class="btn sm" data-jog="Y+" title="Turn platter counterclockwise" aria-label="Turn counterclockwise">↺</button>
+          <button class="btn sm" data-jog="Y-" title="Turn platter clockwise" aria-label="Turn clockwise">↻</button>
+          <span class="lbl">Pen</span>
+          <button class="btn sm" data-pen="up">Up</button>
+          <button class="btn sm" data-pen="down">Down</button>
+          <button class="btn sm" data-jog="Z+" title="Raise pen a little" aria-label="Raise pen a little">▲</button>
+          <button class="btn sm" data-jog="Z-" title="Lower pen a little" aria-label="Lower pen a little">▼</button>
+          <span class="lbl">Step</span>
+          <span class="seg" id="steps"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span>
+          <button class="btn sm span2" id="setCenter">Set center</button>
+        </div>
+        <div class="row plotrow" id="plotRow"><button class="btn primary" id="plot" disabled>Plot</button><button class="btn" id="resumePlot" hidden>Resume</button></div>
+        <div class="run" id="run" hidden>
+          <div class="bar"><span id="bar"></span></div>
+          <div class="row"><span id="runText"></span><button class="btn sm" id="pause">Pause</button><button class="btn sm" id="stop">Stop</button></div>
+        </div>
+        <p class="mmsg" id="mMsg"></p>
+      </div>
+    </section>
+
+    <section class="tool" id="textTool" hidden>
+      <header class="top"><h2>Text</h2><button class="btn" data-close-tool>Done</button></header>
+      <textarea id="textInput" rows="3" spellcheck="false" aria-label="Text to draw">Hello</textarea>
+      <span class="seg" id="textFont"><button data-v="sans" class="on">Sans</button><button data-v="script">Script</button><button data-v="serif">Serif</button></span>
+      <span class="seg" id="textLayout"><button data-v="lines" class="on">Lines</button><button data-v="circle">Circle</button></span>
+    </section>
+
+    <section class="tool" id="patternTool" hidden>
+      <header class="top"><h2>Pattern</h2><button class="btn" data-close-tool>Done</button></header>
+      <span class="seg" id="patternType"><button data-v="spiral" class="on">Spiral</button><button data-v="rose">Rose</button><button data-v="spirograph">Spirograph</button><button data-v="waves">Waves</button></span>
+      <div class="pattern-sliders" id="patternSliders"></div>
+    </section>
+
+    <section class="tool" id="calTool" hidden>
+      <header class="top"><h2>Calibrate</h2><button class="btn" data-close-tool>Done</button></header>
+    </section>
+  </aside>
+</main>
+
+<div class="sheet" id="settings" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <header class="top">
+      <h2 id="setTitle">Settings</h2>
+      <button class="icon" id="closeSettings" aria-label="Close">✕</button>
+    </header>
+
+    <div class="grid">
+      <label><span class="lbl">Drawing width <span class="unit">mm</span></span><input type="number" id="diameter" min="20" max="200" step="1"></label>
+      <label><span class="lbl">Pen speed <span class="unit">mm/min</span></span><input type="number" id="speed" min="50" max="3000" step="10"></label>
+      <label><span class="lbl">Pen up <span class="unit">Z</span></span><input type="number" id="penUp" step="0.1"></label>
+      <label><span class="lbl">Pen down <span class="unit">Z</span></span><input type="number" id="penDown" step="0.1"></label>
+      <label><span class="lbl">Center gap <span class="unit">mm</span> <button class="q" type="button" data-q="gapHelp" aria-label="What is this?">?</button></span><input type="number" id="offset" step="0.1"></label>
+      <label><span class="lbl">Line gap <span class="unit">mm</span> <button class="q" type="button" data-q="lineGapHelp" aria-label="What is this?">?</button></span><input type="number" id="gap" min="0.4" max="5" step="0.1"></label>
+    </div>
+    <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
+    <p class="help" id="lineGapHelp" hidden>Space between spiral rings or hatch lines.</p>
+
+    <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
+    <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>
+    <label class="switch"><input type="checkbox" id="showTravel"><span></span>Show pen-up moves</label>
+    <div class="pick"><span class="lbl">Picture style <button class="q" type="button" data-q="styleHelp" aria-label="What is this?">?</button></span>
+      <span class="seg" id="pictureStyle"><button type="button" data-style="outline">Outlines</button><button type="button" data-style="center">Centerlines</button><button type="button" data-style="spiral">Spiral</button><button type="button" data-style="hatch">Hatch</button></span></div>
+    <p class="help" id="styleHelp" hidden>Outlines: the pen goes around each dark shape.<br>Centerlines: for line drawings, each line drawn once.<br>Spiral: one line from the center, wiggling where dark.<br>Hatch: crossed lines shade photos; darker gets more.</p>
+
+    <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
+    <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>
+    <div class="row">
+      <button class="btn" data-test="circle">Circle</button>
+      <button class="btn" data-test="spoke">Spoke</button>
+    </div>
+
+    <div id="consoleBox" hidden>
+      <h3>Plotter console <button class="q" type="button" data-q="consoleHelp" aria-label="What is this?">?</button></h3>
+      <p class="help" id="consoleHelp" hidden>For GRBL settings like $$ or $101=29.6. Connect first.</p>
+      <form class="row" id="cmdForm"><input id="cmd" placeholder="$$" autocomplete="off" spellcheck="false" aria-label="Plotter command"><button class="btn" id="cmdSend">Send</button></form>
+      <pre class="log" id="log"></pre>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/sim.js"></script>
+</body>
+</html>

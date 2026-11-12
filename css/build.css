@@ -40,9 +40,31 @@
 
 .nav { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
+/* V1 | V2 tabs, and the way to the simulator (build.html and sim.html) */
+.vers { display: flex; gap: 8px; align-items: stretch; }
+.vers .seg { flex: 1; }
+.vers .btn.sm { padding: 6px 14px; text-decoration: none; color: inherit; }
+
+/* simulator (sim.html): the 3D plotter fills the stage; the plan of the drawing sits in a corner */
+.sim #view { touch-action: none; }
+.inset {
+  position: absolute; top: 10px; right: 10px; width: min(34%, 46%, 220px); aspect-ratio: 1;
+  max-height: 46%; border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+}
+.inset .placebar { top: 6px; left: 6px; }
+.simbar { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+.simbar .seg { background: var(--panel); }
+.simbar .seg button { padding: 6px 10px; }
+.simbar .btn.sm { padding: 6px 12px; }
+
 @media (max-width: 760px) {
   .app.build { grid-template-columns: 1fr; grid-template-rows: 42dvh minmax(0, 1fr); }
   .build .panel { overflow: hidden; }
+  .app.sim { grid-template-rows: 42dvh minmax(0, 1fr); }
+  .sim .panel, .sim .panel.connected { max-height: none; overflow-y: auto; }
+  .inset { top: 6px; right: 6px; width: 30%; }
+  .simbar { left: 6px; bottom: 6px; }
   .card { left: 6px; bottom: 6px; width: calc(100% - 12px); padding: 6px 32px 4px 10px; font-size: 13px; }
   .card p { margin: 2px 0 4px; }
 }
