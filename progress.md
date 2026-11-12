@@ -170,6 +170,15 @@ wheel has a 2 mm solid top at the old disc-top height, printed face-down (`print
 frame_wheel.stl); clamp-ring hooks sit between key ribs. Bore/nut slot stop under the skin. Not
 checked: printed face flatness vs the disc, Uno lip clearance to headers (assumed ~1.2 mm).
 
+**11-11 pen centring audit (artifact v7).** Tim asked to check the whole Y chain. pen_y is now
+derived: `rod_y - sc8uu_h (11, spec) - carriage_d (50.0)` = -11.0 (was -11.5: base_plate's
+1 mm pad - 1.5 pocket put the stage back 0.5 mm nearer the rods). Fixed: cage stop ribs started at
+the wall clearance (motor sat 0.4 back), dovetail groove end was 0.2 long (rods 0.2 forward).
+UNKNOWN (Tim to measure): SC8UU depth (/2 = sc8uu_h), and carriage_d = carriage plate back face to
+pen centre on the real assembled carriage (slider proud of stage? clip mounting on the new slider?
+pen diameter?). The model's clip/knob orientation is itself uncertain (old photo shows a different
+holder). Not centring-relevant: X motor plate recess, pen extension, block length.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat

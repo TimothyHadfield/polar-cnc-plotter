@@ -32,7 +32,16 @@ rod_len   = 300;      // the 8 mm rods. Rod holes end 0.5 mm past +-rod_len/2
 shaft_len = 24;       // platter motor shaft above its face
 disc_d    = 200;      // aluminium platter disc
 disc_t    = 1;
-pen_y     = -11.5;    // pen line (from the carriage stack, approximate). Motor slots give +-3 mm
+// Pen line (Tim 11-11: "make sure it's all aligned perfectly"). Front-to-back chain from the rods:
+//   rod centre -> SC8UU mounting face (sc8uu_h) -> carriage plate back face -> pen centre (carriage_d).
+// carriage_d from the CAD of Tim's parts: plate 2 + 1 (stage face pad) - 1.5 (stage pocket) = 1.5,
+// stage 20 (listing), slider 14 (listing; how far it stands proud of the stage is NOT known),
+// clip 23 with the pen 8.5 in (how the clip mounts on the new slider is NOT known) -> 50.0.
+// MEASURE on the real carriage and put the number here; it moves the motor cage (the stop).
+rod_y      = 50;      // rods' plane (stands and frame are built around it)
+sc8uu_h    = 11;     // SC8UU spec: rod centre to mounting face. Measure: block depth / 2 (22 / 2)
+carriage_d = 50.0;    // carriage plate back face (bearing side) to the pen's centre line. MEASURE
+pen_y      = rod_y - sc8uu_h - carriage_d;   // = -11.0 (was -11.5: the stage pocket was missed)
 
 // ---------- platter stack ----------
 motor_len = 38;  stand_gap = 0.5;
@@ -43,7 +52,6 @@ wheel_z0  = cage_z + 1;
 wheel_top = face_z + shaft_len + 1;    // 63.5: the disc rests here
 plate_top = wheel_top + disc_t;        // 64.5
 lift      = plate_top - 41;            // everything on the rods rises this much
-rod_y  = 50;
 rod_lo = 75 + lift;
 rod_hi = 137 + lift;
 belt_z = (rod_lo + rod_hi) / 2;
@@ -81,7 +89,9 @@ module motor_cage() {          // origin = motor axis on the base top
       // back stop (Tim 11-11: "push it in ... until it hits the edge and it's in the perfect
       // position"): two ribs at the back corners stop the motor with its shaft exactly on the
       // design centre. The middle stays open for the motor's plug.
-      for (s = [-1, 1]) translate([s > 0 ? in - stop_w : -in, in, 0]) cube([stop_w, ly - in, face_z]);
+      // ribs start at the motor's half-width (not the side walls' clearance), so the shaft is exactly
+      // on the centre when the motor touches them
+      for (s = [-1, 1]) translate([s > 0 ? in - stop_w : -in, motor_w / 2, 0]) cube([stop_w, ly - motor_w / 2, face_z]);
     }
     // boss + shaft slot, open to the front: the motor slides in from the front with its shaft up
     translate([-11.75, -ly - 1, face_z - 1]) cube([23.5, ly + 1 + slide, cage_top + 2]);
@@ -150,7 +160,7 @@ module stand_holes() {
     cylinder(d = rod_hole, h = rod_len / 2 - arm_x0 + 0.5, $fn = 96);
     cylinder(d1 = rod_hole + 1.2, d2 = rod_hole, h = 0.6, $fn = 96);
   }
-  along_y(base_y0 - 1, base_y1 - dt_stop + dt_fit) dt_profile(dt_fit);         // groove, closed at the back
+  along_y(base_y0 - 1, base_y1 - dt_stop) dt_profile(dt_fit);   // end flush with the rail end: rods land exactly on rod_y         // groove, closed at the back
 }
 module motor_flange() difference() {
   translate([mx - motor_w / 2, col_y0, belt_z - motor_w / 2]) cube([col_x0 - (mx - motor_w / 2) + 0.01, 4, motor_w]);
