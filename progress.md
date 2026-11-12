@@ -118,6 +118,11 @@ retired) with an integral cone socket underneath that drops onto a cone hub on t
 screw); a flat on the cone carries torque; self-centring, lifts off. Magnets optional (money = Tim).
 Tim has Bambu printers big enough for anything here. Artifact:
 https://claude.ai/artifact/SPtQF4veYqcU6sS6VpSr3p (v2 shows it).
+**11-11 Tim's idea (now the lead):** hub with arms reaching under the plate that pinch its edge
+("X shape ... pinches 4 different sides"; "3 or 5 so it's best"). Claude: YES, better than the cone
+alone (edge support stops flex/wobble at the rim; centres on the edge; keeps the aluminium disc).
+Recommend 3 arms (3 points can't rock; self-centring like a 3-jaw chuck), lips flush with the top,
+slightly springy for snap-on/lift-off. Need: disc diameter + roundness + thickness. NOTHING DESIGNED.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
