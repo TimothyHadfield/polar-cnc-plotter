@@ -149,6 +149,17 @@ supports; all 4 STLs manifold (OpenSCAD). Artifact v4 shows renders. NOT printed
 shaft 24, disc 200x1, pen_y -11.5, bed 256. Not checked: pen reach ±~90 (reasoned), collisions
 beyond eyeballed renders, horizontal 3.4 holes in stands.
 
+**11-11 PROTOTYPE 2 (supersedes proto 1 joints/fingers).** Tim: fingers "pointed upwards" were useless;
+"move away from screws/bolts"; nothing may go below the base ("needs to lay flat"); no Arduino screws
+("an indent ... is good enough"); "think about how things are assembled" (motor couldn't enter cage;
+his "Z axis motor" read as the platter motor). Now: stands join base by **sliding dovetail rails**
+(dt_wb 10 / dt_wt 12.2, fit 0.2, groove closed at back = stop), slid on from the front after rods +
+carriage + X motor + idler + belt are assembled in the stands. Cage roof has a **23.5 slot open to the
+front** (motor slides in shaft-up, 4 screws from above). Uno on **4 pegs** + 3-side rim. Wheel: lip
+(disc drops in, 0.15 clearance) + bead 6 below top; new **clamp_ring** (frame_clamp_ring.stl): r92..104.2,
+4 hooks snap under bead with 0.2 preload. Remaining non-motor screws: 2 wheel set screws + idler M3
+axle. All 5 STLs manifold. Artifact v5. Not checked: dovetail fit in print, hook strength/fit.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat
