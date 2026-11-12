@@ -206,6 +206,10 @@ high-friction). GT2 20T, 3 mm bore, 6 mm belt, ~$7-10 per pack of 5 (his money c
 `idler_spacer` (d5.2, presses only the inner race) x2 = frame_idler_spacers.stl; `idler_w = 8.5`
 ASSUMED: measure his idler and re-export. Printed pulley_m3 retired. Platter has no belt now (direct
 drive), so this idler is the only free-spinning belt part; the X motor pulley is bought aluminium.
+Link given: E-outstanding 2-pack B08J9W4PJT (listed 8.5 mm tall = idler_w). 11-12 Tim: "how should
+we attach the bearing to the stand?" -> kept the fork + M3x25 + nut, made bolt hole and nut pocket
+slots `idler_slot = 4` outward = belt tensioner (pull out, tighten; takes up 8 mm). Nut pocket d6.6
+hex (5.7 flats, slides, can't turn). frame_stand_left.stl re-exported. Artifact v11 shows it.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what

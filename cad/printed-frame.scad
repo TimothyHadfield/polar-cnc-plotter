@@ -156,6 +156,7 @@ cheek_t = 4;  idler_gap = 14;
 // fork's gap and press ONLY on the bearing's inner ring (small diameter), so the bolt can be done up
 // tight while the outside spins. MEASURE the idler's total width and set idler_w (8.5 assumed).
 idler_w  = 8.5;
+idler_slot = 4;                                // tensioner travel outward (takes up 8 mm of belt)
 spacer_t = (idler_gap - idler_w) / 2 - 0.1;   // 0.2 total play
 module idler_spacer() difference() { cylinder(d = 5.2, h = spacer_t, $fn = 48); translate([0, 0, -1]) cylinder(d = 3.4, h = spacer_t + 2, $fn = 24); }
 
@@ -192,8 +193,11 @@ module idler_fork() difference() {
     translate([ix, y, belt_z]) rotate([-90, 0, 0]) cylinder(r = 11, h = cheek_t);
     translate([col_x0, y, belt_z - 11]) cube([0.01, cheek_t, 22]);
   }
-  translate([ix, rod_y - 20, belt_z]) rotate([-90, 0, 0]) cylinder(d = 3.4, h = 40, $fn = 24);
-  translate([ix, rod_y + idler_gap / 2 + cheek_t - 2.5, belt_z]) rotate([-90, 0, 0]) m3_nut_pocket(3);
+  // Belt tensioner (Tim 11-12, "how should we attach the bearing"): the bolt sits in a slot that
+  // runs idler_slot mm outward, so pulling the idler outward before tightening takes up 2 x that
+  // much belt. The nut's pocket is a slot too: it slides with the bolt but can't turn.
+  hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y - 20, belt_z]) rotate([-90, 0, 0]) cylinder(d = 3.4, h = 40, $fn = 24);
+  hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y + idler_gap / 2 + cheek_t - 2.5, belt_z]) rotate([-90, 0, 0]) cylinder(d = 6.6, h = 3, $fn = 6);
 }
 module stand_right() difference() { union() { stand_body(); motor_flange(); } stand_holes(); }
 module stand_left() mirror([1, 0, 0]) difference() { union() { stand_body(); idler_fork(); } stand_holes(); }
