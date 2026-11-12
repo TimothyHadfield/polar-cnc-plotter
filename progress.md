@@ -222,9 +222,13 @@ height, socket ceiling 0.6 above collar top. New frame_collar.stl; frame_wheel.s
 Artifact v13: 4-step animated webp + collar, tightening close-up, underside socket, plan cut views.
 Scratchpad pipeline (lost on reset): hubmk.scad pre-cuts meshes (preview colours), hub.scad animates.
 **V1/V2 tabs + 3D simulator** (Tim's 11-12 request: build page tabs V1/V2, V2 same format + all
-changes, 3D on left moving/drawing with all 3 axes, machine controls on right) delegated to a builder
-on branch `sim-v2`, worktree C:/Users/timha/AppData/Local/Temp/claude/wt/polar-cnc-plotter-sim.
-If that branch isn't merged, check it before redoing anything.
+changes, 3D on left moving/drawing with all 3 axes, machine controls on right) MERGED 437ef63, live:
+build.html has V1|V2 tabs + Simulate; new sim.html (js/sim.js, js/simgrbl.js = pretend GRBL with real
+move times + 15-block planner, tests/simgrbl.test.mjs). 101/101 tests; phone-view live 393 px OK.
+Not done: acceleration, Z wire motion, sim link from index.html. V1 glb not regenerated (non-
+deterministic export). Tim's calls pending: V2 colours, labels, drawing inset, phone layout stacked.
+Tim's shopping (11-12): M3 kit (+M3x25), idler B08J9W4PJT, 1 mm 60A adhesive silicone pad (fits hooks),
+VINCA DCLA-0605 calipers. Endstop: offered X switch + app "Find centre" (no GRBL reflash); not asked yet.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
