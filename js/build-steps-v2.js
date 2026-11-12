@@ -10,7 +10,7 @@ const SOURCE = 'https://github.com/TimothyHadfield/polar-cnc-plotter/blob/main/c
 
 // every part once; steps refer to them by key
 export const PARTS = {
-  fittest:   { name: 'Fit test (printed, 15 min)', qty: 1, buy: ['STL', stl('frame_fit_test')] },
+  fittest:   { name: 'Fit test (printed, about 50 min)', qty: 1, buy: ['STL', stl('frame_fit_test')] },
   base:      { name: 'Base (printed)', qty: 1, model: ['frame_base'], buy: ['STL', stl('frame_base')],
                about: 'One print instead of the board and feet. Rails at both ends, motor cage in the middle, Uno pocket at the back.' },
   standR:    { name: 'Right stand (printed)', qty: 1, model: ['stand_right'], buy: ['STL', stl('frame_stand_right')],

@@ -19,7 +19,7 @@
 // slide up its channel) ->
 // pad, paper, clamp ring snapped over (hooks between the key ribs).
 //
-// Prints: fit_test first (15 min). frame_base (flat; supports from the bed ONLY under the motor
+// Prints: fit_test first (~50 min on Tim's Bambu). frame_base (flat; supports from the bed ONLY under the motor
 // cage's roof), stand_right + stand_left (each lies on its outer face, so every wall grows
 // straight up and the rod holes print vertical and round), wheel (platter face down), clamp_ring
 // (top face down). The stands, wheel and ring need no supports.
@@ -355,7 +355,7 @@ module cage_demo() {
   color("#2f8fb3") translate([0, pen_y - 30, face_z + 30]) rotate([90, 0, 0]) linear_extrude(1) text("slides in", size = 7, halign = "center");
 }
 
-// 15-minute test print before the big ones: a piece of base rail (printed flat, like the base), the
+// ~50-minute test print before the big ones: a piece of base rail (printed flat, like the base), the
 // matching stand groove and one rod hole (printed standing, like the stands), and a slice of the wheel
 // hub's hex socket. Print the collar with it. Check: groove slides on the rail, a rod goes in snug,
 // the shaft goes in the collar, the collar presses into the socket.
