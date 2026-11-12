@@ -179,6 +179,14 @@ pen centre on the real assembled carriage (slider proud of stage? clip mounting 
 pen diameter?). The model's clip/knob orientation is itself uncertain (old photo shows a different
 holder). Not centring-relevant: X motor plate recess, pen extension, block length.
 
+**11-11 soft pad + hub explainer (artifact v8).** Tim: vinyl under the paper so the pen presses
+slightly past the surface. `pad_t = 1` (MEASURE his sheet): pad lies on the flat face, cut to 200,
+clamp-ring hooks are pad_t longer (frame_clamp_ring.stl re-exported). A pocket for the pad was
+rejected: the face prints on the bed, so the pocket floor would be in mid-air. Advised firm-ish
+0.5-1.5 mm (vinyl/rubber/cutting mat), pen ~0.5 mm past the paper. Artifact got a hub cross-section:
+D-bore 0.15 loose, 17 mm engagement, 2 set screws 10 apart on the flat + trapped nuts, tightening
+order. Reasoned: 0.5° / 0.9 mm edge lean without the screws, removed when both are tight.
+
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
   changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat

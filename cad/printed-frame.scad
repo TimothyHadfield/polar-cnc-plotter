@@ -197,6 +197,11 @@ set_z = [3.5, w_h - 4.5];
 platter = "printed";
 top_t   = 2;                           // printed platter skin; its top is where the disc top was
 hook_ang = [0, 90, 180, 270];          // clamp ring hooks (16 degrees wide each)
+// Soft pad under the paper (Tim 11-11: vinyl "so that the pen can push slightly further"). It lies
+// on the flat face, cut to the platter's size, and the clamp ring pinches pad + paper together, so
+// the hooks are pad_t longer. (A pocket for it was tried and dropped: the face prints on the bed,
+// so a pocket's floor would print in mid-air.) MEASURE Tim's sheet; 0 = no pad.
+pad_t   = 1;
 module platter_wheel() {
   fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
   difference() {
@@ -232,7 +237,7 @@ paper_t = 0.1;
 cr_in = 92;  cr_out = 104.2;  cr_t = 1.2;
 preload = 0.2;                         // hooks are this much short, so they pull the ring down
 module clamp_ring() {
-  hook_top = -(disc_t + paper_t + (bead_z - w_h) * -1) + preload;   // catch's top face, below the ring
+  hook_top = -(disc_t + (platter == "disc" ? 0 : pad_t) + paper_t + (bead_z - w_h) * -1) + preload;   // catch's top face, below the ring
   difference() { cylinder(r = cr_out, h = cr_t, $fn = 240); translate([0, 0, -1]) cylinder(r = cr_in, h = cr_t + 2, $fn = 240); }
   for (a = hook_ang) rotate(a - 8) rotate_extrude(angle = 16, $fn = 240)
     polygon([[cr_out, 0.01], [cr_out, hook_top - 1.6], [bead_out - 0.1, hook_top - 1.6],
@@ -248,8 +253,10 @@ module assembly() {
   color(c_wheel) translate([0, pen_y, wheel_z0]) platter_wheel();
   if (show_disc) {
     if (platter == "disc") color(c_metal) translate([0, pen_y, wheel_top]) cylinder(d = disc_d, h = disc_t, $fn = 160);
-    color("white") translate([0, pen_y, plate_top + 0.05]) cylinder(d = disc_d - 4, h = paper_t, $fn = 160);
-    color("#1f5f7a") translate([0, pen_y, plate_top + paper_t + 0.1]) clamp_ring();
+    pz = plate_top + (platter == "disc" ? 0 : pad_t);
+    if (platter != "disc" && pad_t > 0) color("#555") translate([0, pen_y, plate_top]) cylinder(d = disc_d, h = pad_t, $fn = 160);
+    color("white") translate([0, pen_y, pz + 0.05]) cylinder(d = disc_d - 4, h = paper_t, $fn = 160);
+    color("#1f5f7a") translate([0, pen_y, pz + paper_t + 0.1]) clamp_ring();
   }
   color(c_dark) translate([0, pen_y, face_z]) nema17();
   color(c_dark) translate([mx, col_y0, belt_z]) rotate([-90, 0, 0]) rotate([0, 0, 180]) nema17();
