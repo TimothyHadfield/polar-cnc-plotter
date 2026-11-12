@@ -144,11 +144,28 @@ module big_pulley_gt2() {
 }
 
 // ---------- spool / roller: 28 mm flange, 21.3 mm hub, 8 mm bore (four on the plate) ----------
-spool_bore = 8.0;   // if this goes on an 8 mm rod or 608 bearing, 8.2-8.3 prints with less force
+// 2026-11-11: Tim printed these at 8.0 and the 8 mm rods were "just barely too small" to go in.
+// Printed holes come out ~0.1-0.2 under, so 8.2 should give a snug, no-wiggle fit. If not,
+// print rod_gauge below and set spool_bore to the hole that fit best.
+spool_bore = 8.2;
 module spool() {
   difference() {
     union() { cylinder(d = 28, h = 2); cylinder(d = 21.3, h = 17); }
-    translate([0, 0, -1]) cylinder(d = spool_bore, h = 19);
+    translate([0, 0, -1]) cylinder(d = spool_bore, h = 19, $fn = 96);
+  }
+}
+
+// Fit test for the rods: five holes 8.10-8.30, each size engraved beside it. 5-minute print.
+gauge_sizes = [8.10, 8.15, 8.20, 8.25, 8.30];
+module rod_gauge() {
+  p = 14;
+  difference() {
+    cube([p * len(gauge_sizes) + 2, 26, 6]);
+    for (i = [0 : len(gauge_sizes) - 1]) {
+      translate([8 + i * p, 9, -1]) cylinder(d = gauge_sizes[i], h = 8, $fn = 96);
+      translate([8 + i * p, 19.5, 5.4]) linear_extrude(1)
+        text(str(gauge_sizes[i]), size = 2.8, halign = "center", valign = "center");
+    }
   }
 }
 
@@ -357,3 +374,4 @@ show("big_pulley_gt2") translate([-62, -150, 0]) big_pulley_gt2();
 show("pulley_m3")     translate([-25, -150, 0]) pulley_m3();
 show("idler_washer")  for (x = [-8, 2]) translate([x, -150, 0]) idler_washer();
 show("paper_ring")    translate([0, -270, 0]) paper_ring();
+show("rod_gauge")     translate([60, -150, 0]) rod_gauge();

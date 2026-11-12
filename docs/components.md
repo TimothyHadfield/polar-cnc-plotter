@@ -100,7 +100,7 @@ version** for the rebuild; the photos show the old machine (scrap plastic, then 
 
 | Part | Closest original | Job (Tim's words, condensed) | What Tim changed |
 |---|---|---|---|
-| `spool` x4, 21.3 hub, 8 bore | rod supports (14.6 hub) | Thicker rod supports: touch the inside of the PVC pipe and the rod at the same time, so they can be glued instead of wrapped in double-sided tape | Hub fills the pipe |
+| `spool` x4, 21.3 hub, 8.2 bore (was 8.0: rods "just barely too small", 11-11; `rod_gauge` = 8.10-8.30 fit test) | rod supports (14.6 hub) | Thicker rod supports: touch the inside of the PVC pipe and the rod at the same time, so they can be glued instead of wrapped in double-sided tape | Hub fills the pipe |
 | `clip` + `gear` (15-tooth knurled knob, 4.2 bore, 7 counterbore) | pen-holder clip + knob | Pen holder, same as the original | Removed the original's other pen-holder piece: the new linear stage does that job |
 | `motor_plate` 120x73x2 (largest, almost flat) | rotary sheet 11x7 cm | Platter plate: one side holds whatever spins the platter (spindle/axle), the other the platter NEMA 17 | Printed instead of scrap plastic |
 | `motor_plate_2` 3 mm, cut-out corners | X motor sheet 7.5x4 cm | X axis motor plate: holds the stepper that drives the carriage belt, solidly fixed to the PVC stand. The two large 4.77 holes take screws drilled into the PVC pipe | Printed |

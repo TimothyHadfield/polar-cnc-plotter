@@ -128,6 +128,14 @@ slightly springy for snap-on/lift-off. Need: disc diameter + roundness + thickne
 Recommend making the printed PVC foot sockets the spacer (exact height, no extra joint), sized from
 Tim's measurement: motor + hub + plate stacked on the board → plate top height, plus the carriage's
 lowest point above the board today.
+**11-11 rod holders (`spool`):** Tim: rods "just barely too small" to fit at 8.0. Changed spool_bore to
+8.2 + new `rod_gauge` STL (8.10/8.15/8.20/8.25/8.30, sizes engraved); STL bores measured 8.2.
+**11-11 wobble (Tim: "reduce as much wobble/bend as possible when pressure is applied to the edges";
+"how does our hub grab the edges tightly?"):** advised: clamp-style hub (split + M3 pinch bolt) using
+the full shaft length, seated ~1 mm above the boss; arms tall at the root, tapering (sag ~ 1/height³);
+outer ring joining the arm tips (wheel, 6 spokes, top face printed on the bed) because the 1 mm disc
+flexes between 3 arms; grip = 3 thin springy fingers on the ring, inner face ~0.3 mm under the disc
+dia and leaning 2-3° inward so the squeeze pins the plate down; PLA. NOTHING DESIGNED.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
