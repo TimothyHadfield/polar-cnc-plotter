@@ -205,5 +205,7 @@ window.plotterSim = {
     window.plotterSim.grbl = link;   // for headless checks
     return link;
   },
+  // true while the pen is still right over the platter centre (radius 0), as it is when the page opens
+  atCenter: () => Math.abs(phys[0]) < 0.01,
 };
 await import('./app.js');

@@ -131,7 +131,10 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       });
       await grbl.ready();
       poll = setInterval(() => grbl?.realtime('?'), 250);
-      say('Move the pen over the platter center, then Set center.');
+      if (sim?.atCenter?.()) {   // the simulator starts with the pen over the centre: no need to set it by hand
+        await grbl.setCenter();
+        say('Center set. Pick a drawing, text or pattern, then Plot.');
+      } else say('Move the pen over the platter center, then Set center.');
       refresh();
     } catch (e) {
       if (e.name !== 'NotFoundError') say(e.message.includes('open') ? 'Could not open the port. Is UGS or the Arduino app still connected?' : e.message, true);
