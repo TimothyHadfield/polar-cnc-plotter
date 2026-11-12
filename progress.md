@@ -229,6 +229,9 @@ Not done: acceleration, Z wire motion, sim link from index.html. V1 glb not rege
 deterministic export). Tim's calls pending: V2 colours, labels, drawing inset, phone layout stacked.
 Tim's shopping (11-12): M3 kit (+M3x25), idler B08J9W4PJT, 1 mm 60A adhesive silicone pad (fits hooks),
 VINCA DCLA-0605 calipers. Endstop: offered X switch + app "Find centre" (no GRBL reflash); not asked yet.
+Pen-stage cable (120 mm wires, messy splice): suggested 1 m 4-pin Dupont cable + solder + heat shrink,
+zip-tie strain relief, slack loop; Tim holding off ("see what I can do"). Offered carriage zip-tie anchor.
+Sim: Set center now lifts pen + returns to platter centre first (bc3ac5a, live).
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
