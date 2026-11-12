@@ -72,7 +72,8 @@ tongue_top = 4;
 dt_x  = 112.5;                 // dovetail rail centre
 dt_wb = 10;  dt_wt = 12.2;     // rail width at the bottom / top (about 20 degree flanks)
 dt_h  = base_t - lap_low;      // 3
-dt_fit = 0.2;                  // clearance per face
+dt_fit = 0.25;                 // clearance per face (11-12: 0.2 -> 0.25, a 135 mm slide binds easily;
+                               // Tim's carriage-plate stage pocket at 0.3 a side fit "perfectly")
 dt_stop = 5;                   // rail ends this far before the back edge = the stop
 motor_w = 42.3;  motor_fit = 0.4;  cage_wall = 3;
 slide   = 3;
@@ -210,14 +211,20 @@ ring_in = 96;  ring_out = 101.5;
 lip_in  = disc_d / 2 + 0.15;           // the disc drops into this lip: centred to 0.15 mm
 lip_h   = disc_t - 0.2;                // lip stays 0.2 below the disc top, so the clamp presses the disc
 bead_out = 102.5;  bead_z = w_h - 6;   // catch for the clamp ring's hooks (flat underside)
-shaft_d = 5;  shaft_flat = 4.5;  bore_fit = 0.15;
-nut_x = 4.0;  nut_t = 2.6;  nut_w = 5.8;
+// 11-12 (Tim skips the fit test, "make the dimensions as perfect as possible"): bore 0.15 -> 0.25
+// (small upright holes print ~0.1-0.2 under), nut slot 2.6 -> 2.8 thick, screw holes 3.2 -> 3.4.
+shaft_d = 5;  shaft_flat = 4.5;  bore_fit = 0.25;
+nut_x = 4.0;  nut_t = 2.8;  nut_w = 5.8;
 // Shaft collar (separate print). Wheel coordinates: z 0 = wheel underside. The collar's top is
-// flush with the shaft tip (easy to set by feel), so it spans z col_z0..col_z1 = 1..17.
-// Its outside is a hexagon tapering from 18 to 16.6 across the flats (2.5 degrees a side).
-col_z0 = 1;  col_z1 = w_h - 1;  col_af0 = 18;  col_af1 = 16.6;
-sock_top = col_z1 + 0.6;               // socket ceiling 0.6 above the collar: the taper wedges first
-set_z = [col_z0 + 4, col_z1 - 4];      // collar screws, 8 mm apart
+// flush with the shaft tip (easy to set by feel), so it spans z col_z0..col_z1 = 1..15.5.
+// Its outside is a hexagon tapering from 18 to 16.6 across the flats (~2.8 degrees a side).
+// Socket and collar are drawn the same size, so the taper must wedge before the collar's top hits
+// the socket ceiling, or the hex turns with play. 11-12: collar top lowered 1.5 (ceiling gap 0.6 ->
+// 2.1), so even a socket printed ~0.1 a side too big still wedges. Printed holes run small, which
+// only makes the wheel ride a little higher (harmless). Shaft now needs 22.5 mm out of the motor.
+col_z0 = 1;  col_z1 = w_h - 2.5;  col_af0 = 18;  col_af1 = 16.6;
+sock_top = w_h - 0.4;                  // socket ceiling, under the wheel's top skin
+set_z = [col_z0 + 4, col_z1 - 4];      // collar screws, 6.5 mm apart (4 and 10.5 below the shaft tip)
 // Collar screws (Tim 11-12: "I just got 8 M3 8mm screws", pan-head Phillips, used instead of grub
 // screws). Tightened, the tip sits on the shaft's flat, so the head stands proud of the collar's
 // +x face; the wheel's socket has a channel, open at the bottom, that the heads slide up into
@@ -237,7 +244,7 @@ module shaft_collar() difference() {     // built in wheel coordinates
     cylinder(d = shaft_d + bore_fit, h = col_z1 - col_z0 + 2);
     translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, col_z1 - col_z0 + 2]);
   }
-  for (z = set_z) translate([0, 0, z]) rotate([0, 90, 0]) cylinder(d = 3.2, h = 20, $fn = 24);
+  for (z = set_z) translate([0, 0, z]) rotate([0, 90, 0]) cylinder(d = 3.4, h = 20, $fn = 24);
   // one nut slot from the collar's underside up past the top screw: top nut first, then the bottom
   translate([nut_x, -nut_w / 2, col_z0 - 1]) cube([nut_t, nut_w, set_z[1] + 3 - col_z0 + 1]);
 }

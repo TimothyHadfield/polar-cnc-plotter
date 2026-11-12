@@ -243,6 +243,12 @@ the bottom); hub_d 30 -> 33. Sweep check: screws moved straight down never touch
 intersection). Re-exported frame_wheel/frame_fit_test + plate1/plate4. plotter-v2.glb NOT rebuilt
 (3D guide wheel lacks the channel). His bag: 1 M3x25 socket, 2 nuts, ~8 M3x8 pan. Still needs 1 nut and
 4 × M3x6 for the platter motor (8 is ~1 mm too long through the 2.5 mm cage roof floor).
+**Tim skips the fit test (11-12):** "I'm not gonna do a test print ... the indent [stage pocket, 0.3 a
+side] fit perfectly". Fits tuned for that: dovetail 0.2 -> 0.25/face, collar bore 0.15 -> 0.25, nut
+slot 2.6 -> 2.8, collar screw holes 3.2 -> 3.4, collar top lowered 1.5 (col_z1 15.5, ceiling gap
+2.1) so the hex taper always wedges before bottoming (no rotational play). Shaft now needs >= 22.5
+out. Rod holes kept 8.2 (vertical, snug wanted). All frame STLs + 5 plates re-exported; clash check
+still empty. plotter-v2.glb still not rebuilt.
 
 **Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
 - **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
