@@ -411,6 +411,10 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 - Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
 - Web Serial flows only exercised with `?demo` (FakeGrbl).
 - Draw tool with a real finger on Tim's iPhone (only WebKit headless: mouse drags + one touch tap).
+- Simulate on Tim's own devices (headless WebKit only, live at a5f877f, 393 px + 1440 px). One
+  live laptop run logged "Importing a module script failed" on sim.html once; 8 further loads were
+  clean (reasoned: the test left the page 2.5 s into a cold three.js load). Recheck if Tim reports
+  a blank simulator.
   Open with Tim: on the laptop the Draw button wraps to its own row (4 buttons don't fit 288 px);
   a tap dab is a 0.2 mm line, tiny on the preview.
 
