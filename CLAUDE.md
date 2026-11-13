@@ -22,7 +22,9 @@ previews it, and can stream it to the plotter over USB.
 - `js/svg.js` (+ `pathflat.js`): SVG -> strokes, browser-only (uses the DOM for transforms/shapes).
 - `js/image.js`, `trace.js`, `styles.js`: picture -> outlines / centerlines / spiral / hatch.
 - `js/text.js` + `fonts.js` (Hershey single-stroke, license text inside), `js/patterns.js`.
-- `js/place.js`: drag to move, Turn slider, Crop box.
+- `js/sketch.js`: Draw tool (draw on the preview with finger or mouse). Its strokes carry
+  `center` + `radius`, so `fitFrame` keeps them where they were drawn instead of fitting them.
+- `js/place.js`: drag to move, Turn slider, Crop box (steps aside while `api.sketching`).
 - `js/grbl.js`: GRBL streaming (character counting, 127-byte RX limit), pause/stop/resume, Web Serial.
 - `js/machine.js`: plotter panel (connect, jog, set center, plot, pen changes via M0).
 - `js/calibrate.js`: 6-step calibration tool ($100, $101, pen heights, center gap, mirror check).
@@ -39,7 +41,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (8 files, 96 tests, about 1-2 minutes; no package.json,
+- Tests: `node --test tests/*.test.mjs` (10 files, 111 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with

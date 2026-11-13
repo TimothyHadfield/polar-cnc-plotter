@@ -8,6 +8,7 @@ import { initPlace } from './place.js';
 import { spiral, hatch } from './styles.js';
 import { initText } from './text.js';
 import { initPatterns } from './patterns.js';
+import { initSketch } from './sketch.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -321,6 +322,7 @@ const api = {
   setPlace: (patch, delay = 0) => { Object.assign(place, patch); rebuild(delay); },
   view: { k: 1, cx: 0, cy: 0 },   // preview scale, set by draw()
   inkShift: null,
+  sketching: false,               // true while the Draw tool is open (js/sketch.js): the pointer draws
 };
 initPlace(api);
 
@@ -334,4 +336,5 @@ api.machine = machine;   // null when this browser can't use USB serial
 initCalibrate(api);
 initText(api);
 initPatterns(api);
+initSketch(api);
 rebuild();

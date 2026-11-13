@@ -90,8 +90,10 @@ export function fitFrame(strokes, o) {
   if (!b) return null;
   // drawings made around a middle point (patterns, circle text) say so with strokes.center
   const [cx, cy] = strokes.center ?? [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
-  let R = 0;
-  for (const s of strokes) for (const [x, y] of s) R = Math.max(R, Math.hypot(x - cx, y - cy));
+  // drawings made at a fixed scale (js/sketch.js) give strokes.radius: that many units reach the
+  // circle's edge at Size 100%, however little of the circle the drawing fills
+  let R = strokes.radius ?? 0;
+  if (!R) for (const s of strokes) for (const [x, y] of s) R = Math.max(R, Math.hypot(x - cx, y - cy));
   return { cx, cy, k: R ? (o.diameter / 2) * (o.size / 100) / R : 1 };
 }
 
@@ -253,12 +255,21 @@ function keepColor(to, from) {
   return to;
 }
 
+// Where the drawing sits on the paper, in platter mm: crop, fit, turn, move (see placeStrokes).
+export function layout(rawStrokes, opts, place) {
+  const o = { ...DEFAULTS, ...opts };
+  const src = place?.crop ? cropStrokes(rawStrokes, place.crop) : rawStrokes;
+  let strokes = fitStrokes(src, o);
+  if (place) strokes = placeStrokes(strokes, place, o.diameter / 2);
+  if (src.radius) strokes = clipOuter(strokes, o.diameter / 2);   // a fixed-scale drawing can reach past the circle
+  return strokes;
+}
+
 // Everything the converter will actually try to draw, in platter mm.
 // place (optional): crop, turn and move, see placeStrokes.
 export function prepare(rawStrokes, opts, place) {
   const o = { ...DEFAULTS, ...opts };
-  let strokes = fitStrokes(place?.crop ? cropStrokes(rawStrokes, place.crop) : rawStrokes, o);
-  if (place) strokes = placeStrokes(strokes, place, o.diameter / 2);
+  let strokes = layout(rawStrokes, o, place);
   strokes = strokes.map(s => simplify(s, o.tol / 5));
   strokes = clipInner(strokes, Math.abs(o.offset) + 1e-6);
   return orderStrokes(strokes);

@@ -57,5 +57,19 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   sweep, spinning envelope vs everything fixed: all as expected); headless Bambu Studio slices of
   all 5 plates with Tim's X1C presets; 101/101 node tests; phone-view 393 px + 1440 px of
   build.html?v=2 and sim.html?v=2 on localhost.
-- **Open:** did the base print have supports under the cage roof (see progress.md); pen clip for
-  the new slider needs Tim's measurements; nothing printed from the changed parts yet.
+- **Open:** pen clip for the new slider needs Tim's measurements; nothing printed from the changed
+  parts yet. Base supports: Tim "did add supports"; Bambu's default leaves "On build plate only"
+  unticked (stock preset checked, no user preset), so the cage roof should be supported.
+
+## 2026-11-12 (later) · Draw tool
+- **Asked:** "for the plotter app, could you make a feature where you can draw your own design
+  yourself on the plate as a submission for the drawing?"
+- **Decided (Claude, flagged to Tim):** a Draw button beside Text/Pattern, same tool-panel pattern;
+  drawing lands exactly where drawn (no auto-fit); Undo also undoes Clear; kept across reloads.
+- **Built:** `js/sketch.js`, `strokes.radius` in `fitFrame`, `layout()` split out of `prepare`,
+  place.js steps aside while drawing, `tests/sketch.test.mjs` (10 tests).
+- **Verified how:** tests seen failing first (stretch-to-fit, no smoothing), then 111/111; headless
+  WebKit at 393 px and 1440 px: drew a face with mouse drags + taps, start point within 1 px of the
+  pointer, undo/clear/undo, Done -> "4 strokes", move 20 mm then Draw again (stays put), touch tap,
+  reload keeps it; no console errors, no page scroll.
+- **Open:** Tim's finger on his iPhone; laptop button row wraps.

@@ -47,7 +47,7 @@ export function initPlace(api) {
 
   // Runs on every redraw: keep the controls in step with the drawing and placement.
   api.addOverlay(({ ctx, color }) => {
-    const p = api.getPlace(), has = !!api.getRaw();
+    const p = api.getPlace(), has = !!api.getRaw() && !api.sketching;   // the Draw tool uses the pointer itself
     $('placeBar').style.visibility = has ? 'visible' : 'hidden';
     stage.classList.toggle('movable', has);
     resetBtn.hidden = !moved(p);
@@ -73,7 +73,7 @@ export function initPlace(api) {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && cropping) setCropping(false); });
 
   canvas.addEventListener('pointerdown', e => {
-    if (!api.getRaw() || e.button > 0) return;
+    if (api.sketching || !api.getRaw() || e.button > 0) return;
     const at = local(e);
     try { canvas.setPointerCapture(e.pointerId); } catch {}
     const p = api.getPlace();

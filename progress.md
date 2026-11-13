@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-11-12 (engineering review block, search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-12 (engineering review block, search "ENGINEERING REVIEW"; Draw tool, see Status). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -343,6 +343,7 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 | Area | State | Notes |
 |---|---|---|
 | Plotter app | live | node tests: see Map |
+| Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). |
 | Machine X axis | works (Tim, 10-27) | uncalibrated |
 | Machine Y / Z | not moving | Y channel (driver or slot) suspected; see Goal |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
@@ -403,6 +404,9 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   by Tim.
 - Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
 - Web Serial flows only exercised with `?demo` (FakeGrbl).
+- Draw tool with a real finger on Tim's iPhone (only WebKit headless: mouse drags + one touch tap).
+  Open with Tim: on the laptop the Draw button wraps to its own row (4 buttons don't fit 288 px);
+  a tap dab is a 0.2 mm line, tiny on the preview.
 
 ## Rejected / parked
 - ~~Short NEMA motors~~ · 2026-10-25 · with direct drive keep the 42 Ncm motors (details §7).
@@ -411,7 +415,10 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-12: 101 passed / 0 failed (26 s)
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-12: 111 passed / 0 failed (24 s)
+- Draw tool browser check (mouse drag, touch tap, undo, clear, done, move + reopen, reload):
+  `node <scratchpad>/draw/drawtest.mjs phone|desktop <outdir>` pattern = Playwright WebKit from
+  `~/.claude/tools/node_modules`, `page.mouse` on `#preview`, read `localStorage['polar-plotter-sketch']`.
 - Live: https://timothyhadfield.github.io/polar-cnc-plotter/ (`build.html` = guide) · GitHub Pages
   from `main`; every push redeploys.
 - Python venv for the model: `C:/Users/timha/AppData/Local/Temp/claude/venv3d` (Temp gets swept:

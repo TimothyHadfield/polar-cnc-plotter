@@ -104,6 +104,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); width: 100%;
 }
 .tool .seg button { flex: 1 1 auto; padding: 7px 6px; }
+/* draw tool (js/sketch.js) */
+.stage.sketching #preview { cursor: crosshair; }
+#drawTool .help { margin: 0; }
+#drawTool .row .btn { flex: 1; }
 .pattern-sliders { display: flex; flex-direction: column; gap: 12px; min-height: 166px; }  /* room for 3 sliders, so switching type doesn't resize the panel */
 
 /* plotter controls */
