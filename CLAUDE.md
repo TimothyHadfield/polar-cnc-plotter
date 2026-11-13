@@ -24,6 +24,10 @@ previews it, and can stream it to the plotter over USB.
 - `js/text.js` + `fonts.js` (Hershey single-stroke, license text inside), `js/patterns.js`.
 - `js/sketch.js`: Draw tool (draw on the preview with finger or mouse). Its strokes carry
   `center` + `radius`, so `fitFrame` keeps them where they were drawn instead of fitting them.
+- `js/handoff.js`: packs the drawing on screen (strokes, colours, center/radius, turn/move/crop)
+  into sessionStorage for the "Simulate" link; app.js unpacks it once when it runs on sim.html.
+- `sim.html` + `js/sim.js`: the 3D simulator. sim.js imports `js/app.js` last, so **app.js and
+  every tool module run on sim.html too**, against sim.html's own copy of the panel markup.
 - `js/place.js`: drag to move, Turn slider, Crop box (steps aside while `api.sketching`).
 - `js/grbl.js`: GRBL streaming (character counting, 127-byte RX limit), pause/stop/resume, Web Serial.
 - `js/machine.js`: plotter panel (connect, jog, set center, plot, pen changes via M0).
@@ -41,7 +45,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (10 files, 111 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (11 files, 115 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with
@@ -58,6 +62,9 @@ GitHub Pages, legacy build from `main` at `/`. Pushing to `main` is the deploy. 
 - Anything about the real machine (whether drawings come out right) is NOT verifiable here; only
   Tim can run the plotter. README status says drawings came out unrecognizable with the old
   Inkscape -> GRBL-Plotter -> UGS chain; that is why this app exists.
+- A control wired in app.js or a tool module must exist in both `index.html` and `sim.html`, or be
+  looked up with a null check; otherwise the simulator throws at start-up. After an app change,
+  load `sim.html?v=1` and `?v=2` headless and read the exceptions.
 - `tests/fixtures/*.json` were made by `tools/make-fixtures.mjs` from the real `svg.js` in Chromium.
   Regenerate them only if `svg.js` output is meant to change.
 

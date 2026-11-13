@@ -73,3 +73,18 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   pointer, undo/clear/undo, Done -> "4 strokes", move 20 mm then Draw again (stays put), touch tap,
   reload keeps it; no console errors, no page scroll.
 - **Open:** Tim's finger on his iPhone; laptop button row wraps.
+
+## 2026-11-13 · Simulate the drawing
+- **Asked:** "allow the user to simulate the drawing aswell."
+- **Found:** the Draw commit had broken sim.html (app.js runs there too; no `#openDraw` ->
+  exception at start-up, seen live with phone-view). Fixed in the same change (see Traps).
+- **Decided (Claude, flagged to Tim):** read as "watch the 3D plotter draw what I made": a Simulate
+  link beside Download G-code that carries the drawing over; Draw tool also inside the simulator;
+  opens V2.
+- **Built:** `js/handoff.js` + `tests/handoff.test.mjs` (4 tests, seen failing with the extras
+  dropped), Simulate link, Draw button/panel in sim.html, inset grows while drawing.
+- **Verified how:** 115/115 tests; headless WebKit 393 px + 1440 px, local then live: sim.html
+  v=1/v=2 load with no exceptions; draw face -> Done -> move -> Simulate -> same "4 strokes" in the
+  simulator -> Connect -> Plot at 100× -> "Done in 1 min." -> Draw there adds a 5th stroke.
+- **Open:** Tim's own try; on the phone the simulator's small plan shows Crop/Reset overlapping
+  (older layout, not touched).

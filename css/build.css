@@ -53,6 +53,9 @@
   background: color-mix(in srgb, var(--bg) 85%, transparent);
 }
 .inset .placebar { top: 6px; left: 6px; }
+/* Draw tool: the plan takes over the stage so there is room to draw, and goes back to its corner on Done */
+.stage.sketching .inset { inset: 10px; width: auto; max-height: none; aspect-ratio: auto; background: var(--bg); z-index: 1; }
+.stage.sketching .simbar { visibility: hidden; }
 .simbar { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
 .simbar .seg { background: var(--panel); }
 .simbar .seg button { padding: 6px 10px; }

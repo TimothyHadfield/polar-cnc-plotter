@@ -82,6 +82,7 @@ function store(s) {
 
 export function initSketch(api) {
   const $ = id => document.getElementById(id);
+  if (!$('openDraw') || !$('drawTool')) return;   // a page without the tool's markup
   const tool = import('./tool.js');   // browser-only, so not a top-level import (tests load this file in node)
   const canvas = api.canvas, stage = $('stage');
   const sketch = makeSketch(load());
@@ -100,9 +101,10 @@ export function initSketch(api) {
   }
 
   $('openDraw').addEventListener('click', async () => {
-    // still our drawing, but turned, moved or cropped since: carry on from where it sits now
+    // A drawn drawing is on screen (only this tool makes strokes with a radius), but it was turned,
+    // moved or cropped since, or it came over from the other page: carry on from where it sits now.
     const raw = api.getRaw(), p = api.getPlace();
-    if (mine && raw === mine && (p.turn || p.dx || p.dy || p.crop)) sketch.reset(bake(raw, api.getSettings(), p));
+    if (raw?.radius && (raw !== mine || p.turn || p.dx || p.dy || p.crop)) sketch.reset(bake(raw, api.getSettings(), p));
     (await tool).openTool('drawTool', () => {
       api.sketching = false; live = shown = null;
       stage.classList.remove('sketching');

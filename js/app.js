@@ -9,6 +9,7 @@ import { spiral, hatch } from './styles.js';
 import { initText } from './text.js';
 import { initPatterns } from './patterns.js';
 import { initSketch } from './sketch.js';
+import { HANDOFF, pack, unpack } from './handoff.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -261,6 +262,27 @@ function download(text, file) {
 }
 $('download').addEventListener('click', () => result && download(result.gcode, `${name || 'drawing'}-polar.nc`));
 
+// Simulate (a plain link to sim.html): the drawing on screen goes along, see js/handoff.js.
+$('simulate')?.addEventListener('click', () => {
+  try {
+    sessionStorage.removeItem(HANDOFF);
+    if (raw) sessionStorage.setItem(HANDOFF, pack(raw, $('fileName').textContent, place));
+  } catch {}   // too big for this browser's storage: the simulator opens without it
+});
+// The simulator page picks it up once, as it opens.
+function takeHandoff() {
+  if (!window.plotterSim) return;
+  try {
+    const text = sessionStorage.getItem(HANDOFF);
+    if (!text) return;
+    sessionStorage.removeItem(HANDOFF);
+    const d = unpack(text);
+    raw = d.strokes; picture = null;
+    showName(d.name); showDark();
+    Object.assign(place, d.place);
+  } catch {}
+}
+
 // settings sheet
 const sheet = $('settings');
 $('openSettings').addEventListener('click', () => { sheet.hidden = false; });
@@ -337,4 +359,5 @@ initCalibrate(api);
 initText(api);
 initPatterns(api);
 initSketch(api);
+takeHandoff();
 rebuild();

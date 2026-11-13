@@ -343,7 +343,8 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 | Area | State | Notes |
 |---|---|---|
 | Plotter app | live | node tests: see Map |
-| Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). |
+| Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). Also on sim.html (the plan inset fills the stage while drawing). |
+| Simulate (`js/handoff.js`) | live 2026-11-13 | Tim: "allow the user to simulate the drawing aswell". A "Simulate" link beside Download G-code opens `sim.html?v=2`; the drawing on screen (strokes + colours + center/radius + turn/move/crop) rides along in sessionStorage `polar-plotter-handoff`, consumed once by app.js when `window.plotterSim` exists. A picture arrives already traced (no Darkness slider there). Then Connect plotter -> Plot in the simulator. |
 | Machine X axis | works (Tim, 10-27) | uncalibrated |
 | Machine Y / Z | not moving | Y channel (driver or slot) suspected; see Goal |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
@@ -378,6 +379,11 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 - Claude can drive the plotter: COM3 at 115200 via PowerShell `System.IO.Ports.SerialPort`, only
   while the browser app is disconnected. Opening the port resets the Uno: wait ~2.5 s. Ask Tim
   "ready" in the question box before any move.
+- **sim.html runs `js/app.js` too** (js/sim.js imports it last), with its own copy of the panel
+  markup. Any new control wired in app.js or a tool module must exist in BOTH index.html and
+  sim.html, or be looked up with a null check: on 11-12 the Draw commit (ce99488) threw on
+  sim.html for a few hours because `#openDraw` wasn't there. After any app change, load sim.html
+  headless and read the exceptions list.
 - Plot/resume tests use FakeGrbl with real timers: slow and can time out on a busy machine.
 - `svg.js`, `app.js` UI and `machine.js` are browser-only: verify with phone-view, not node.
 - The app hides r/θ until Set center, so before that you can't see whether a jog registered.
@@ -415,7 +421,7 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-12: 111 passed / 0 failed (24 s)
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-13: 115 passed / 0 failed
 - Draw tool browser check (mouse drag, touch tap, undo, clear, done, move + reopen, reload):
   `node <scratchpad>/draw/drawtest.mjs phone|desktop <outdir>` pattern = Playwright WebKit from
   `~/.claude/tools/node_modules`, `page.mouse` on `#preview`, read `localStorage['polar-plotter-sketch']`.
