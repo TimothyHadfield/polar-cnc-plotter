@@ -15,7 +15,9 @@
 // until they stop (each groove is closed at its back end, which meets the rail's back end)
 // -> carriage plate onto the blocks, belt on its pegs -> Uno slides into its pocket from the back
 // (set driver currents now; the wheel covers the board) -> platter motor slides into its cage
-// from the front, 4 screws from the top (M3x6, or M3x8 with a printed washer under each head) ->
+// from the front, 4 screws from the top started loose (M3x6, or M3x8 with a printed washer under
+// each head) -> carriage over the motor, motor slid front to back until its shaft is under the pen
+// tip, screws tightened (base 2, 11-13: the motor is adjustable, see cage_y) ->
 // setting gauge on the cage top, shaft collar pushed down onto it, 2 M3x8 pan-head screws on the
 // flat, gauge out -> wheel pressed down onto the collar's hex taper (the screw heads slide up its
 // channel) ->
@@ -46,14 +48,19 @@ disc_d    = 200;      // aluminium platter disc
 disc_t    = 1;
 // Pen line (Tim 11-11: "make sure it's all aligned perfectly"). Front-to-back chain from the rods:
 //   rod centre -> SC8UU mounting face (sc8uu_h) -> carriage plate back face -> pen centre (carriage_d).
-// carriage_d from the CAD of Tim's parts: plate 2 + 1 (stage face pad) - 1.5 (stage pocket) = 1.5,
-// stage 20 (listing), slider 14 (listing; how far it stands proud of the stage is NOT known),
-// clip 23 with the pen 8.5 in (how the clip mounts on the new slider is NOT known) -> 50.0.
-// MEASURE on the real carriage and put the number here; it moves the motor cage (the stop).
+// First print (Tim 11-13): "the central plate motor is about an inch forward of the pen". Cause:
+// carriage_d was 50.0, a chain of unmeasured depths that stacked a 14 mm slider on a 20 mm stage.
+// His real stage: "The center brick ... only sticks out about 1 cm further than the rest of the
+// motor", and the listing's 20 is the depth of the whole thing, slider included.
+// carriage_d now: plate 2 + 1 (stage face pad) - 1.5 (stage pocket) = 1.5, stage body 10, slider
+// 10, clip 23 with the pen 8.5 in (the V1 clip; the holder for this slider is NOT final) -> 36.0.
+// Still not measured, and Tim's "about an inch" would be 25, not 14. So the base no longer trusts
+// this number: the platter motor slides front to back in its cage (cage_y, motor_adj below) and is
+// set under the real pen tip. pen_y is only where the model draws the pen, the wheel and the motor.
 rod_y      = 50;      // rods' plane (stands and frame are built around it)
 sc8uu_h    = 11;     // SC8UU spec: rod centre to mounting face. Measure: block depth / 2 (22 / 2)
-carriage_d = 50.0;    // carriage plate back face (bearing side) to the pen's centre line. MEASURE
-pen_y      = rod_y - sc8uu_h - carriage_d;   // = -11.0 (was -11.5: the stage pocket was missed)
+carriage_d = 36.0;    // carriage plate back face (bearing side) to the pen's centre line. MEASURE
+pen_y      = rod_y - sc8uu_h - carriage_d;   // = 3.0 (the first print had -11.0)
 
 // ---------- platter stack ----------
 motor_len = 38;  stand_gap = 0.5;
@@ -87,11 +94,17 @@ dt_fit = 0.25;                 // clearance per face (11-12: 0.2 -> 0.25, a 135 
                                // Tim's carriage-plate stage pocket at 0.3 a side fit "perfectly")
 dt_stop = 5;                   // rail ends this far before the back edge = the stop
 motor_w = 42.3;  motor_fit = 0.4;  cage_wall = 3;
-slide   = 3;
-stop_w  = 6;                   // back-stop rib width (motor plug passes between the ribs)
+// Base 2 (11-13): the motor cage moved toward the rods (Tim: "reprint the flat plate board with the
+// motor holder moved closer to the beams") and the motor slides in it instead of sitting on a fixed
+// stop, because the pen's real distance from the rods is still not measured (see carriage_d).
+cage_y    = 9;                 // middle of the motor's travel: 20 mm behind the first print's centre (-11)
+motor_adj = 10;                // travel each way: shaft at y -1..19 = 10 to 30 mm behind the first print
+stop_w  = 6;  stop_t = 3;      // back-stop ribs = the back end of the travel (motor plug passes between them)
+boss_w  = 23.5;  boss_h = 3;   // channel under the roof for the motor's 22 x 2 boss
+shaft_w = 8;                   // slot through the roof for the 5 mm shaft
+assert(abs(pen_y - cage_y) <= motor_adj, "the pen line is outside the platter motor's travel");
 ard_x = 40;  ard_y = 76;       // Uno: left edge, USB end (USB + 12 V jack face the back)
-uno_holes = [[14, 2.5], [15.3, 50.7], [66.1, 7.6], [66.1, 35.5]];
-uno_pad = 3;                   // board sits 3 mm up (its solder pins clear)
+uno_pad = 3;                   // room under the board for its solder pins; the lips are set from it
 
 module obround(d, h, ext) hull() for (y = [-ext, ext]) translate([0, y, 0]) cylinder(d = d, h = h);
 module dt_profile(c = 0) polygon([[dt_x - dt_wb / 2 - c, -dt_h - 0.01], [dt_x + dt_wb / 2 + c, -dt_h - 0.01],
@@ -111,25 +124,27 @@ module dt_groove(c = dt_fit) {
            [xi - (zl + dt_h), -dt_h - 0.01]]);
 }
 
-module motor_cage() {          // origin = motor axis on the base top
-  in = motor_w / 2 + motor_fit;  out = in + cage_wall;  ly = out + slide;
+module motor_cage() {          // origin = the middle of the motor's travel, on the base top
+  in = motor_w / 2 + motor_fit;  out = in + cage_wall;
+  ly = motor_w / 2 + motor_adj + stop_t;       // half length: the motor's body at either end of its travel
   difference() {
     union() {
       for (s = [-1, 1]) translate([s > 0 ? in : -out, -ly, 0]) cube([cage_wall, 2 * ly, face_z]);
       translate([-out, -ly, face_z]) cube([2 * out, 2 * ly, cage_top]);
-      // back stop (Tim 11-11: "push it in ... until it hits the edge and it's in the perfect
-      // position"): two ribs at the back corners stop the motor with its shaft exactly on the
-      // design centre. The middle stays open for the motor's plug.
-      // ribs start at the motor's half-width (not the side walls' clearance), so the shaft is exactly
-      // on the centre when the motor touches them
-      for (s = [-1, 1]) translate([s > 0 ? in - stop_w : -in, motor_w / 2, 0]) cube([stop_w, ly - motor_w / 2, face_z]);
+      // Two ribs at the back corners stop the motor at the back end of its travel (the first print's
+      // ribs were the one fixed position, 11-11 "push it in ... until it hits the edge"; that
+      // position was wrong by about an inch). The middle stays open for the motor's plug.
+      for (s = [-1, 1]) translate([s > 0 ? in - stop_w : -in, ly - stop_t, 0]) cube([stop_w, stop_t, face_z]);
     }
-    // boss + shaft slot, open to the front: the motor slides in from the front with its shaft up
-    translate([-11.75, -ly - 1, face_z - 1]) cube([23.5, ly + 1 + slide, cage_top + 2]);
-    translate([0, 0, face_z - 1]) obround(23.5, cage_top + 2, slide);
+    // The motor slides in from the front with its shaft up: a slot for the shaft through the roof
+    // and a channel for the boss in the roof's underside, both open to the front. (The first print
+    // had one 23.5 mm slot right through; with the longer screw slots that left the roof as two
+    // loose strips, so the roof now stays whole above the boss.)
+    hull() for (y = [-ly - shaft_w, motor_adj]) translate([0, y, face_z - 1]) cylinder(d = shaft_w, h = cage_top + 2);
+    hull() for (y = [-ly - boss_w, motor_adj]) translate([0, y, face_z - 1]) cylinder(d = boss_w, h = boss_h + 1);
     for (sx = [-1, 1], sy = [-1, 1]) translate([sx * 15.5, sy * 15.5, 0]) {
-      translate([0, 0, face_z - 1]) obround(3.4, cage_top + 2, slide);          // screw slots
-      translate([0, 0, cage_z - 3.5]) obround(6.5, 4, slide);                   // heads sunk
+      translate([0, 0, face_z - 1]) obround(3.4, cage_top + 2, motor_adj);      // screw slots
+      translate([0, 0, cage_z - 3.5]) obround(6.5, 4, motor_adj);               // heads sunk
     }
   }
 }
@@ -138,6 +153,9 @@ module motor_cage() {          // origin = motor axis on the base top
 // so that we can slide the arduino in"): a snug pocket open at the back (USB end), two overhanging
 // lips along the long sides, and the closed front wall is the stop. No pegs, no screws.
 // Lips cover 0.5 mm of board edge; the Uno's headers start ~1.2 mm in from its long edges.
+// Base 2 (Tim 11-13): the first print had four round pads under the board's mounting holes, and the
+// pins under his Uno caught on them ("keep it exactly the same but without those tiny 4 little
+// circle stands"). The pads are gone and nothing else moved: the board rests on its own pins.
 uno_w = 53.34;  uno_l = 68.58;  uno_fit = 0.3;  uno_wall = 2;
 lip_over = 0.8;  lip_t = 1.2;  lip_from = 18;    // lips start 18 mm from the USB end (clear the jacks)
 module tray() {
@@ -150,7 +168,6 @@ module tray() {
   }
   for (s = [0, 1]) translate([s == 0 ? x0 + uno_wall - 0.01 : ard_x + uno_w + uno_fit - lip_over, yf, zb])
     cube([lip_over + 0.01, ard_y - lip_from - yf, lip_t]);                     // the overhangs
-  for (p = uno_holes) translate([ard_x + p[1], ard_y - p[0], 0]) cylinder(d = 5.5, h = uno_pad);  // pads
 }
 
 module frame_base() difference() {
@@ -160,7 +177,7 @@ module frame_base() difference() {
       translate([lap_x - 0.01, base_y0, -base_t]) cube([base_x - lap_x + 0.01, base_y1 - base_y0, lap_low]);
       along_y(base_y0, base_y1 - dt_stop) dt_profile();                         // the rail
     }
-    translate([0, pen_y, 0]) motor_cage();
+    translate([0, cage_y, 0]) motor_cage();
     tray();
   }
 }
@@ -399,7 +416,7 @@ module key_demo() intersection() {
 }
 // motor going into its cage from the front
 module cage_demo() {
-  color(c_print) intersection() { frame_base(); translate([-60, -80, -10]) cube([120, 110, 70]); }
+  color(c_print) intersection() { frame_base(); translate([-36, -80, -10]) cube([72, 130, 70]); }
   color(c_dark) translate([0, pen_y - 55, face_z]) nema17();
   color("#2f8fb3") translate([0, pen_y - 30, face_z + 30]) rotate([90, 0, 0]) linear_extrude(1) text("slides in", size = 7, halign = "center");
 }

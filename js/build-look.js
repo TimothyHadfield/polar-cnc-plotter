@@ -172,18 +172,18 @@ function ribbon(name, pts, colors = WIRE, r = 0.65) {
   });
   return g;
 }
-export function extras(pen_y = -11.5, platter_z = 40) {
+export function extras(pen_y = 3, platter_z = 40) {
   const wires = new THREE.Group();
   wires.name = 'wires';
   // carriage (X) motor: out of the plug on top, back along the right stand, down to the shield
   wires.add(ribbon('wires__x', [[128, 20.5, 133], [128, 22, 145], [138, 40, 156], [158, 63, 146], [165, 66, 70],
     [171, 44, 5], [170, 5, 6], [168, -12, 40], [159.8, -19.1, 29.8]]));
   // platter (Y) motor: along the board behind the platter to the shield
-  wires.add(ribbon('wires__y', [[-68, 15, 13], [-66, 26, 6], [-45, 35, 2.5], [60, 36, 2.5], [112, 22, 2.5],
+  wires.add(ribbon('wires__y', [[-68, 29.5, 13], [-66, 40, 6], [-45, 48, 2.5], [60, 48, 2.5], [112, 30, 2.5],
     [128, 2, 6], [128, -12, 40], [135.3, -19.1, 29.8]]));
   // pen-lift (Z) motor: a slack loop from the carriage over to the right stand, then down with the X wires.
   // Its plug lead is brown/red/orange/yellow, as in Tim's photo of the shield.
-  wires.add(ribbon('wires__z', [[0, 27, 155], [0, 30, 172], [25, 48, 190], [85, 63, 182], [140, 68, 165],
+  wires.add(ribbon('wires__z', [[0, 30, 149.5], [0, 33, 168], [25, 48, 190], [85, 63, 182], [140, 68, 165],
     [161, 69, 140], [167, 69, 70], [178, 46, 5], [180, 2, 8], [170, -38, 42], [159.8, -44.8, 29.8]],
     [0x6b4226, 0xd0302a, 0xf08a24, 0xf2c418], 0.45));
   // 12 V from the jack to the shield's blue screw terminal
@@ -216,10 +216,10 @@ export function extrasV2() {
   wires.add(ribbon('wires__x', [[128, 16, 157], [128, 17, 166], [150, 22, 175], [176, 30, 160], [178, 42, 90],
     [178, 55, 12], [150, 74, 7], [104, 64, 9], [89, 50, 40], [82.9, 44, 38], [82.9, 42.2, 32.8]]));
   // platter (Y) motor: out of the back of the cage between the stop ribs, then up onto the shield
-  wires.add(ribbon('wires__y', [[0, 16, 22], [0, 24, 20], [12, 31, 9], [30, 31, 8], [45, 28, 38], [70, 20, 40],
+  wires.add(ribbon('wires__y', [[0, 30, 22], [0, 41, 19], [12, 49, 9], [30, 47, 8], [46, 36, 38], [70, 22, 40],
     [82.9, 19, 38], [82.9, 17.7, 32.8]]));
   // pen-lift (Z) motor: slack loop from the carriage over the right stand, down with the X leads
-  wires.add(ribbon('wires__z', [[0, 27, 178.5], [0, 30, 195.5], [25, 48, 213.5], [85, 63, 205], [140, 68, 188],
+  wires.add(ribbon('wires__z', [[0, 30, 174], [0, 33, 192], [25, 48, 213.5], [85, 63, 205], [140, 68, 188],
     [176, 70, 170], [181, 62, 90], [181, 50, 12], [152, 77, 8], [100, 67, 10], [66, 52, 40], [57.2, 44, 38], [57.2, 42.2, 32.8]],
     [0x6b4226, 0xd0302a, 0xf08a24, 0xf2c418], 0.45));
   // 12 V from behind the base into the shield's screw terminal (its wire openings face the back)

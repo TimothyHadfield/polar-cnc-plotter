@@ -111,3 +111,21 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
 - **Decided:** nothing built. Agreed with his fix (reprint the base, cage moved toward the rods);
   cause = the never-measured `carriage_d`. Details in progress.md (11-13 block).
 - **Open:** his dimensions; a photo of the rough rail; his other base problems.
+
+## 2026-11-13 (night) · base 2 and the stage model
+- **Asked:** his diagnosis: the model's linear stage is "a large brick that pushes the pen and pen
+  holder out quite a lot"; the real slider "only sticks out about 1 cm further than the rest of the
+  motor". "Try to redesign both the model and the base plate so that it fixes these problems I
+  stated." Mid-work: "how close are you to finishing"; "pull up the build guide artifact again"
+  (opened the checklist artifact; said which reading was taken).
+- **Decided (Claude, flagged to Tim):** platter motor adjustable +-10 mm front to back instead of a
+  fixed stop (his inch = 25 mm vs the corrected chain's 14 mm; pen holder not final); cage centre
+  20 mm back; roof kept whole (shaft slot + boss channel); rail left alone; extra file
+  `plate2_base_only.3mf`.
+- **Built:** stage/slider model, `pen_y` 3.0, new `motor_cage()`, pads loop removed, frame_base.stl,
+  both GLBs, plate 2 files, sim centres, wire routes, guide step, checklist artifact.
+- **Verified how:** OpenSCAD intersections (motor at both ends, sliding in, over-travel hits the
+  ribs, spinning envelope, carriage), watertight STL, headless Bambu slice (3 h 2, 150 g, supports
+  only under the cage roof), GLB centres measured at y 3.00, 115/115 tests, headless WebKit 393 px
+  + 1440 px of build.html and sim.html (v1 + v2), no exceptions.
+- **Open:** the print itself; his "other problems"; the rail photo; pen clip for the new slider.

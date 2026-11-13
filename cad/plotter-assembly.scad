@@ -28,8 +28,17 @@ ix       = -stand_x + fit_r + 17.38;   // idler axle, from the bracket's hole he
 plate_z  = 26;         // rotary plate rests on 26 mm spacers
 carriage_x = 0;
 block_face = rod_y - 11;            // SC8UU mounting face (rod centre is 11 mm behind it)
-stage_front = block_face - 2 - 20;  // carriage plate 2 mm, linear stage 20 mm deep
-pen_y    = stage_front - 14 - 23 + 8.5;  // slider 14 deep, clip 23 deep, pen 8.5 into the clip
+// Pen-lift stage, front to back (Tim 11-13, looking at his real part: "The center brick on the
+// linear motor that slides up and down only sticks out about 1 cm further than the rest of the
+// motor"). The listing's 81 x 25 x 20 is the whole thing, slider included, and its slider is
+// 25 x 10 x 14: 10 proud, 14 along the travel. The first model stacked a 14 mm slider on a 20 mm
+// body, which put the pen 14.5 mm too far forward. None of this is measured with calipers yet.
+stage_d  = 10;         // stage body, front to back (20 overall less the slider)
+slider_d = 10;         // slider proud of the body
+slider_h = 14;         // slider along the travel
+stage_front  = block_face - 1.5 - stage_d;   // carriage plate 2 + 1 (pad) - 1.5 (stage pocket)
+slider_front = stage_front - slider_d;
+pen_y    = slider_front - 23 + 8.5;      // = 3.0: clip 23 deep, pen 8.5 into the clip
 platter_z = 40;
 motor_off = 68;        // 20T to 60T centre distance for a 220 mm GT2 loop
 
@@ -139,23 +148,26 @@ module open_belt(x1, r1, x2, r2, pegs, peg_z, peg_r, w = 6, t = 1.1) {
     }
   }
 }
-module linear_stage() {             // QINIZX 48 mm stroke stage, 25 x 81 x 20, slider on the front
+// QINIZX 48 mm stroke stage: 25 wide, 81 long with its motor (body 70 = 48 stroke + 14 slider + two
+// 4 mm ends, motor 11), 20 deep with its slider. y = 0 is the body's front, y = stage_d its back.
+module linear_stage() {
   piece("frame") difference() {
-    cube([25, 20, 75]);
-    translate([3, -1, 4]) cube([19, 12, 67]);
-    for (z = [12, 63]) translate([12.5, 21, z]) rotate([90, 0, 0]) cylinder(d = 3, h = 4, $fn = 12);
+    cube([25, stage_d, 70]);
+    translate([3, -1, 4]) cube([19, stage_d - 3, 62]);
+    for (z = [12, 58]) translate([12.5, stage_d + 1, z]) rotate([90, 0, 0]) cylinder(d = 3, h = 4, $fn = 12);
   }
-  piece("screw") translate([12.5, 10, 4]) cylinder(d = 2.8, h = 67, $fn = 12);
-  piece("rails") for (x = [5, 20]) translate([x, 10, 4]) cylinder(d = 2, h = 67, $fn = 10);
-  piece("motor") translate([12.5, 10, 75]) { cylinder(d = 15, h = 11); translate([0, 0, 11]) cylinder(d = 6, h = 1.5); }
-  piece("flex") translate([5, 17.5, 77]) cube([15, 0.3, 8]);       // the motor's little ribbon cable, down its back
+  piece("screw") translate([12.5, 2.5, 4]) cylinder(d = 2.8, h = 62, $fn = 12);
+  piece("rails") for (x = [5, 20]) translate([x, 2.5, 4]) cylinder(d = 2, h = 62, $fn = 10);
+  // the 15 mm motor sits flush with the body's back, so it stands 5 mm proud at the front
+  piece("motor") translate([12.5, stage_d - 7.5, 70]) { cylinder(d = 15, h = 11); translate([0, 0, 11]) cylinder(d = 6, h = 1.5); }
+  piece("flex") translate([5, stage_d - 0.3, 72]) cube([15, 0.3, 8]);   // the motor's little ribbon cable, down its back
 }
-module stage_slider() {
+module stage_slider() {             // y = 0 is its front face, where the pen clip goes
   piece("block") difference() {
-    cube([25, 14, 10]);
-    for (x = [7, 18]) translate([x, -1, 5]) rotate([-90, 0, 0]) cylinder(d = 2.5, h = 4, $fn = 10);
+    cube([25, slider_d, slider_h]);
+    for (x = [7, 18]) translate([x, -1, slider_h / 2]) rotate([-90, 0, 0]) cylinder(d = 2.5, h = 4, $fn = 10);
   }
-  piece("nut") translate([12.5, 24, 0]) cylinder(d = 6, h = 10, $fn = 6);   // brass nut on the lead screw
+  piece("nut") translate([12.5, slider_d + 2.5, 0]) cylinder(d = 6, h = slider_h, $fn = 6);   // brass nut on the lead screw
 }
 module spindle() {                  // salvaged disc-drive spindle: stator board + rotor (z = 0 on the plate)
   piece("board") difference() {
@@ -312,10 +324,10 @@ module blocks() for (x = [-15, 15], z = [rod_lo, rod_hi]) translate([carriage_x 
 module carriage_plate() translate([carriage_x - 28.5, block_face - 2, belt_z + 47.5]) rotate([-90, 0, 0]) base_plate();
 
 // ---------- pen lift ----------
-module stage() translate([carriage_x - 12.5, stage_front, 66]) linear_stage();
-module slider() translate([carriage_x - 12.5, stage_front - 14, 100]) stage_slider();
-module pen_clip() translate([carriage_x + 10, stage_front - 14 - 23, 100]) rotate([0, 0, 90]) clip();
-module knob() translate([carriage_x, stage_front - 14 - 23, 105]) rotate([90, 0, 0]) gear();
+module stage() translate([carriage_x - 12.5, stage_front, 65.5]) linear_stage();   // 65.5..146.5: inside the plate's pocket
+module slider() translate([carriage_x - 12.5, slider_front, 100]) stage_slider();
+module pen_clip() translate([carriage_x + 10, slider_front - 23, 100]) rotate([0, 0, 90]) clip();
+module knob() translate([carriage_x, slider_front - 23, 105]) rotate([90, 0, 0]) gear();
 module the_pen() translate([carriage_x, pen_y, platter_z + 9]) pen();
 
 // ---------- X drive (motor in front of the right stand, as in docs/photos/full-machine.jpg) ----------

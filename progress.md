@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-11-12 (engineering review block, search "ENGINEERING REVIEW"; Draw tool, see Status). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-13 (BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -10,6 +10,9 @@ _Last updated 2026-11-12 (engineering review block, search "ENGINEERING REVIEW";
    settings + Vref, §7 improvements incl. what the builders made 2026-10-26).
 
 ## Goal right now
+**2026-11-13: Tim reprints the base** (`build/print/plate2_base_only.3mf`, see "BASE 2"), sets the
+platter motor under the pen tip, prints plate 5, then Calibrate. The older text below is history.
+
 Get all three axes moving, then run the app's Calibrate tool. **X (carriage) works.** Y (platter)
 and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Claude guides.
 
@@ -102,104 +105,13 @@ middle swap — that's how the pen was found); then wiggle; then bypass the oran
 **Result 11-11: a middle wire of the platter plug wasn't fully connected; fixed. ALL 3 AXES WORK on
 their own headers with their own drivers (Tim).** Next: finish the rebuild, then `$102` for the pen
 stage (measure travel per rev), then the app's Calibrate (`$100`, `$101`).
-**Rebuild ideas (11-11, Tim: "Let me know your ideas before we design anything" = NOTHING
-DESIGNED).** Tim fully disassembled; Z stage + X motor plate good; he REMOVED the two iron bars under
-the board (sharp edge, extra material). His list: Y gears/platter connection, board depth, X idler
-(was a cut nail), PVC-to-board joints, pen line exactly over the platter centre. Proposed: direct
-drive (hub + stand) with the platter SCREWED to the hub (3 M3, not glue); motor stand with slots
-across the pen line for centring + a draw-and-rotate-180° check; printed PVC foot sockets screwed
-from the top (wood screws shorter than the board, so no bars needed) + 4 printed feet; X idler =
-bought bearing GT2 idler (money, his call) or the printed pulley_m3 on an M3 bolt; heights set from
-his measurements. Waiting on his picks + measurements.
-**11-11 later:** Tim rejected screws (heads break the smooth drawing face) AND glue (not removable),
-and said neither centres the plate. New proposal (still NOTHING DESIGNED): one-piece PRINTED platter
-(~200 mm, 3-4 mm + ribs, printed drawing-face-down so the bed side is the smooth top; aluminium disc
-retired) with an integral cone socket underneath that drops onto a cone hub on the motor shaft (set
-screw); a flat on the cone carries torque; self-centring, lifts off. Magnets optional (money = Tim).
-Tim has Bambu printers big enough for anything here. Artifact:
-https://claude.ai/artifact/SPtQF4veYqcU6sS6VpSr3p (v2 shows it).
-**11-11 Tim's idea (now the lead):** hub with arms reaching under the plate that pinch its edge
-("X shape ... pinches 4 different sides"; "3 or 5 so it's best"). Claude: YES, better than the cone
-alone (edge support stops flex/wobble at the rim; centres on the edge; keeps the aluminium disc).
-Recommend 3 arms (3 points can't rock; self-centring like a 3-jaw chuck), lips flush with the top,
-slightly springy for snap-on/lift-off. Need: disc diameter + roundness + thickness. NOTHING DESIGNED.
-**11-11 Tim: platter now sits higher, add ~2" to the PVC legs?** Claude: yes it must rise, but by
-~23-25 mm (reasoned, components.md §7: motor 38 + shaft 24 → top ≈64 mm vs 41 before), not 2".
-Recommend making the printed PVC foot sockets the spacer (exact height, no extra joint), sized from
-Tim's measurement: motor + hub + plate stacked on the board → plate top height, plus the carriage's
-lowest point above the board today.
-**11-11 rod holders (`spool`):** Tim: rods "just barely too small" to fit at 8.0. Changed spool_bore to
-8.2 + new `rod_gauge` STL (8.10/8.15/8.20/8.25/8.30, sizes engraved); STL bores measured 8.2.
-**11-11 wobble (Tim: "reduce as much wobble/bend as possible when pressure is applied to the edges";
-"how does our hub grab the edges tightly?"):** advised: clamp-style hub (split + M3 pinch bolt) using
-the full shaft length, seated ~1 mm above the boss; arms tall at the root, tapering (sag ~ 1/height³);
-outer ring joining the arm tips (wheel, 6 spokes, top face printed on the bed) because the 1 mm disc
-flexes between 3 arms; grip = 3 thin springy fingers on the ring, inner face ~0.3 mm under the disc
-dia and leaning 2-3° inward so the squeeze pins the plate down; PLA. NOTHING DESIGNED.
-**11-11 PROTOTYPE 1 DESIGNED (Tim: "scrap the wooden board ... and maybe the PVC pipes ... print them
-in 3 separate components (each stand and the bottom plate) ... show me your first prototype/design").**
-`cad/printed-frame.scad` → build/stl/frame_base, frame_stand_right, frame_stand_left (print
-orientation: on the outer face), frame_wheel. Base 250x135 with motor cage (slots ±3 mm in Y for
-pen-line centring, heads sunk 3.5) + Uno tray (USB to the back); stands lap onto stepped base ends,
-3 M3x12 + nuts each; rod holes 8.2 x 22 deep (vertical in print); right stand front face = X motor
-plate; left = idler fork (M3x25, pulley_m3 + 2 idler_washers). Wheel: 6 spokes + ring, 18 deep,
-3 fingers 0.15 mm inside the disc, 2 set screws on the flat 10 apart (clamp dropped: unreachable
-inside the spokes), key holes through the ring. Lift 23.5 → rods 98.5/160.5. All < 256 mm, no
-supports; all 4 STLs manifold (OpenSCAD). Artifact v4 shows renders. NOT printed. Assumed: rod 300,
-shaft 24, disc 200x1, pen_y -11.5, bed 256. Not checked: pen reach ±~90 (reasoned), collisions
-beyond eyeballed renders, horizontal 3.4 holes in stands.
-
-**11-11 PROTOTYPE 2 (supersedes proto 1 joints/fingers).** Tim: fingers "pointed upwards" were useless;
-"move away from screws/bolts"; nothing may go below the base ("needs to lay flat"); no Arduino screws
-("an indent ... is good enough"); "think about how things are assembled" (motor couldn't enter cage;
-his "Z axis motor" read as the platter motor). Now: stands join base by **sliding dovetail rails**
-(dt_wb 10 / dt_wt 12.2, fit 0.2, groove closed at back = stop), slid on from the front after rods +
-carriage + X motor + idler + belt are assembled in the stands. Cage roof has a **23.5 slot open to the
-front** (motor slides in shaft-up, 4 screws from above). Uno on **4 pegs** + 3-side rim. Wheel: lip
-(disc drops in, 0.15 clearance) + bead 6 below top; new **clamp_ring** (frame_clamp_ring.stl): r92..104.2,
-4 hooks snap under bead with 0.2 preload. Remaining non-motor screws: 2 wheel set screws + idler M3
-axle. All 5 STLs manifold. Artifact v5. Not checked: dovetail fit in print, hook strength/fit.
-
-**11-11 proto 2 rev (artifact v6).** Tim: "add a edge to one side of the slide ... push it ... until it
-hits the edge and it's in the perfect position" → cage gets 2 back-corner stop ribs (stop_w 6, plug
-passes between); stands already stop (closed groove). Tim: Arduino comments not applied → Uno now
-slides into a pocket from the back (fit 0.3, 0.8 mm overhang lips along long sides from 18 mm past
-the USB end, front wall = stop, 4 pads, no pegs). Tim: disc "relies on friction rather than physical
-connection" → **aluminium disc dropped** (`platter = "printed"`; "disc" restores old lip version):
-wheel has a 2 mm solid top at the old disc-top height, printed face-down (`print_wheel`, the
-frame_wheel.stl); clamp-ring hooks sit between key ribs. Bore/nut slot stop under the skin. Not
-checked: printed face flatness vs the disc, Uno lip clearance to headers (assumed ~1.2 mm).
-
-**11-11 pen centring audit (artifact v7).** Tim asked to check the whole Y chain. pen_y is now
-derived: `rod_y - sc8uu_h (11, spec) - carriage_d (50.0)` = -11.0 (was -11.5: base_plate's
-1 mm pad - 1.5 pocket put the stage back 0.5 mm nearer the rods). Fixed: cage stop ribs started at
-the wall clearance (motor sat 0.4 back), dovetail groove end was 0.2 long (rods 0.2 forward).
-UNKNOWN (Tim to measure): SC8UU depth (/2 = sc8uu_h), and carriage_d = carriage plate back face to
-pen centre on the real assembled carriage (slider proud of stage? clip mounting on the new slider?
-pen diameter?). The model's clip/knob orientation is itself uncertain (old photo shows a different
-holder). Not centring-relevant: X motor plate recess, pen extension, block length.
-
-**11-11 soft pad + hub explainer (artifact v8).** Tim: vinyl under the paper so the pen presses
-slightly past the surface. `pad_t = 1` (MEASURE his sheet): pad lies on the flat face, cut to 200,
-clamp-ring hooks are pad_t longer (frame_clamp_ring.stl re-exported). A pocket for the pad was
-rejected: the face prints on the bed, so the pocket floor would be in mid-air. Advised firm-ish
-0.5-1.5 mm (vinyl/rubber/cutting mat), pen ~0.5 mm past the paper. Artifact got a hub cross-section:
-D-bore 0.15 loose, 17 mm engagement, 2 set screws 10 apart on the flat + trapped nuts, tightening
-order. Reasoned: 0.5° / 0.9 mm edge lean without the screws, removed when both are tight.
-
-**11-11 pre-print check (artifact v9).** Tim: "go through every single part ... until you're confident".
-Measured with OpenSCAD intersections (scratchpad clash.scad: carriage stack translated to cx vs each
-frame part) + an STL overhang scan (faces within 30° of flat-down, off the bed). Found + fixed:
-pen reach — app only uses s >= 0 (polar.js) and needs 90; blocks hit the idler fork at cx -78 and
-the plate hits the X motor flange at +78 -> `ix = rod_len/2 - 17` (133): idler side clear at -92,
-contact ~-98. **Pen draws on the idler (left) side**; flip GRBL `$3` X bit if direction is wrong.
-Inner front gusset (x 148..154) printed over air -> one `tri_x(160, 10)`. Motor cage roof = 10 mm
-flat overhang -> base needs supports "build plate only" (only there). Hooks at 0° covered the
-set-screw holes -> `hook_ang` 45/135/225/315. Rod holes now end 2 mm past rod_len/2. New part
-`fit_test` (frame_fit_test.stl): rail slice, groove slice, rod hole, hub bore, same orientations.
-OK as is: belt plane, idler centred (1.9 play/side), plugs (X up; platter out the back between ribs),
-wheel ~10 mm over drivers (set Vref before the wheel). Groove's upper flank = 3 mm 20° overhang
-(may sag; fit test). Hardware: X motor 4×M3x8, platter 4×M3x6, idler M3x25+nut, 2 M3 grubs+nuts.
+**11-11 design history (rebuild ideas, prototype 1, prototype 2 and its revisions, pen centring
+audit, soft pad, pre-print check): moved verbatim to `docs/archive/progress-2026-11-13.md`.** Still
+true from it: Tim's rules for the frame = no screws/bolts between stands and base, nothing below the
+base, no Arduino screws, no screws or glue on the drawing face; stands on sliding dovetail rails
+(groove closed at the back = stop); printed platter face (aluminium disc dropped); clamp ring with
+hooks between key ribs; `pad_t = 1` soft pad; the pen draws on the idler (left) side (`ix` 133).
+Flip GRBL `$3` X bit if the carriage jogs the wrong way.
 
 **11-12 idler: Tim chose to BUY a bearing idler** (question box; he'd found the nail idler loud and
 high-friction). GT2 20T, 3 mm bore, 6 mm belt, ~$7-10 per pack of 5 (his money call, made).
@@ -298,24 +210,44 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   file. Small parts unscaled (collar 0.06 mm smaller across flats = wheel ~0.7 mm lower, fine).
   Measured: Bambu refuses ABS on the Cool Plate ("Filaments are not compatible with the plate
   type"); on Textured PEI it slices: 39 min, 14.5 g, bed 90, nozzle 270, 0 supports, 0 brim.
-- **11-13 TIM PRINTED plates 2, 3, 4 (not 5) and assembled. NOTHING CHANGED YET: "Don't change
-  anything yet, I'll talk about specific dimensions in a bit."** Read this before touching the base.
-  - **Pen is ~1 inch off centre, front to back:** "the central plate motor is about an inch forward
-    of the pen". Cause (certain): `carriage_d = 50.0` was never measured (built from listing sizes
-    and a guess at how the clip sits on the new slider), so `pen_y = -11` is wrong by ~25 mm; the
-    real pen is nearer the rods. Tim's fix, agreed: **reprint the base with the motor cage moved
-    toward the rods** (+y). Only `frame_base` uses `pen_y` for a printed feature (cage), so stands,
-    wheel and collar stay. WAIT for his number; best single measurement = front-to-back distance
-    from the pen tip to the motor shaft centre with stands and motor against their stops. Reasoned
-    (not checked in CAD): cage at y ~ +14 clears the Uno tray (cage x +-24.6, tray from x 37.7) and
-    the wheel still clears the stands (r 104 vs columns from x 148; arms are above the wheel).
-  - **Uno pads:** his board's bottom pins hit the 4 round pads (d 5.5 x 3 high), so it would not
-    slide in. Tim: "keep it exactly the same but without those tiny 4 little circle stands".
-    On the reprint: delete the pads loop in `tray()`, change nothing else there.
-  - **Base rail "a little messed up on one side":** cause unknown (no photo yet). Not supports
-    (slice put them only under the cage roof); rail flanks are only 20 degrees off vertical.
-    Suspects: warp/bed edge (base is 250 wide on a 256 bed, lap is 3 mm thin). Asked for a photo.
-  - He says the base "has some other problems as well" (not yet said which).
+- **11-13 TIM PRINTED plates 2, 3, 4 (not 5) and assembled.** Pen ~1 inch off centre front to back
+  ("the central plate motor is about an inch forward of the pen"); Uno's bottom pins hit the 4
+  round pads; one base rail printed rough; base "has some other problems as well" (never said
+  which).
+- **11-13 BASE 2 (Tim: "Try to redesign both the model and the base plate so that it fixes these
+  problems I stated"). BUILT, NOT PRINTED.**
+  - **Cause (Tim found it):** the model's stage was a 20 mm body PLUS a 14 mm-proud slider. His
+    real part: "The center brick ... only sticks out about 1 cm further than the rest of the motor";
+    the listing's 20 is the whole depth and the slider is 25 x 10 x 14 (10 proud, 14 along travel).
+  - **Stage model** (`plotter-assembly.scad`, shared by V1 and V2): `stage_d` 10, `slider_d` 10,
+    `slider_h` 14, body 70 tall + motor 11 (= 81, fits the plate pocket), motor flush with the back.
+    `pen_y` is now **3.0** in both scad files (was -11.5 / -11). `carriage_d` 36.0, still NOT
+    measured. V1's platter drive follows pen_y (it is a model of a machine that no longer exists).
+  - **Base** (`printed-frame.scad`): cage centre `cage_y = 9` (20 mm behind the first print) and
+    the motor **slides front to back `motor_adj = +-10`** (shaft y -1..19 = 10 to 30 mm behind the
+    first print) in long screw slots; back ribs are now only the end of travel. Why adjustable
+    (Claude's call, flagged to Tim): his "about an inch" = 25 mm, the corrected chain = 14 mm, and
+    the pen holder for this slider is not final. Roof: 8 mm shaft slot through + 23.5 x 3 boss
+    channel underneath (was one 23.5 slot right through), so the roof stays in one piece.
+    Centring: screws loose, carriage over the motor, slide the motor until the shaft is under the
+    pen tip, tighten. An `assert` fails the render if pen_y leaves the travel.
+  - **Uno tray:** only the 4 pads removed ("keep it exactly the same but without those tiny 4
+    little circle stands"); lips and `uno_pad = 3` unchanged, board rests on its own pins.
+  - **Rail: NOT changed** (his printed stands must still fit; cause unknown, no photo). Measured:
+    the slicer puts no supports at the rails on either base, only under the cage roof.
+  - **Measured 11-13:** OpenSCAD intersections (scratchpad `redesign/clash2.scad`): motor at both
+    ends of travel and sliding in = only the model's proud bottom screw heads (0.1 mm, as before);
+    1 mm past the back end hits the ribs; spinning envelope (r 104.5) vs base/stands/X motor/Uno at
+    both ends = empty; vs carriage = empty; stage + slider vs carriage plate = empty. New
+    frame_base.stl: one body, watertight. Headless Bambu slice (X1C, 0.20, PLA, supports on, not
+    build-plate-only): base only **3 h 2 min, 150 g** (first base 2 h 46, 136 g); with spacers,
+    clip and knob 3 h 9, 152 g. GLB centres (wheel, shaft, pen tip, V1 platter) all at y 3.00 =
+    `centre` in sim.js.
+  - **Files:** `build/print/plate2_base_only.3mf` (new, for the reprint) and
+    `plate2_base_and_small_parts.3mf` (same new base). sim.js centres [0, 3]; build-look.js wire
+    routes; guide step "Platter motor" reworded (wording is Tim's call).
+  - **Open:** more support to dig out of the cage (171 m of support line vs 97 m: the roof is now
+    solid over the middle); his "other problems"; the rail.
 - Checklist artifact for Tim: https://claude.ai/artifact/7FoeWjaJ7hR36dzydvh4PC. Hardware artifact
   (F83nn95VXsk6BVKmLUT6v3) updated to match.
 - Still open: pen clip/knob for the new slider (need Tim's caliper numbers: slider size + proud of
@@ -443,6 +375,9 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   by Tim.
 - Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
 - Web Serial flows only exercised with `?demo` (FakeGrbl).
+- Base 2 is not printed. Not measured on the real parts: stage body depth (10 assumed), where the
+  pen really sits (the motor's +-10 mm travel is meant to cover it), whether the 3 mm boss channel
+  and 8 mm shaft slot come out clean over supports, how hard the cage supports are to remove.
 - Draw tool with a real finger on Tim's iPhone (only WebKit headless: mouse drags + one touch tap).
 - Simulate on Tim's own devices (headless WebKit only, live at a5f877f, 393 px + 1440 px). One
   live laptop run logged "Importing a module script failed" on sim.html once; 8 further loads were

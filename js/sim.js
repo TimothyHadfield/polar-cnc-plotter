@@ -19,16 +19,16 @@ const PEN = ['slider', 'pen_clip', 'knob', 'pen'];
 const MACHINES = {
   1: {   // cad/plotter-assembly.scad
     url: 'build/plotter.glb', extras: () => extras(),
-    centre: [0, -11.5], travel: [-85, 85],
+    centre: [0, 3], travel: [-85, 85],                // centre = pen_y in the scad
     platter: ['platter', 'paper', 'steel_strip', 'cd', 'big_pulley', 'spindle__rotor'],
-    motor: { names: ['y_pulley', 'y_motor__shaft'], at: [-68, -11.5], ratio: 3 },     // 20T -> 60T belt
+    motor: { names: ['y_pulley', 'y_motor__shaft'], at: [-68, 3], ratio: 3 },     // 20T -> 60T belt
     pulleys: [{ name: 'x_pulley', at: [128, 106], r: 5.09 }, { name: 'idler_pulley', at: [-119.12, 106], r: 6.37 }],
     belt: { from: -119.12, to: 128, z: 106 },
   },
   2: {   // cad/printed-frame.scad assembly()
     url: 'build/plotter-v2.glb', extras: () => extrasV2(),
     // travel: the carriage plate meets the idler fork at 93.5 (OpenSCAD intersection, 11-12), the motor flange at 78
-    centre: [0, -11], travel: [-78, 93],
+    centre: [0, 3], travel: [-78, 93],                // centre = pen_y in the scad
     platter: ['wheel', 'collar', 'pad', 'paper', 'clamp_ring', 'y_motor__shaft'],
     motor: null,                                                                       // direct drive
     pulleys: [{ name: 'x_pulley', at: [128, 130.5], r: 5.09 }, { name: 'idler', at: [-133, 130.5], r: 6.37 }],

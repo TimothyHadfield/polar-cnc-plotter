@@ -1,4 +1,4 @@
-// Build guide content for V2, prototype 2 (cad/printed-frame.scad, 2026-11-11/12): the printed frame.
+// Build guide content for V2, prototype 2 (cad/printed-frame.scad, 2026-11-11/13): the printed frame.
 // Same shape as build-steps.js. `model` names are nodes in build/plotter-v2.glb
 // (tools/make-build-model.py v2); parts shared with V1 keep V1's names and pieces.
 import { PARTS as V1 } from './build-steps.js';
@@ -139,8 +139,9 @@ export const STEPS = [
     title: 'Platter motor', show: ['frame_base', 'y_motor'], view: [-10, 30],
     do: [
       'Slide the motor into its cage from the front, shaft up, plug to the back.',
-      'Push it back against the stop ribs: the shaft is now under the pen line.',
-      'Fix it with 4 screws from the top: M3 × 6, or M3 × 8 with a printed washer under each head.',
+      'Start 4 screws from the top, loose: M3 × 6, or M3 × 8 with a printed washer under each head.',
+      'Carriage over the motor. Slide the motor forward or back until its shaft is under the pen tip.',
+      'Tighten the 4 screws.',
     ],
     parts: ['nema', 'base', 'washers', 'screws'],
   },
