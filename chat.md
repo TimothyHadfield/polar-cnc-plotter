@@ -98,3 +98,8 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
 - **Verified how:** meshes compared with the committed plate 1/5 (identical); gaps on a 0.5 mm
   grid; headless Bambu Studio slice with Tim's X1C presets (33 min, 18 g, 0 supports).
 - **Open:** nothing printed from it yet.
+- **Brim question:** the message Tim saw is a rotating Bambu tip (hints.ini), not a warning; his
+  preset is brim Auto and the slice made no brim. Nothing changed.
+- **ABS question:** out of PLA; answered yes and added an ABS version of plate 5 (ring 100.4 % in
+  X/Y, reasoned). Sliced headless with Bambu ABS on Textured PEI. Open: whether Tim's wheel is PLA
+  (assumed), and how the hooks actually fit.

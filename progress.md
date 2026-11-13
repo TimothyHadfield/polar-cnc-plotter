@@ -290,6 +290,14 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   headless slice: 33 min, 18 g, 0 supports, no warnings). Plates are now 2, 3, 4, 5 (numbers kept).
   `plates.py` (scratchpad) has the layout: collar at (60, 91), gauge (86, 91), washers (86, 111)
   from the ring's corner.
+- **11-13 ABS for plate 5 (Tim out of PLA: "Is it okay if I do ABS?"):** yes. Added
+  `plate5_clamp_ring_and_small_parts_ABS.3mf`: only the ring is scaled 100.4 % in X/Y (hook wall has
+  0.2 mm radial clearance to the wheel's bead at r 102.5; ABS shrinks ~0.3-0.4 % more than PLA =
+  ~0.3-0.4 mm there. REASONED from typical shrink figures, not measured; both Bambu presets have
+  shrink compensation 100 %). ASSUMES the wheel is PLA; if the wheel is also ABS use the normal
+  file. Small parts unscaled (collar 0.06 mm smaller across flats = wheel ~0.7 mm lower, fine).
+  Measured: Bambu refuses ABS on the Cool Plate ("Filaments are not compatible with the plate
+  type"); on Textured PEI it slices: 39 min, 14.5 g, bed 90, nozzle 270, 0 supports, 0 brim.
 - Checklist artifact for Tim: https://claude.ai/artifact/7FoeWjaJ7hR36dzydvh4PC. Hardware artifact
   (F83nn95VXsk6BVKmLUT6v3) updated to match.
 - Still open: pen clip/knob for the new slider (need Tim's caliper numbers: slider size + proud of
