@@ -88,3 +88,13 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   simulator -> Connect -> Plot at 100× -> "Done in 1 min." -> Draw there adds a 5th stroke.
 - **Open:** Tim's own try; on the phone the simulator's small plan shows Crop/Reset overlapping
   (older layout, not touched).
+
+## 2026-11-13 (later) · collar onto the clamp-ring plate
+- **Asked:** "put that necessary connector in the last plate and clamp ring print so I can easily
+  skip the test print and still have all the necessary parts."
+- **Decided (Claude, flagged to Tim):** moved everything from plate 1 (collar, gauge, washers), not
+  only the collar, since the gauge and washers are needed too; plate 1 removed; file renamed
+  `plate5_clamp_ring_and_small_parts.3mf`; plate numbers kept.
+- **Verified how:** meshes compared with the committed plate 1/5 (identical); gaps on a 0.5 mm
+  grid; headless Bambu Studio slice with Tim's X1C presets (33 min, 18 g, 0 supports).
+- **Open:** nothing printed from it yet.

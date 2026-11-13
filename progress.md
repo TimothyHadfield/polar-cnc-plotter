@@ -283,6 +283,13 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   fit_test STL stays). plate3 + plate4 re-exported. Slicer (X1C, 0.20 Standard, PLA Basic — Tim's
   last-used presets): p1 11 min/5 g, p2 ~3 h/130 g with supports, p3 3 h 57/198 g, p4 2 h 55/133 g,
   p5 24 min/14 g. plotter-v2.glb REBUILT.
+- **11-13 plate 1 is gone:** Tim: "put that necessary connector [collar] in the last plate and clamp
+  ring print so I can easily skip the test print and still have all the necessary parts". Collar,
+  collar gauge and 6 motor washers now sit inside the ring on
+  `plate5_clamp_ring_and_small_parts.3mf` (parts byte-identical, gaps >= 6.5 mm, 46 mm to the ring;
+  headless slice: 33 min, 18 g, 0 supports, no warnings). Plates are now 2, 3, 4, 5 (numbers kept).
+  `plates.py` (scratchpad) has the layout: collar at (60, 91), gauge (86, 91), washers (86, 111)
+  from the ring's corner.
 - Checklist artifact for Tim: https://claude.ai/artifact/7FoeWjaJ7hR36dzydvh4PC. Hardware artifact
   (F83nn95VXsk6BVKmLUT6v3) updated to match.
 - Still open: pen clip/knob for the new slider (need Tim's caliper numbers: slider size + proud of
