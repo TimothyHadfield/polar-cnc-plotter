@@ -298,6 +298,24 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   file. Small parts unscaled (collar 0.06 mm smaller across flats = wheel ~0.7 mm lower, fine).
   Measured: Bambu refuses ABS on the Cool Plate ("Filaments are not compatible with the plate
   type"); on Textured PEI it slices: 39 min, 14.5 g, bed 90, nozzle 270, 0 supports, 0 brim.
+- **11-13 TIM PRINTED plates 2, 3, 4 (not 5) and assembled. NOTHING CHANGED YET: "Don't change
+  anything yet, I'll talk about specific dimensions in a bit."** Read this before touching the base.
+  - **Pen is ~1 inch off centre, front to back:** "the central plate motor is about an inch forward
+    of the pen". Cause (certain): `carriage_d = 50.0` was never measured (built from listing sizes
+    and a guess at how the clip sits on the new slider), so `pen_y = -11` is wrong by ~25 mm; the
+    real pen is nearer the rods. Tim's fix, agreed: **reprint the base with the motor cage moved
+    toward the rods** (+y). Only `frame_base` uses `pen_y` for a printed feature (cage), so stands,
+    wheel and collar stay. WAIT for his number; best single measurement = front-to-back distance
+    from the pen tip to the motor shaft centre with stands and motor against their stops. Reasoned
+    (not checked in CAD): cage at y ~ +14 clears the Uno tray (cage x +-24.6, tray from x 37.7) and
+    the wheel still clears the stands (r 104 vs columns from x 148; arms are above the wheel).
+  - **Uno pads:** his board's bottom pins hit the 4 round pads (d 5.5 x 3 high), so it would not
+    slide in. Tim: "keep it exactly the same but without those tiny 4 little circle stands".
+    On the reprint: delete the pads loop in `tray()`, change nothing else there.
+  - **Base rail "a little messed up on one side":** cause unknown (no photo yet). Not supports
+    (slice put them only under the cage roof); rail flanks are only 20 degrees off vertical.
+    Suspects: warp/bed edge (base is 250 wide on a 256 bed, lap is 3 mm thin). Asked for a photo.
+  - He says the base "has some other problems as well" (not yet said which).
 - Checklist artifact for Tim: https://claude.ai/artifact/7FoeWjaJ7hR36dzydvh4PC. Hardware artifact
   (F83nn95VXsk6BVKmLUT6v3) updated to match.
 - Still open: pen clip/knob for the new slider (need Tim's caliper numbers: slider size + proud of

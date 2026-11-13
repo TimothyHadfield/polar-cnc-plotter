@@ -103,3 +103,11 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
 - **ABS question:** out of PLA; answered yes and added an ABS version of plate 5 (ring 100.4 % in
   X/Y, reasoned). Sliced headless with Bambu ABS on Textured PEI. Open: whether Tim's wheel is PLA
   (assumed), and how the hooks actually fit.
+
+## 2026-11-13 (evening) · first assembly report
+- **Asked:** printed everything but plate 5; pen ~1 inch behind the platter motor; Uno pads block
+  the board's bottom pins; one base rail printed rough. "Don't change anything yet, I'll talk about
+  specific dimensions in a bit."
+- **Decided:** nothing built. Agreed with his fix (reprint the base, cage moved toward the rods);
+  cause = the never-measured `carriage_d`. Details in progress.md (11-13 block).
+- **Open:** his dimensions; a photo of the rough rail; his other base problems.
