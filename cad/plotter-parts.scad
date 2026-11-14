@@ -5,7 +5,7 @@
 
 part = "all";   // all, motor_plate, base_plate, motor_plate_2, big_pulley, spool, bracket, clip,
                 // pulley_a, pulley_b, gear, platter_hub, motor_stand,
-                // big_pulley_gt2, pulley_m3, idler_washer, paper_ring
+                // big_pulley_gt2, pulley_m3, idler_washer, paper_ring, rod_gauge, pen_holder
 
 $fn = 96;
 screw_d = 3.4;      // M3 clearance hole. The TinkerCad parts used 3.0, which usually prints too tight.
@@ -209,6 +209,27 @@ module clip() {
   }
 }
 
+// ---------- pen holder: the flat back the pen lies against, a round cradle at each end ----------
+// The third piece of the original guide's pen-holder set (with clip + knob). Tim 11-13: "The other
+// part was the longer flat part with round holders on the end as to support the pen more."
+// Redrawn from the guide's "Pen+Holder+Parts.stl" (measured from the mesh): 25 x 50, plate 3 thick,
+// 9 mm end blocks with a 15 mm cradle whose bottom is the plate's top, and a 10 mm long neck in the
+// middle where the clip's two arms pass on either side of the plate (clip 10 thick, arms 14 apart).
+// ONE CHANGE: the guide's neck is 18 wide, which the clip's 14 mm opening cannot go over. Here it
+// is ph_neck, the opening less 0.2 a side. Flat face (z = 0) goes against the stage slider, above
+// or below the neck so the arm tips have room behind the plate. Prints as drawn, no supports.
+ph_neck = 13.6;
+module pen_holder() {
+  difference() {
+    union() {
+      translate([0, 8, 0]) cube([25, 34, 3]);
+      for (y = [0, 42]) translate([0, y, 0]) cube([25, 8, 9]);
+    }
+    for (x = [-1, (25 + ph_neck) / 2]) translate([x, 20, -1]) cube([(25 - ph_neck) / 2 + 1, 10, 5]);
+    translate([12.5, -1, 3 + 7.5]) rotate([-90, 0, 0]) cylinder(d = 15, h = 52);
+  }
+}
+
 // ---------- small belt pulleys: 20 teeth (GT2 size), 18 mm flanges, 5.15 mm bore ----------
 gt2_20_tooth = [5.181, 5.187, 5.224, 5.301, 5.505, 5.856, 5.971, 6.028,
                 6.050, 6.041, 5.998, 5.908, 5.654, 5.348, 5.247, 5.198];
@@ -375,3 +396,4 @@ show("pulley_m3")     translate([-25, -150, 0]) pulley_m3();
 show("idler_washer")  for (x = [-8, 2]) translate([x, -150, 0]) idler_washer();
 show("paper_ring")    translate([0, -270, 0]) paper_ring();
 show("rod_gauge")     translate([60, -150, 0]) rod_gauge();
+show("pen_holder")    translate([100, -30, 0]) pen_holder();        // added 2026-11-13
