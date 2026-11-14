@@ -97,8 +97,11 @@ motor_w = 42.3;  motor_fit = 0.4;  cage_wall = 3;
 // Base 2 (11-13): the motor cage moved toward the rods (Tim: "reprint the flat plate board with the
 // motor holder moved closer to the beams") and the motor slides in it instead of sitting on a fixed
 // stop, because the pen's real distance from the rods is still not measured (see carriage_d).
-cage_y    = 9;                 // middle of the motor's travel: 20 mm behind the first print's centre (-11)
-motor_adj = 10;                // travel each way: shaft at y -1..19 = 10 to 30 mm behind the first print
+// 11-14 (Tim: "did you make sure the expected center fits in the middle of the 10mm range"): the
+// travel was -1..19, centred between the two guesses (model 3, Tim's inch 14), which left each guess
+// only 4-5 mm on one side. Now -6.5..23.5: each guess has 9.5 mm one way and 20.5 the other.
+cage_y    = 8.5;               // middle of the motor's travel = halfway between the two guesses
+motor_adj = 15;                // travel each way: shaft at y -6.5..23.5 (the screw slots join into one long slot a side)
 stop_w  = 6;  stop_t = 3;      // back-stop ribs = the back end of the travel (motor plug passes between them)
 boss_w  = 23.5;  boss_h = 3;   // channel under the roof for the motor's 22 x 2 boss
 shaft_w = 8;                   // slot through the roof for the 5 mm shaft
