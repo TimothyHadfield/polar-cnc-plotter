@@ -213,3 +213,7 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
 - **Open:** nothing of this has run on the real plotter (see NOT verified). Speed step if the
   platter turns slowly. Mistake to avoid: `git checkout -- file` after a mutation test also throws
   away uncommitted work in that file; reverse the edit instead.
+- **Later, asked:** "make the carraight motor say left and right, not in and out." Built: Left
+  (X+, away from the center) / Right (X-) on the main panel and in Calibrate, instructions reworded
+  ("Jog the pen left, near the platter edge."). Verified: 131/131 tests; headless WebKit on
+  `sim.html?v=2`, 35/35 at 393 px and 1440 px; Left raised X 0 -> 4, Right lowered it to 2.

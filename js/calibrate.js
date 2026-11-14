@@ -193,7 +193,7 @@ export function letterF() {
 
 // ---------- the panel ----------
 const STEPS = 6;
-const xJog = `<div class="calres"><button class="btn sm" data-act="xIn">In</button><button class="btn sm" data-act="xOut">Out</button>
+const xJog = `<div class="calres"><button class="btn sm" data-act="xLeft">Left</button><button class="btn sm" data-act="xRight">Right</button>
     <span class="seg xstep"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span></div>`;
 
 const HTML = `
@@ -222,7 +222,7 @@ const HTML = `
 <div class="calstep" data-n="3" hidden>
   <h3>Carriage test <button class="q" type="button" data-q="calLineHelp" aria-label="What is this?">?</button></h3>
   <p class="help" id="calLineHelp" hidden>The pen draws a short line toward the center. A ruler on it shows how far the carriage really moved, which sets $100.</p>
-  <p class="calsay">1. Jog the pen out near the platter edge.</p>
+  <p class="calsay">1. Jog the pen left, near the platter edge.</p>
   ${xJog}
   <p class="calsay">2. Draw a line. Measure it with a ruler.</p>
   <div class="calres"><button class="btn sm" data-act="line">Draw line</button><span class="end">Plotter says <b id="calLine">–</b> mm</span></div>
@@ -234,13 +234,13 @@ const HTML = `
 <div class="calstep" data-n="4" hidden>
   <h3>Find center <button class="q" type="button" data-q="calFindHelp" aria-label="What is this?">?</button></h3>
   <p class="help" id="calFindHelp" hidden>The pen draws a circle, then crosses it. The platter center is halfway between the two sides of the circle.</p>
-  <p class="calsay">1. Jog the pen about halfway out.</p>
+  <p class="calsay">1. Jog the pen left, about halfway to the edge.</p>
   ${xJog}
   <p class="calsay">2. Draw a circle.</p>
   <button class="btn" data-act="circle">Draw circle</button>
   <p class="calsay">3. Cross it. Stop with the pen over the far side.</p>
   <button class="btn" data-act="cross">Cross slowly</button>
-  <p class="calsay">4. Nudge onto the line with In or Out.</p>
+  <p class="calsay">4. Nudge onto the line with Left or Right.</p>
   <button class="btn" data-act="center">Set center</button>
 </div>
 
@@ -462,7 +462,7 @@ export function initCalibrate(api) {
       if (reset) throw new Error(`${reset} Try again.`);
       api.setSettings(await touchLift(g, vals[102], live));
     }, 'Saved. The pen is up, ready to travel.'),
-    xIn: () => xNudge(-1), xOut: () => xNudge(1),
+    xLeft: () => xNudge(1), xRight: () => xNudge(-1),     // left = away from the center (X+)
     save100: () => save(100, corrected(vals[100], Math.abs(line.b - line.a), num('calRuler')), 'Draw again to check.'),
     circle: () => run(async (g, live) => {
       if (!plausible(101, vals[101])) throw new Error('Do the turn test first.');

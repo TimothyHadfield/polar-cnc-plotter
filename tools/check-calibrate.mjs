@@ -143,7 +143,7 @@ try {
   await click('next');
   ok('22 step 3 is Carriage test', (await title()).startsWith('Carriage test') && (await txt('#calCount')) === 'Step 3 of 6', await title());
   await page.click('.calstep:not([hidden]) .xstep [data-step="10"]');
-  await click('xOut'); await idle('xOut', 'Out');
+  await click('xLeft'); await idle('xLeft', 'Left');
   const x0 = await sim('plotterSim.grbl.real()[0]');
   await sim('plotterSim.grbl.speed = 3');
   await click('line');

@@ -99,6 +99,11 @@ connects". Built in `js/calibrate.js` (still 6 steps; the old one is in
   (browser rule). Whether Chrome keeps the permission after unplugging is REASONED (Windows: yes).
 - `api.setSettings` now also updates the Settings sheet's inputs. Wording: "Carriage" replaces
   "Rail" in the warnings (`safe.js` `NAME`). Messages name steps, not numbers.
+- **Left / Right (Tim, 11-14 later: "make the carraight motor say left and right, not in and
+  out").** Main panel and Calibrate: **Left = X+ (away from the center, toward the idler), Right =
+  X- (toward the carriage motor)**, as seen from the front with the carriage motor on the right
+  (the simulator's view; `sim.js` `dx = -x`). Which side is left on his real plotter is REASONED
+  from the model; if Left goes right, the Carriage test's "Reverse direction" switch fixes it.
 - Unchanged from before: slow speeds in motor steps per second (`SLOW` X 300, Y 107), `saveSetting`
   puts the work zero back after a `$100`/`$101` change, `Grbl.stop()` restores Z when `penZero` is set.
 
