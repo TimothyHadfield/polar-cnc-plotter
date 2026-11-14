@@ -197,7 +197,7 @@ try {
 
   // ----- step 5: Find center (a mark, half a turn, the mark again) -----
   await click('next');
-  ok('29 step 5 of 5 is Find center, three numbered lines', (await title()).startsWith('Find center') && (await txt('#calCount')) === 'Step 5 of 5' && await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')].map(p => p.textContent[0]).join('') === '123'), await title());
+  ok('29 step 5 of 5 is Find center, four numbered lines, carriage buttons under line 3', (await title()).startsWith('Find center') && (await txt('#calCount')) === 'Step 5 of 5' && await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')].map(p => p.textContent[0]).join('') === '1234') && await page.evaluate(() => { const p = [...document.querySelectorAll('.calstep:not([hidden]) .calsay')][2]; return p.nextElementSibling.querySelector('[data-act=xRight2]') !== null; }), await title());
   ok('30 Set center waits for the half turn', (await dis(act('center')))[0] === true);
   await page.click('.calstep:not([hidden]) .xstep [data-step="10"]');
   await sim('plotterSim.grbl.speed = 20');
@@ -211,7 +211,9 @@ try {
   await click('center'); await page.waitForTimeout(900);
   ok('32 Set center before jogging across is refused', (await txt('#calErr')) === 'Jog right to the mark first.', await txt('#calErr'));
   await sim('plotterSim.grbl.speed = 20');
-  for (let i = 0; i < 8; i++) { await click('xRight'); await idle('xRight', 'Right'); }      // 80 mm to the other side
+  await page.click('.calstep:not([hidden]) .xstep2 [data-step="10"]');
+  for (let i = 0; i < 8; i++) { await click('xRight2'); await idle('xRight2', 'Right'); }    // 80 mm to the other side, line 3's buttons
+  await page.click('.calstep:not([hidden]) .dstep [data-step="1"]');
   await click('yCcw'); await idle('yCcw', '↺');
   await click('yCcw'); await idle('yCcw', '↺');                                               // the mark needed 2° more
   await sim('plotterSim.grbl.speed = 1');

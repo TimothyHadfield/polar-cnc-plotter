@@ -243,3 +243,7 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   Test at 4320 °/min; `$111=7200` / `$121=300` written when lower (`platterSpeed`). Verified:
   133/133 node tests; walk 42/42 at 393 px and 1440 px (two 90° clicks from factory 250 = one real
   turn = 4.444; Test 360° in ~6 s wall time; Tim's no-Save case still one circle).
+- **Then:** step 5 "is really confusing"; he used the rotation buttons to undo the half turn and
+  asked for carriage buttons instead. Built: line 3 has its own Left/Right row; rotation moved to
+  a line 4 for small side alignment only (0.2° / 1°). Verified: walk 42/42 at 393 px and 1440 px
+  (80 mm across with line 3's Right, gap 0.7 found), 133/133 tests.

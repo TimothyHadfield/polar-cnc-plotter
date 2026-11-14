@@ -211,8 +211,9 @@ export async function touchLift(grbl, spu, alive) {
 
 // ---------- the panel ----------
 const STEPS = 5;
-const xJog = `<div class="calres"><button class="btn sm" data-act="xLeft">Left</button><button class="btn sm" data-act="xRight">Right</button>
-    <span class="seg xstep"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span></div>`;
+// Carriage Left / Right with its own step sizes; `n` tells two rows in one step apart.
+const xJog = (n = '') => `<div class="calres"><button class="btn sm" data-act="xLeft${n}">Left</button><button class="btn sm" data-act="xRight${n}">Right</button>
+    <span class="seg xstep${n}"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span></div>`;
 
 const HTML = `
 <div class="calstep" data-n="1">
@@ -252,7 +253,7 @@ const HTML = `
   <h3>Carriage test <button class="q" type="button" data-q="calLineHelp" aria-label="What is this?">?</button></h3>
   <p class="help" id="calLineHelp" hidden>The carriage moves a set number of motor steps. The ruler shows how far that really was, which sets $100. A result within 2 % of a plain belt drive's exact value is rounded to it.</p>
   <p class="calsay">1. Jog the pen left, near the platter edge.</p>
-  ${xJog}
+  ${xJog()}
   <p class="calsay">2. Hold a ruler under the pen. Press Move.</p>
   <div class="calres"><button class="btn sm" data-act="move">Move</button><span class="end">Plotter says <b id="calLine">–</b> mm</span></div>
   <div class="calres"><span>Ruler says</span><input type="number" id="calRuler" min="1" step="0.5" aria-label="The pen moved, mm"><span>mm</span></div>
@@ -262,14 +263,16 @@ const HTML = `
 
 <div class="calstep" data-n="5" hidden>
   <h3>Find center <button class="q" type="button" data-q="calFindHelp" aria-label="What is this?">?</button></h3>
-  <p class="help" id="calFindHelp" hidden>The mark is found twice, half a turn apart. The center is halfway between the two spots. Any extra turn it needed gives the center gap.</p>
-  <p class="calsay">1. Jog the pen left, about halfway to the edge.</p>
-  ${xJog}
-  <p class="calsay">2. Put a small mark on the platter, under the tip.</p>
+  <p class="help" id="calFindHelp" hidden>The half turn carries the mark to the other side of the center. The center is halfway between the two spots. If the mark comes round a little to the side, the small turn needed gives the center gap.</p>
+  <p class="calsay">1. Jog the pen left, about halfway out. Mark the platter under the tip.</p>
+  ${xJog()}
+  <p class="calsay">2. Press Half turn. The mark goes to the other side.</p>
   <button class="btn" data-act="half">Half turn</button>
-  <p class="calsay">3. Jog right to the mark. Line it up exactly.</p>
+  <p class="calsay">3. Jog right until the tip is over the mark.</p>
+  ${xJog('2')}
+  <p class="calsay">4. Mark off to one side? Turn a little to line it up.</p>
   <div class="calres"><button class="btn sm" data-act="yCcw" aria-label="Turn counterclockwise">↺</button><button class="btn sm" data-act="yCw" aria-label="Turn clockwise">↻</button>
-    <span class="seg dstep"><button data-step="0.2">0.2°</button><button data-step="1" class="on">1°</button><button data-step="5">5°</button></span></div>
+    <span class="seg dstep"><button data-step="0.2" class="on">0.2°</button><button data-step="1">1°</button></span></div>
   <button class="btn" data-act="center">Set center</button>
 </div>
 
@@ -479,7 +482,7 @@ export function initCalibrate(api) {
     msg(note.trim());
   });
   const zNudge = dir => nudge('Z', dir * segStep('zstep'), 200);
-  const xNudge = dir => nudge('X', dir * segStep('xstep'), 1000);
+  const xNudge = (dir, n = '') => nudge('X', dir * segStep('xstep' + n), 1000);
   // ↺ / ↻ as on the main panel: ↺ is Y+, or Y− for a platter that turns the other way
   const yNudge = dir => nudge('Y', dir * (api.getSettings().flip ? -1 : 1) * segStep('dstep'), 300);
   // Which way Y+ turns the platter. A gap measured for the other direction changes sides.
@@ -503,6 +506,7 @@ export function initCalibrate(api) {
       api.setSettings(await touchLift(g, vals[102], live));
     }, 'Saved. The pen is up, ready to travel.'),
     xLeft: () => xNudge(1), xRight: () => xNudge(-1),     // left = away from the center (X+)
+    xLeft2: () => xNudge(1, '2'), xRight2: () => xNudge(-1, '2'),
     save100: () => save(100, beltSteps(vals[100], Math.abs(line.b - line.a), num('calRuler')), 'Move again to check.'),
     yCcw: () => yNudge(1), yCw: () => yNudge(-1),
     center: () => run(async (g, live) => {

@@ -50,7 +50,11 @@ lowered except by his own Down clicks in Pen height. (The drawing steps it repla
 5. **Find center** (replaces the drawn circle AND the Center gap step): jog Left about halfway,
    put a small mark on the platter under the tip, **Half turn** (180° jog; remembers `mark {x, y}`),
    jog Right to the mark, line it up with ↺ / ↻ (0.2° / 1° / 5°), **Set center**. The center is
-   halfway between the two X positions (`centerBetween`); the leftover angle gives the center gap:
+   halfway between the two X positions (`centerBetween`). Since 11-14 late (Tim: "those platter
+   rotation buttons should be carraige movement buttons so that you can move the carraige to the
+   point instead of the platter back around") the step has 4 lines: 1 jog left + mark, 2 Half
+   turn, 3 its own Left/Right row (`xLeft2`/`xRight2`, `.xstep2`) to reach the mark, 4 "Mark off
+   to one side? Turn a little" with ↺ / ↻ at 0.2° / 1° only (for the gap); the leftover angle gives the center gap:
    `gapFromMark` = `s·tan(extra/2)`, `s` = half the X distance, `extra` = turn beyond 180°, sign
    flipped with `flip`; saved to setting `offset` ("Center set. Center gap 0.7 mm."). Set center
    refuses until the pen has moved 400+ motor steps from the mark and is within 30° of half a turn.
