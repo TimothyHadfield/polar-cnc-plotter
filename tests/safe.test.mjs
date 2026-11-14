@@ -1,7 +1,7 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { plausible, badAxes, trouble, refusal, jogFeed, JOG_SPS, RANGE } from '../js/safe.js';
-import { corrected, saveSetting, slowJog, stopJog, snapDirect, nudgeJog, sane, stopMove, drawCircle,
+import { corrected, saveSetting, slowJog, stopJog, snapDirect, nudgeJog, sane, stopMove, waitIdle,
   NUDGE, START, SLOW } from '../js/calibrate.js';
 import { Grbl } from '../js/grbl.js';
 import { FakeGrbl } from '../js/fakegrbl.js';
@@ -121,14 +121,18 @@ test('steps per unit beyond anything real: the slow move refuses, the tool start
   slowJog('Y', 1, spu, 10);                                // and now the slow turn can run
 });
 
-test('Stop during the circle: the platter stops there, the pen lifts, the circle is not kept', async () => {
+test('Stop during a long move: the platter stops there, the pen lifts, the center is kept', async () => {
   const { sim, g } = await plotter();
   await g.setCenter();
   let stopped = false;
   const live = () => { if (stopped) throw new Error('Stopped.'); return true; };
-  const circle = drawCircle(g, { penUp: 2, penDown: 0 }, 17.132, live);
-  const failed = assert.rejects(circle, /Stopped\./);
-  while (!sim.received.includes('G0 Z2')) await new Promise(r => setTimeout(r, 10));   // all four lines are in
+  const move = (async () => {
+    await g.send('G94 G91 G1 Y370 F1400.9');
+    await g.send('G90');
+    return waitIdle(g, live);
+  })();
+  const failed = assert.rejects(move, /Stopped\./);
+  while (!sim.received.includes('G90')) await new Promise(r => setTimeout(r, 10));   // both lines are in
   sim.advance(5000);                                       // part of the way round
   const at = sim.pos[1];
   assert.ok(at > 20 && at < 200, `${at}°`);

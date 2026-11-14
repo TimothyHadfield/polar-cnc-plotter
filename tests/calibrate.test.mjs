@@ -1,12 +1,12 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { corrected, offsetFromGap, parseSettings, saveSetting, centerLine, snapDirect, turnSteps, slowJog,
-  nudgeJog, fullTurn, stopJog, waitIdle, drawCircle, centerBetween, touchLift, setDirection, uprightPen,
+import { corrected, gapFromMark, parseSettings, saveSetting, snapDirect, snapBelt, beltSteps, turnSteps, slowJog,
+  nudgeJog, fullTurn, partTurn, stopJog, waitIdle, centerBetween, touchLift, setDirection, uprightPen,
   SLOW, LINE, LIFT } from '../js/calibrate.js';
 import { Grbl } from '../js/grbl.js';
 import { FakeGrbl } from '../js/fakegrbl.js';
 import { SimGrbl } from '../js/simgrbl.js';
-import { DEFAULTS, placedToGcode, simulate } from '../js/polar.js';
+import { DEFAULTS, toMachine, toPlatter } from '../js/polar.js';
 
 const near = (a, b, eps = 1e-3) => assert.ok(Math.abs(a - b) < eps, `${a} ≠ ${b}`);
 
@@ -22,22 +22,28 @@ test('$$ lines parse to numbers, other lines ignored', () => {
     { 0: 10, 100: 47.62, 101: 17.132, 130: -5 });
 });
 
-test('gap setting from the distance between the two halves, measured on a simulated plot', () => {
-  // The real pen line misses the center by 1.5 mm; the app thinks 0. Draw the center line, measure.
-  const realGap = 1.5;
-  const measure = setting => {
-    const g = placedToGcode(centerLine(0), { ...DEFAULTS, offset: setting }).gcode;
-    const { down } = simulate(g, { ...DEFAULTS, offset: realGap }, 0.5);
-    const yAt = x => down.flat().reduce((b, p) => Math.abs(p[0] - x) < Math.abs(b[0] - x) ? p : b)[1];
-    return yAt(30) - yAt(-30);
-  };
-  const apart = measure(0);
-  near(Math.abs(apart), 3, 0.05);
-  const fix = offsetFromGap(0, Math.abs(apart), 1);
-  near(fix, 1.5, 0.03);
-  near(measure(fix), 0, 0.05);                                  // one straight line now
-  near(offsetFromGap(0, 3, -1), -1.5);                          // "Other side"
-  near(offsetFromGap(1, 1, 1), 1.5);                            // a second pass adds to the current one
+test('center gap from a mark found twice, half a turn apart (no drawing)', () => {
+  // A plotter whose pen line misses the center by `gap`. A mark sits on the platter under the pen.
+  // Where does the platter have to stand for the pen to be over it again on the other side?
+  for (const flip of [false, true]) for (const gap of [1.5, -2.3, 0]) {
+    const o = { ...DEFAULTS, offset: gap, flip };
+    const x0 = -37;                                         // machine X of the point closest to the center
+    const s = 45, y1 = 12;                                  // the pen is 45 mm left of it, the platter at 12°
+    const p = toPlatter([s, y1], o);                        // the mark, on the platter
+    // the same platter point reached from the other side: scan the half turn for it
+    let best = [Infinity, 0];
+    for (let y2 = y1 + 150; y2 <= y1 + 210; y2 += 0.001) {
+      const q = toPlatter([-s, y2], o), d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (d < best[0]) best = [d, y2];
+    }
+    assert.ok(best[0] < 0.01, `mark not found again: ${best}`);
+    near(gapFromMark(x0 + s, y1, x0 - s, best[1], flip), gap, 0.051);
+    near(toMachine(p, o)[0], s, 1e-6);                      // and the app agrees where that point is
+  }
+  assert.equal(gapFromMark(40, 0, -40, 180), 0);            // exactly half a turn: no gap
+  assert.equal(gapFromMark(0, 0, -80, 182), 0.7);           // 40 mm out, 2° more: 40 × tan 1°
+  assert.equal(gapFromMark(0, 0, -80, 182, true), -0.7);
+  assert.equal(gapFromMark(0, 0, -80, -178), 0.7);          // turned the other way round to get there
 });
 
 test('saving sends the corrected value, and GRBL then reads the same spot in the new units', async () => {
@@ -144,26 +150,28 @@ test('pen height at GRBL\'s factory 250 steps per unit: the same lift in steps i
   near(sim.pos[2], -0.1);
 });
 
-test('find center: circle, cross to its far side, halfway is the center; the ruler gives $100', async () => {
+test('find center: a mark under the pen, half a turn, the mark again; halfway is the center', async () => {
   const { sim, g } = await plotter({ 100: 80 }, false);   // the rail really has 80 steps per mm
   await g.send('$100=100');                               // set wrong: 1 unit = 1.25 mm
   const vals = await g.readSettings();
   // GRBL woke up with the pen 40 real mm out: the real center is at machine X −32
-  const a = await drawCircle(g, { penUp: 2, penDown: 0 }, vals[101]);
-  assert.equal(a, 0);
-  assert.ok(sim.received.includes('G94 G91 G1 Y370 F1400.9'), sim.received.join(' | '));
-  near(sim.pos[1], 370); near(sim.pos[2], 2);             // a turn and a bit, pen left up
-  freeze(sim);
-  await g.send(slowJog('X', -1, vals[100]));              // 300 steps/s = 3 units a second
-  sim.advance(64 / 3 * 1000);                             // over the line on the far side: Stop
-  const b = (await stopJog(g))[0];
-  near(b, -64, 1e-6);
-  thaw(sim);
-  await centerBetween(g, a, b, 2);
+  const a = (await g.nextStatus()).mpos;                  // the mark goes under the tip here
+  const turn = partTurn(180, vals[101]);
+  assert.equal(turn, '$J=G91 G21 Y180.000 F1400.89');     // 400 motor steps a second
+  await g.send(turn);
+  near((await waitIdle(g)).mpos[1], 180, 1e-6);
+  assert.equal(sim.pos[2], 0);                            // the pen is never lowered
+  for (let i = 0; i < 6; i++) { await g.send(nudgeJog('X', -10, 1000, vals[100])); await waitIdle(g); }
+  await g.send(nudgeJog('X', -4, 1000, vals[100]));       // Right, to the mark on the other side
+  for (const d of [1, 1]) { await g.send(nudgeJog('Y', d, 300, vals[101])); await waitIdle(g); }   // ↺ ↺
+  const b = (await waitIdle(g)).mpos;
+  near(b[0], -64, 1e-6); near(b[1], 182, 1e-6);
+  assert.equal(gapFromMark(a[0], a[1], b[0], b[1]), 0.6);  // 32 units out, 2° more (true mm come after $100 is right)
+  await centerBetween(g, a[0], b[0], 2);
   near(sim.pos[0], -32); near(sim.real()[0], -40);        // the pen is over the real center
   near((await g.nextStatus()).wpos[0], 0);
-  // ruler: the circle is 2 × 40 = 80 mm across, the plotter says 64
-  const fix = corrected(vals[100], Math.abs(b - a), 80);
+  // the carriage test: the plotter says 64, the ruler says 80
+  const fix = corrected(vals[100], Math.abs(b[0] - a[0]), 80);
   near(fix, 80);
   await g.send('G90 G0 X8');                              // somewhere else: really 10 mm out
   await waitIdle(g);
@@ -209,7 +217,18 @@ test('turn test result is still rounded to a plain motor\'s value', () => {
   assert.ok(Number.isNaN(turnSteps(4.444, NaN)));
 });
 
-test('carriage test: a line of 2000 motor steps, the ruler on it gives $100', async () => {
+test('a measured $100 near a plain belt drive\'s value becomes that value', () => {
+  assert.equal(snapBelt(40.5), 40);           // GT2, 20 teeth, 8 microsteps
+  assert.equal(snapBelt(79), 80);             // 16 microsteps
+  assert.equal(snapBelt(50.4), 50);           // 16 teeth, 8 microsteps
+  assert.equal(snapBelt(44.444), null);       // an 18-tooth pulley: left as measured
+  assert.equal(snapBelt(NaN), null);
+  assert.equal(beltSteps(250, 8, 50.6), 40);  // the ruler read 0.6 mm long: still the belt's value
+  near(beltSteps(250, 8, 47), 42.553);        // 6 % off: taken as measured
+  assert.ok(Number.isNaN(beltSteps(250, NaN, 50)));
+});
+
+test('carriage test: a move of 2000 motor steps with the pen up, the ruler under it gives $100', async () => {
   const { sim, g } = await plotter({ 100: 40 }, false);    // GT2 belt, 20 teeth, 8 microsteps
   await g.send('$100=250');                                // what GRBL ships with
   const vals = await g.readSettings();
@@ -218,11 +237,13 @@ test('carriage test: a line of 2000 motor steps, the ruler on it gives $100', as
   const at = (await waitIdle(g)).mpos[0];
   near(Math.abs(at - from), 8, 1e-6);                      // "Plotter says 8.0 mm"
   near(sim.real()[0], -50, 1e-6);                          // the ruler says 50
-  const fix = corrected(vals[100], Math.abs(at - from), 50);
-  near(fix, 40);
+  assert.equal(sim.pos[2], 0);                             // the pen stayed where it was: nothing is drawn
+  assert.ok(!sim.received.some(l => /Z/.test(l)), sim.received.join(' | '));
+  const fix = beltSteps(vals[100], Math.abs(at - from), 50.5);   // read by eye, half a mm long
+  assert.equal(fix, 40);
   await saveSetting(g, 100, fix, vals[100]);
   assert.equal(sim.received.at(-1), '$100=40.000');
-  const again = slowJog('X', -1, fix, vals[120], LINE);    // draw again to check
+  const again = slowJog('X', -1, fix, vals[120], LINE);    // move again to check
   assert.equal(again, '$J=G91 G21 X-50.000 F450.00');
   await g.send(again);
   near((await waitIdle(g)).mpos[0], -100, 1e-6);           // plotter and ruler agree: 50 more

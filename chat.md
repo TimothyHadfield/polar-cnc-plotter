@@ -217,3 +217,17 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   (X+, away from the center) / Right (X-) on the main panel and in Calibrate, instructions reworded
   ("Jog the pen left, near the platter edge."). Verified: 131/131 tests; headless WebKit on
   `sim.html?v=2`, 35/35 at 393 px and 1440 px; Left raised X 0 -> 4, Right lowered it to 2.
+- **Later still, asked:** "for the calibration, there shouldn't be any proceedures that require you
+  to draw on the paper, because it's hard to get the paper and It needs to be as easy as possible."
+  **Decided (Claude, flagged to Tim):** 5 steps, nothing draws. Mirror check -> "Turn direction"
+  (quarter turn, Clockwise / Counterclockwise sets Reverse rotation); Carriage test = a pen-up
+  Move over a ruler, `$100` rounded to an exact belt value within 2 %; Find center = a mark under
+  the tip, Half turn, the mark again -> center halfway + center gap worked out and saved (the
+  separate Center gap step is gone). Pen height still needs the tip to touch once. **Built:**
+  `js/calibrate.js` (`snapBelt`, `beltSteps`, `gapFromMark`, `partTurn`; `drawCircle`,
+  `centerLine`, `letterF`, `offsetFromGap` removed), tests, `tools/check-calibrate.mjs`; the old
+  steps' notes in `docs/archive/progress-2026-11-14-calibrate3-drawing-steps.md`. **Verified
+  how:** 132/132 node tests; 6 mutations each failed a test; headless WebKit on `sim.html?v=2`,
+  41/41 at 393 px and 1440 px (true gap 0.7 mm found as 0.7; no "draw" or "paper" text anywhere in
+  the tool). **Open:** not run on the real plotter; lining a mark up by eye limits the gap to
+  about ±0.3 mm (reasoned).

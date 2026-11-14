@@ -31,10 +31,12 @@ previews it, and can stream it to the plotter over USB.
 - `js/place.js`: drag to move, Turn slider, Crop box (steps aside while `api.sketching`).
 - `js/grbl.js`: GRBL streaming (character counting, 127-byte RX limit), pause/stop/resume, Web Serial.
 - `js/machine.js`: plotter panel (connect, jog, set center, plot, pen changes via M0).
-- `js/calibrate.js`: 6-step calibration tool. Turn test (slow turn the user stops, jog cancel 0x85,
-  then Test = one full turn to check) -> $101; Pen height (click Down to the paper, Touching lifts
-  it and saves up 0 / down -lift, `G92 Z0` at pen up, `grbl.penZero`); Carriage test (pen draws a
-  line, ruler) -> $100; Find center (cross a circle the pen drew); then center gap and mirror check.
+- `js/calibrate.js`: 5-step calibration tool; nothing in it draws (Tim: no paper needed). Turn test
+  (slow turn the user stops, jog cancel 0x85, then Test = one full turn to check) -> $101; Turn
+  direction (quarter turn, Clockwise / Counterclockwise) -> `flip`; Pen height (click Down until
+  the tip touches, Touching lifts it and saves up 0 / down -lift, `G92 Z0` at pen up,
+  `grbl.penZero`); Carriage test (pen-up move over a ruler) -> $100, rounded to a belt value;
+  Find center (a mark under the tip, Half turn, the mark again) -> center + center gap `offset`.
 - Pen direction: setting `zFlip` (default true: Tim's pen motor is mounted so GRBL's Z runs
   backwards) is written to the plotter as `$3` bit 2 by `machine.js` on connect. Nothing else in
   the app flips Z.
@@ -58,7 +60,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (12 files, 131 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (12 files, 132 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with

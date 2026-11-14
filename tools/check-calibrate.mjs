@@ -55,7 +55,7 @@ try {
   // ----- step 1: Turn test + Test -----
   await page.click('#calOpen');
   await page.waitForTimeout(900);
-  ok('06 opens on Turn test, step 1 of 6; the settings step is gone', (await title()).startsWith('Turn test') && (await txt('#calCount')) === 'Step 1 of 6' && !(await page.evaluate(() => document.body.textContent.includes('Current settings'))), { t: await title(), c: await txt('#calCount'), err: await txt('#calErr') });
+  ok('06 opens on Turn test, step 1 of 5; the settings step is gone', (await title()).startsWith('Turn test') && (await txt('#calCount')) === 'Step 1 of 5' && !(await page.evaluate(() => document.body.textContent.includes('Current settings'))), { t: await title(), c: await txt('#calCount'), err: await txt('#calErr') });
   ok('07 Test is off until the platter value is believable', (await dis(act('turnTest')))[0] === true);
   await shot('1-turn');
   let before = await sim('plotterSim.grbl.real()[1]');
@@ -112,9 +112,31 @@ try {
   went = await sim('plotterSim.grbl.real()[1]') - before;
   ok('15 Test can be stopped', went > 2 && went < 200 && (await txt('#calMsg')) === 'Stopped.' && (await txt('#calNew101')) === '–', { went, msg: await txt('#calMsg') });
 
-  // ----- step 2: Pen height -----
+  // ----- step 2: Turn direction (a question, nothing is drawn) -----
   await click('next');
-  ok('16 step 2 is Pen height, with Up / Down / Touching', (await title()).startsWith('Pen height') && (await txt(act('zUp'))) === 'Up' && (await txt(act('zDown'))) === 'Down' && (await txt(act('touch'))) === 'Touching' && !(await page.evaluate(() => document.getElementById('calTool').textContent.includes('slowly') && false)), await title());
+  before = await sim('plotterSim.grbl.real()[1]');
+  await sim('plotterSim.grbl.speed = 6');
+  await click('quarter'); await idle('quarter', 'Turn');
+  await sim('plotterSim.grbl.speed = 1');
+  went = await sim('plotterSim.grbl.real()[1]') - before;
+  // a center gap measured earlier, typed into Settings
+  await page.evaluate(() => { document.getElementById('offset').value = 1.5; document.getElementById('offset').dispatchEvent(new Event('change', { bubbles: true })); document.getElementById('offset').dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(300);
+  const d0 = { flip: !!(await stored()).flip, offset: (await stored()).offset, say: await txt('#calDir') };
+  await click('ccw');
+  await page.waitForTimeout(300);
+  const d1 = { flip: (await stored()).flip, offset: (await stored()).offset, say: await txt('#calDir'), box: await page.evaluate(() => document.getElementById('flip').checked) };
+  await click('cw');
+  await page.waitForTimeout(300);
+  const d2 = { flip: (await stored()).flip, offset: (await stored()).offset, say: await txt('#calDir'), box: await page.evaluate(() => document.getElementById('flip').checked) };
+  ok('16a step 2 is Turn direction: Turn goes a quarter turn', (await title()).startsWith('Turn direction') && Math.abs(went - 90) < 0.5, { t: await title(), went });
+  ok('16b Counterclockwise = reverse rotation on (gap changes sides), Clockwise = off', d0.flip === false && d0.offset === 1.5 && d1.flip === true && d1.offset === -1.5 && d1.box === true && d1.say === 'Saved: counterclockwise' && d2.flip === false && d2.offset === 1.5 && d2.box === false && d2.say === 'Saved: clockwise', { d0, d1, d2 });
+  await shot('4-direction');
+  ok('16c no page scroll (turn direction)', !(await scrolls()));
+
+  // ----- step 3: Pen height -----
+  await click('next');
+  ok('16 step 3 is Pen height, with Up / Down / Touching', (await title()).startsWith('Pen height') && (await txt('.calstep:not([hidden]) .calsay')) === 'Click Down until the tip just touches.' && (await txt(act('zUp'))) === 'Up' && (await txt(act('zDown'))) === 'Down' && (await txt(act('touch'))) === 'Touching' && !(await page.evaluate(() => document.getElementById('calTool').textContent.includes('slowly') && false)), await title());
   ok('17 Reverse direction is shown and on', (await vis('#calZFlipRow')) && await page.evaluate(() => document.getElementById('calZFlip').checked));
   const z0 = await sim('plotterSim.grbl.pos[2]');
   await click('zDown'); await idle('zDown', 'Down');
@@ -139,69 +161,77 @@ try {
   const on = { set: await sim('plotterSim.grbl.settings[3]'), zFlip: (await stored()).zFlip, box: await page.evaluate(() => document.getElementById('calZFlip').checked) };
   ok('21 the switch clears and sets the pen bit in $3', off.set === '0.000' && off.zFlip === false && off.box === false && off.pen === -1 && on.set === '4.000' && on.zFlip === true && on.box === true, { off, on, err: await txt('#calErr') });
 
-  // ----- step 3: Carriage test -----
+  // ----- step 4: Carriage test (the pen stays up) -----
   await click('next');
-  ok('22 step 3 is Carriage test', (await title()).startsWith('Carriage test') && (await txt('#calCount')) === 'Step 3 of 6', await title());
+  ok('22 step 4 is Carriage test', (await title()).startsWith('Carriage test') && (await txt('#calCount')) === 'Step 4 of 5', await title());
   await page.click('.calstep:not([hidden]) .xstep [data-step="10"]');
   await click('xLeft'); await idle('xLeft', 'Left');
   const x0 = await sim('plotterSim.grbl.real()[0]');
+  const zSent = () => sim('plotterSim.grbl.received.filter(l => /Z/.test(l)).length');
+  const zBefore = await zSent();
   await sim('plotterSim.grbl.speed = 3');
-  await click('line');
+  await click('move');
   await page.waitForFunction(x => Math.abs(plotterSim.grbl.real()[0] - x) > 10, x0, { timeout: 30000, polling: 20 });
-  const mid = { label: await txt(act('line')), z: await wz() };
-  await idle('line', 'Draw line');
+  const mid = { label: await txt(act('move')), z: await wz() };
+  await idle('move', 'Move');
   await sim('plotterSim.grbl.speed = 1');
   const x1 = await sim('plotterSim.grbl.real()[0]');
-  ok('23 Draw line: pen down, 50 mm toward the center, pen up; plotter says 8.0', mid.label === 'Stop' && Math.abs(mid.z + 1) < 1e-6 && Math.abs(x0 - x1 - 50) < 0.01 && Math.abs(await wz()) < 1e-6 && (await txt('#calLine')) === '8.0', { x0, x1, mid, line: await txt('#calLine'), msg: await txt('#calMsg'), err: await txt('#calErr') });
-  await page.fill('#calRuler', '50');
+  ok('23 Move: 50 mm toward the center with the pen up; plotter says 8.0', mid.label === 'Stop' && Math.abs(mid.z) < 1e-6 && Math.abs(x0 - x1 - 50) < 0.01 && (await txt('#calLine')) === '8.0' && (await txt('#calMsg')) === 'Type how far the pen moved.', { x0, x1, mid, line: await txt('#calLine'), msg: await txt('#calMsg'), err: await txt('#calErr') });
+  await page.fill('#calRuler', '50.5');
   await page.waitForTimeout(300);
-  ok('24 ruler 50 -> new $100 40.000', (await txt('#calNew100')) === '40.000', await txt('#calNew100'));
+  ok('24 ruler 50.5 (read by eye) -> new $100 40.000, the belt\'s exact value', (await txt('#calNew100')) === '40.000' && (await txt('#calRaw100')) === 'measured 39.604', { n: await txt('#calNew100'), raw: await txt('#calRaw100') });
   await shot('5-carriage');
   ok('25 no page scroll (carriage test)', !(await scrolls()));
   await click('save100');
   await page.waitForTimeout(1500);
-  ok('26 saved', (await sim('plotterSim.grbl.settings[100]')) === '40.000' && (await txt('#calMsg')) === 'Saved $100=40.000. Draw again to check.' && (await txt('#calLine')) === '–', await txt('#calMsg'));
-  // draw again and stop early: the length so far is what the ruler checks
+  ok('26 saved', (await sim('plotterSim.grbl.settings[100]')) === '40.000' && (await txt('#calMsg')) === 'Saved $100=40.000. Move again to check.' && (await txt('#calLine')) === '–', await txt('#calMsg'));
+  // move again and stop early: how far it went so far is what the ruler checks
   const x2 = await sim('plotterSim.grbl.real()[0]');
-  await click('line');
+  await click('move');
   await page.waitForFunction(x => Math.abs(plotterSim.grbl.real()[0] - x) > 12, x2, { timeout: 30000, polling: 20 });
-  await click('line');
-  await idle('line', 'Draw line');
+  await click('move');
+  await idle('move', 'Move');
   const x3 = await sim('plotterSim.grbl.real()[0]');
   const said = +(await txt('#calLine'));
-  ok('27 stopped early: it stops, the pen lifts, the length matches the paper', x2 - x3 > 12 && x2 - x3 < 45 && Math.abs(said - (x2 - x3)) < 0.06 && Math.abs(await wz()) < 1e-6, { drawn: x2 - x3, said, msg: await txt('#calMsg') });
+  ok('27 stopped early: it stops, and the plotter says how far it really went', x2 - x3 > 12 && x2 - x3 < 45 && Math.abs(said - (x2 - x3)) < 0.06, { went: x2 - x3, said, msg: await txt('#calMsg') });
+  ok('28 the pen was never moved in the carriage test', (await zSent()) === zBefore, { zBefore, now: await zSent() });
 
-  // ----- step 4: Find center -----
+  // ----- step 5: Find center (a mark, half a turn, the mark again) -----
   await click('next');
-  ok('28 step 4 is Find center, four numbered lines', (await title()).startsWith('Find center') && await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')].map(p => p.textContent[0]).join('') === '1234'), await title());
-  await shot('6-center');
-  ok('29 no page scroll (find center)', !(await scrolls()));
-  ok('30 Cross and Set center wait for the circle', (await dis(act('cross')))[0] && (await dis(act('center')))[0]);
-  const xa = await sim('plotterSim.grbl.real()[0]');
+  ok('29 step 5 of 5 is Find center, three numbered lines', (await title()).startsWith('Find center') && (await txt('#calCount')) === 'Step 5 of 5' && await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')].map(p => p.textContent[0]).join('') === '123'), await title());
+  ok('30 Set center waits for the half turn', (await dis(act('center')))[0] === true);
+  await page.click('.calstep:not([hidden]) .xstep [data-step="10"]');
   await sim('plotterSim.grbl.speed = 20');
-  await click('circle');
-  await page.waitForTimeout(600);
-  await idle('circle', 'Draw again');
-  await sim('plotterSim.grbl.speed = 1');
-  ok('31 circle drawn, told what is next', (await txt('#calMsg')) === 'Circle drawn. Now press Cross slowly.' && (await dis(act('cross')))[0] === false, { msg: await txt('#calMsg'), err: await txt('#calErr') });
-  await sim('plotterSim.grbl.speed = 3');
-  await click('cross');
-  await page.waitForFunction(x => Math.abs(plotterSim.grbl.real()[0] - x) > 30, xa, { timeout: 30000, polling: 20 });
-  await click('cross');
-  await idle('cross', 'Cross slowly');
+  for (let i = 0; i < 6; i++) { await click('xLeft'); await idle('xLeft', 'Left'); }        // out to the left, the mark goes here
+  const xa = await sim('plotterSim.grbl.real()[0]');
+  const ya = await sim('plotterSim.grbl.real()[1]');
+  await sim('plotterSim.grbl.speed = 6');
+  await click('half'); await idle('half', 'Half turn');
+  const yb = await sim('plotterSim.grbl.real()[1]');
+  ok('31 Half turn turns 180°, then says what is next', Math.abs(yb - ya - 180) < 0.3 && (await txt('#calMsg')) === 'Now jog right to the mark.' && (await dis(act('center')))[0] === false, { turned: yb - ya, msg: await txt('#calMsg'), err: await txt('#calErr') });
+  await click('center'); await page.waitForTimeout(900);
+  ok('32 Set center before jogging across is refused', (await txt('#calErr')) === 'Jog right to the mark first.', await txt('#calErr'));
+  await sim('plotterSim.grbl.speed = 20');
+  for (let i = 0; i < 8; i++) { await click('xRight'); await idle('xRight', 'Right'); }      // 80 mm to the other side
+  await click('yCcw'); await idle('yCcw', '↺');
+  await click('yCcw'); await idle('yCcw', '↺');                                               // the mark needed 2° more
   await sim('plotterSim.grbl.speed = 1');
   const xb = await sim('plotterSim.grbl.real()[0]');
+  const yc = await sim('plotterSim.grbl.real()[1]');
+  await shot('6-center');
+  ok('33 no page scroll (find center)', !(await scrolls()));
+  const zc = await zSent();
+  await sim('plotterSim.grbl.speed = 20');
   await click('center');
-  await idle('center', 'Set center');
+  await page.waitForFunction(() => /^Center set/.test(document.getElementById('calMsg').textContent) || document.getElementById('calErr').textContent, null, { timeout: 60000 });
+  await page.waitForTimeout(400);
+  await sim('plotterSim.grbl.speed = 1');
   const xc = await sim('plotterSim.grbl.real()[0]');
-  ok('32 Set center goes halfway between the two sides', Math.abs(xc - (xa + xb) / 2) < 0.05 && (await txt('#calMsg')) === 'Center set. The pen is over it.', { xa, xb, xc, msg: await txt('#calMsg'), err: await txt('#calErr') });
+  const s5 = await stored();
+  ok('33a ↺ twice turned the platter 2° further', Math.abs(yc - yb - 2) < 0.3 && Math.abs(xa - xb - 80) < 0.05, { extra: yc - yb, across: xa - xb });
+  ok('33b Set center goes halfway and saves the gap (40 mm out, 2°: 0.7 mm)', Math.abs(xc - (xa + xb) / 2) < 0.05 && (await txt('#calMsg')) === 'Center set. Center gap 0.7 mm.' && s5.offset === 0.7 && await page.evaluate(() => document.getElementById('offset').value === '0.7'), { xa, xb, xc, msg: await txt('#calMsg'), err: await txt('#calErr'), offset: s5.offset });
+  ok('33c nothing in the whole tool draws', !(await page.evaluate(() => /draw|paper/i.test(document.getElementById('calTool').textContent))), await page.evaluate(() => (document.getElementById('calTool').textContent.match(/.{0,20}(draw|paper).{0,20}/i) || [''])[0]));
   await shot('7-center-set');
-
-  // ----- the rest is as before -----
-  await click('next');
-  const t5 = await title();
-  await click('next');
-  ok('33 then Center gap and Mirror check', t5.startsWith('Center gap') && (await title()).startsWith('Mirror check') && (await txt('#calCount')) === 'Step 6 of 6', { t5, t6: await title() });
   await page.click('#calTool [data-close-tool]');
   await page.waitForTimeout(400);
   // main panel: the up arrow is Z+

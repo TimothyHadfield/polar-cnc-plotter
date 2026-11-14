@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-11-14 (CALIBRATE 3 = the tool as it is now: search "CALIBRATE 3"; SAFEGUARDS: search "SAFEGUARDS"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-14 (CALIBRATE 4 = the tool as it is now, nothing draws: search "CALIBRATE 4"; CALIBRATE 3 = its Turn test, Pen height, pen direction, Connect; SAFEGUARDS: search "SAFEGUARDS"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -10,11 +10,43 @@ _Last updated 2026-11-14 (CALIBRATE 3 = the tool as it is now: search "CALIBRATE
    settings + Vref, §7 improvements incl. what the builders made 2026-10-26).
 
 ## Goal right now
-**2026-11-14: Tim ran Calibrate on the real plotter and asked for five changes plus auto-connect
-(CALIBRATE 3, built and live).** Next is his run of the reworked flow: Turn test + Test, Pen height
-(is Down really down now?), Carriage test, Find center; then a first real drawing. If the platter
-is slow (factory `$111`/`$121`: a Test turn can take ~43 s), a speed step was offered, not built.
-The older text below is history.
+**2026-11-14: Calibrate is 5 steps and never draws (CALIBRATE 4, built and live).** Next is Tim's
+run on the real plotter: Turn test + Test, Turn direction, Pen height (is Down really down now?),
+Carriage test (ruler under the pen), Find center (a mark + Half turn); then a first real drawing.
+If the platter is slow (factory `$111`/`$121`: a Test turn can take ~43 s), a speed step was
+offered, not built. The older text below is history.
+
+**CALIBRATE 4 (2026-11-14, evening).** Tim: "for the calibration, there shouldn't be any
+proceedures that require you to draw on the paper, because it's hard to get the paper and It
+needs to be as easy as possible." Rebuilt in `js/calibrate.js`, `STEPS = 5`; the pen is never
+lowered except by his own Down clicks in Pen height. (The drawing steps it replaced:
+`docs/archive/progress-2026-11-14-calibrate3-drawing-steps.md`.)
+1. **Turn test**: as in CALIBRATE 3.
+2. **Turn direction** (new, replaces Mirror check): **Turn** = a 90° Y+ jog (`partTurn`), then
+   **Clockwise** / **Counterclockwise** (seen from above). Clockwise = `flip` off, counterclockwise
+   = `flip` on (the simulator's convention: Y+ is clockwise with `flip` off). Changing `flip`
+   negates a saved `offset`. It comes BEFORE Find center because the gap's sign depends on `flip`.
+3. **Pen height**: as in CALIBRATE 3; wording "Click Down until the tip just touches." (no paper).
+4. **Carriage test**: jog Left near the edge, hold a ruler under the pen, **Move** = slow jog of
+   `LINE` = 2000 motor steps toward the center, PEN UP (Stop or running out both count; under 200
+   steps = "Too short to measure"). "Plotter says N mm" + "Ruler says" -> New `$100` =
+   `beltSteps`: the measured value, rounded to an exact GT2 belt value (`snapBelt`: 16/20 teeth,
+   200/400-step motor, any microstep) when within 2 %; the raw number shows as "measured x".
+5. **Find center** (replaces the drawn circle AND the Center gap step): jog Left about halfway,
+   put a small mark on the platter under the tip, **Half turn** (180° jog; remembers `mark {x, y}`),
+   jog Right to the mark, line it up with ↺ / ↻ (0.2° / 1° / 5°), **Set center**. The center is
+   halfway between the two X positions (`centerBetween`); the leftover angle gives the center gap:
+   `gapFromMark` = `s·tan(extra/2)`, `s` = half the X distance, `extra` = turn beyond 180°, sign
+   flipped with `flip`; saved to setting `offset` ("Center set. Center gap 0.7 mm."). Set center
+   refuses until the pen has moved 400+ motor steps from the mark and is within 30° of half a turn.
+   A `$100` save rescales `mark.x`; a `$101` save, a `$100` reset or an X direction flip drops it.
+- The gap needs an exact `$101` (direct drive snaps to 4.444) and by-eye lining up: about ±0.3 mm
+  REASONED. Center gap and Reverse rotation stay editable in Settings.
+- Verified: 132 node tests; `tools/check-calibrate.mjs` 41 checks at 393 px and 1440 px (simulator
+  pretending a 4.444 / 40 plotter at factory 250, true gap 0.7 found as 0.7). Six mutations each
+  failed a test (flip ignored, gap sign, no belt snap, 20T missing, half-turn feed, center not
+  halfway). On the phone the Carriage test and Find center panels scroll about 40 px INSIDE the
+  panel on sim.html (the page does not scroll); plotting needs the laptop anyway.
 
 **SAFEGUARDS (2026-11-13 night).** Tim ran the OLD turn test (app not hard-refreshed): "counted 56
 full rotations", Save, "did it again, it completely freaked out ... tried to spin at an extreamly
@@ -51,9 +83,9 @@ problems like these are impossible?"
   150. Not saved."); nudges use `nudgeJog` (step cap `NUDGE` X 1000, Y 400, Z 400); `slowJog` /
   `jogFeed` throw when the feed would be under GRBL's 1 unit/min; steps per unit above `EXTREME`
   5000 (or 0) are reset to `START` (100 / 8.889 / 250) before a move (`sane`), with a message;
-  Draw circle needs a plausible `$101`, the test drawings need both; **Draw circle, Set center,
-  Draw test, Draw F turn into Stop** while they run (`stopMove` = `grbl.stop()` + pen up); closing
-  the tool stops them. Step 1 shows a bad value in red.
+  the Turn-direction quarter turn needs a plausible `$101`, Half turn needs both axes plausible;
+  **Set center turns into Stop** while it runs (`stopMove` = `grbl.stop()` + pen up); closing the
+  tool stops any move. A bad value shows in red.
 - **Not covered, told Tim:** moves typed by hand into the Settings console; a value inside the
   range but still wrong (e.g. Stop at half a turn).
 
@@ -68,7 +100,7 @@ click down or up to mark exactly where the pen is touching the plate ... move it
 off that and then put it back down to draw. For step 4, I'm not really sure what's happening ...
 make the instructions more clear. Step 4 should be a carraige motor calibration though." Mid-turn
 he added: "if you click connect and there's only one option to connect to, it automatically
-connects". Built in `js/calibrate.js` (still 6 steps; the old one is in
+connects". Built in `js/calibrate.js` (6 steps then, 5 since CALIBRATE 4; the old one is in
 `docs/archive/progress-2026-11-14-calibrate2-and-driver-debug.md`):
 1. **Turn test**: Turn slowly / Stop, Back / Further, Save as before, plus **Test** = one full turn
    by the plotter's count (`fullTurn`, a jog at 400 steps/s, the button is Stop meanwhile). When
@@ -79,12 +111,8 @@ connects". Built in `js/calibrate.js` (still 6 steps; the old one is in
    pen down, lift `LIFT` = 100 motor steps (0.4 units at `$102`=250; about 2 mm REASONED for a
    20-step, 3 mm-lead stage at 1/8), `G92 Z0` there, save penUp 0 / penDown -(lift). The slow Z
    moves are gone (`SLOW.Z` too).
-3. **Carriage test** (new): jog out near the edge, **Draw line** = pen down, slow jog of `LINE` =
-   2000 motor steps toward the center (50 mm at 40 steps/mm; Stop or running out both count), pen
-   up; "Plotter says N mm" + "Ruler says" -> New `$100`. The X "Reverse direction" switch is here.
-4. **Find center**: four numbered lines (jog halfway out, Draw circle, Cross slowly, nudge + Set
-   center). No ruler here any more.
-5. Center gap, 6. Mirror check: unchanged.
+3. to 6. (Carriage test by a drawn line, Find center by a drawn circle, Center gap, Mirror check):
+   **replaced by CALIBRATE 4 above**. The X "Reverse direction" switch is still in the Carriage test.
 - **Pen direction:** new setting `zFlip` (default TRUE = Tim's upside-down stage). `machine.js`
   `check()` -> `penDirection()` makes GRBL's `$3` bit 2 match it on connect and after every
   settings read (`setDirection`), logging `> $3=4 (pen direction)`; so Z+ lifts in everything the
@@ -284,7 +312,7 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 | Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). Also on sim.html (the plan inset fills the stage while drawing). |
 | Simulate (`js/handoff.js`) | live 2026-11-13 | Tim: "allow the user to simulate the drawing aswell". A "Simulate" link beside Download G-code opens `sim.html?v=2`; the drawing on screen (strokes + colours + center/radius + turn/move/crop) rides along in sessionStorage `polar-plotter-handoff`, consumed once by app.js when `window.plotterSim` exists. A picture arrives already traced (no Darkness slider there). Then Connect plotter -> Plot in the simulator. |
 | Machine | built; all axes move (Tim, 11-13 night); pen motor mounted so GRBL's Z ran backwards (Tim, 11-14: "the way that I want it") | `$100`/`$101` unknown until Tim runs the Turn and Carriage tests; `$$` never read by Claude |
-| Calibrate tool | reworked 2026-11-14 (CALIBRATE 3) + safeguards | Tim used the 11-13 version on the plotter; the 11-14 flow is tests + simulator only |
+| Calibrate tool | 5 steps, nothing draws (CALIBRATE 4, 2026-11-14) + safeguards | Tim used the 11-13 version on the plotter; the 11-14 flow is tests + simulator only |
 | Connect | 2026-11-14: one remembered port connects without the browser's list (`pickPort` in `js/grbl.js`) | stand-in `navigator.serial` only; the first ever pick still shows the list |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
 | Carriage plate pocket for micro stage | live STL (3fed47d) | 81.9 x 25.5 x 1.5 mm; Tim to caliper the stage |
@@ -349,11 +377,14 @@ TMC2209s, all three axes move) and 11-13 (fully built).
   by Tim.
 - Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
 - Web Serial flows only exercised with `?demo` (FakeGrbl).
-- CALIBRATE 3 on the real plotter (Tim used the 11-13 tool there; nothing of 11-14 has run on
+- CALIBRATE 3 + 4 on the real plotter (Tim used the 11-13 tool there; nothing of 11-14 has run on
   it): the `$3` write on connect (assumes his bit 2 was 0; if Down still goes up he flips "Reverse
   direction" in Pen height), Test (a full turn at 400 steps/s, slower if `$111` caps it), the
-  Touching lift (100 motor steps ≈ 2 mm is reasoned from a 3 mm lead), Draw line (2000 steps
-  toward the center, pen down), how far the platter coasts after Stop. Auto-connect in real Chrome:
+  Touching lift (100 motor steps ≈ 2 mm is reasoned from a 3 mm lead), Move (2000 steps toward
+  the center, pen up; reading a ruler under a lifted pen by eye), that Left is really his left,
+  that Y+ with `flip` off is clockwise on HIS wiring means "not mirrored" (the convention is the
+  simulator's), how well a mark can be lined up under the tip (center gap ±0.3 mm reasoned), how
+  far the platter coasts after Stop. Auto-connect in real Chrome:
   that it remembers the port across unplug/restart, and that the list still opens when
   `getPorts()` ran first. In `?demo` slow moves jump at once: FakeGrbl has no real-time motion.
 - SAFEGUARDS: the plotter's real `$$` (never read), so 1607 and 1/8 microstepping are reasoned;
@@ -379,9 +410,9 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 131 passed / 0 failed
-- Calibrate 3 browser check: `node tools/check-calibrate.mjs phone|desktop <outdir> [baseUrl]`
-  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 35 checks, writes screenshots and
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 132 passed / 0 failed
+- Calibrate browser check: `node tools/check-calibrate.mjs phone|desktop <outdir> [baseUrl]`
+  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 41 checks, writes screenshots and
   `<mode>-report.json` to outdir; about 3 minutes, so use the background option). It pretends a platter
   that needs 4.444 and a carriage that needs 40 at factory 250, `$3=0`, old flipped pen heights,
   then walks every step. Next button is `#calTool [data-act=next]` (it sits outside `.calstep`).

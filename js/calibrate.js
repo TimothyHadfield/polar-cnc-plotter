@@ -1,12 +1,11 @@
-// Calibrate: a guided tool panel, one step at a time. The platter's steps ($101: turn it once, then
-// Test a full turn), the pen height (click down to the paper), the carriage's steps ($100: draw a
-// line and measure it), the platter center (cross a circle the pen drew), the center gap and the
-// rotation direction. The slow moves stop when their button is pressed again. Needs a connected
-// plotter (the link sits in the connected status row). The math and the machine steps are
-// exported for the tests.
+// Calibrate: a guided tool panel, one step at a time. Nothing in it draws, so it needs no paper.
+// The platter's steps ($101: turn it once, then Test a full turn), which way it turns, the pen
+// height (click down until the tip touches), the carriage's steps ($100: move, and read a ruler),
+// the platter center and the center gap (a mark found twice, half a turn apart). The slow moves
+// stop when their button is pressed again. Needs a connected plotter (the link sits in the
+// connected status row). The math and the machine steps are exported for the tests.
 
-import { placedToGcode } from './polar.js';
-import { gcodeLines } from './grbl.js';
+import { wrap180 } from './polar.js';
 import { plausible, badAxes, refusal, jogFeed } from './safe.js';
 export { parseSettings } from './grbl.js';
 
@@ -38,11 +37,32 @@ export function turnSteps(old, moved, tested = false) {
   return tested ? raw : snapDirect(raw) ?? raw;
 }
 
-// A line through the center comes out as two parallel halves 2 × (real gap − gap setting) apart.
-// sign = +1 or −1 (which side the pen line misses on; "Other side" flips it).
-export function offsetFromGap(current, apart, sign = 1) {
-  if (!(apart >= 0)) return NaN;
-  return Math.round((current + sign * apart / 2) * 100) / 100;
+// A belt drive has an exact value too: full steps × microsteps / (pulley teeth × 2 mm of GT2 belt).
+export function snapBelt(v, tol = 0.02) {
+  for (const teeth of [16, 20]) for (const full of [200, 400]) for (const micro of [1, 2, 4, 8, 16, 32, 64]) {
+    const exact = full * micro / (teeth * 2);
+    if (Math.abs(v / exact - 1) <= tol) return r3(exact);
+  }
+  return null;
+}
+
+// New $100 from a move the plotter counted as `counted` mm and a ruler under the pen says was
+// `ruler` mm. Reading a ruler there is good to about 1 mm, so a value near a plain belt drive's
+// exact one becomes that one.
+export function beltSteps(old, counted, ruler) {
+  const raw = corrected(old, counted, ruler);
+  return snapBelt(raw) ?? raw;
+}
+
+// A mark on the platter sat under the pen at machine (x1, y1). After about half a turn it sits
+// under the pen again at (x2, y2), on the other side of the center. The center is halfway in X.
+// If the pen line misses the center by a gap (polar.js `offset`: the pen is at (s, gap), a platter
+// point shows at angle theta − Y), the mark comes round at 180° + 2·atan(gap / s), not at 180°:
+// the turn beyond 180° gives the gap. `flip` = the platter turns the other way.
+export function gapFromMark(x1, y1, x2, y2, flip = false) {
+  const s = (x1 - x2) / 2;                               // the first spot, measured from the center
+  const extra = wrap180(y2 - y1 - 180) * (flip ? -1 : 1);
+  return Math.round(s * Math.tan(extra / 2 * Math.PI / 180) * 10) / 10 || 0;
 }
 
 // ---------- machine steps (also used by the tests) ----------
@@ -86,9 +106,12 @@ export function nudgeJog(axis, dist, feed, spu) {
 // Test, after the turn test: one full turn by the plotter's own count, at the nudges' step rate.
 export const fullTurn = spu => nudgeJog('Y', 360, Infinity, spu);
 
-// The carriage test's line: this many motor steps (50 mm at 40 steps per mm), so it stays short
-// whatever $100 says. It may be stopped early; either way its length is what the ruler checks.
+// The carriage test's move: this many motor steps (50 mm at 40 steps per mm), so it stays short
+// whatever $100 says. It may be stopped early; either way how far it went is what the ruler checks.
 export const LINE = 2000;
+
+// Half a turn (find center) and a quarter (turn direction) by the plotter's own count.
+export const partTurn = (deg, spu) => nudgeJog('Y', deg, Infinity, spu);
 
 // Steps per unit above EXTREME are not a measurement to correct, they are a mistake (a real
 // plotter has a few hundred at most), and the slow moves could not be slow with them. Before a
@@ -136,23 +159,14 @@ export async function setDirection(grbl, mask, bit, on) {
 // that Z+ lifts it. null when they are already that way round.
 export const uprightPen = s => s.penUp < s.penDown ? { penUp: 0 - s.penUp, penDown: 0 - s.penDown } : null;
 
-// Stop a move that is under way (a circle, a test drawing) and lift the pen. GRBL's buffers are
+// Stop a move that is under way (the move to the center) and lift the pen. GRBL's buffers are
 // emptied; the center and the pen zero are put back.
 export async function stopMove(grbl, penUp) {
   await grbl.stop();
   await grbl.send(`G90 G0 Z${penUp}`);
 }
 
-// Pen down, one turn and a bit, pen up. Returns the machine X the circle was drawn at.
-export async function drawCircle(grbl, { penUp, penDown }, spu, alive) {
-  await grbl.send(`G90 G0 Z${penDown}`);
-  await grbl.send(`G94 G91 G1 Y370 F${(400 * 60 / spu).toFixed(1)}`);   // 400 steps a second
-  await grbl.send('G90');
-  await grbl.send(`G0 Z${penUp}`);
-  return (await waitIdle(grbl, alive)).mpos[0];
-}
-
-// The pen crossed its circle at machine X `a` and `b`: the center is halfway. Go there, zero it.
+// The mark was under the pen at machine X `a` and `b`: the center is halfway. Go there, zero it.
 export async function centerBetween(grbl, a, b, penUp, alive) {
   await grbl.send(`G90 G0 Z${penUp}`);
   const d = (a + b) / 2 - (await waitIdle(grbl, alive)).mpos[0];
@@ -182,17 +196,8 @@ export async function touchLift(grbl, spu, alive) {
   return penHeights(grbl, down);
 }
 
-// Test drawings in platter mm: a line through the center (turned `angle` degrees), and an "F".
-export function centerLine(angle = 0, r = 40) {
-  const a = angle * Math.PI / 180, c = Math.cos(a) * r, s = Math.sin(a) * r;
-  return [[[-c, -s], [c, s]]];
-}
-export function letterF() {
-  return [[[25, 10], [25, 40], [45, 40]], [[25, 25], [38, 25]]];
-}
-
 // ---------- the panel ----------
-const STEPS = 6;
+const STEPS = 5;
 const xJog = `<div class="calres"><button class="btn sm" data-act="xLeft">Left</button><button class="btn sm" data-act="xRight">Right</button>
     <span class="seg xstep"><button data-step="0.1">0.1</button><button data-step="1" class="on">1</button><button data-step="10">10</button></span></div>`;
 
@@ -208,9 +213,18 @@ const HTML = `
 </div>
 
 <div class="calstep" data-n="2" hidden>
+  <h3>Turn direction <button class="q" type="button" data-q="calDirHelp" aria-label="What is this?">?</button></h3>
+  <p class="help" id="calDirHelp" hidden>If the platter turns the other way, everything comes out mirrored. The answer sets Reverse rotation in Settings.</p>
+  <p class="calsay">Press Turn. Seen from above, which way did it go?</p>
+  <button class="btn" data-act="quarter">Turn</button>
+  <div class="row"><button class="btn wide" data-act="cw">Clockwise</button><button class="btn wide" data-act="ccw">Counterclockwise</button></div>
+  <p class="calsay" id="calDir"></p>
+</div>
+
+<div class="calstep" data-n="3" hidden>
   <h3>Pen height <button class="q" type="button" data-q="calPenHelp" aria-label="What is this?">?</button></h3>
   <p class="help" id="calPenHelp" hidden>Touching saves that height as pen down, then lifts the pen a little for travel. The heights are counted from where the pen rests, so leave it up. Do this step again after changing the pen.</p>
-  <p class="calsay">Click Down until the tip just touches the paper.</p>
+  <p class="calsay">Click Down until the tip just touches.</p>
   <div class="row"><button class="btn wide" data-act="zUp">Up</button><button class="btn wide" data-act="zDown">Down</button></div>
   <div class="calres"><span>Pen at</span><b class="calz" id="calZ">–</b>
     <span class="seg zstep"><button data-step="0.02">0.02</button><button data-step="0.1" class="on">0.1</button><button data-step="0.5">0.5</button></span></div>
@@ -219,46 +233,29 @@ const HTML = `
   <p class="calsay" id="calPens"></p>
 </div>
 
-<div class="calstep" data-n="3" hidden>
+<div class="calstep" data-n="4" hidden>
   <h3>Carriage test <button class="q" type="button" data-q="calLineHelp" aria-label="What is this?">?</button></h3>
-  <p class="help" id="calLineHelp" hidden>The pen draws a short line toward the center. A ruler on it shows how far the carriage really moved, which sets $100.</p>
+  <p class="help" id="calLineHelp" hidden>The carriage moves a set number of motor steps. The ruler shows how far that really was, which sets $100. A result within 2 % of a plain belt drive's exact value is rounded to it.</p>
   <p class="calsay">1. Jog the pen left, near the platter edge.</p>
   ${xJog}
-  <p class="calsay">2. Draw a line. Measure it with a ruler.</p>
-  <div class="calres"><button class="btn sm" data-act="line">Draw line</button><span class="end">Plotter says <b id="calLine">–</b> mm</span></div>
-  <div class="calres"><span>Ruler says</span><input type="number" id="calRuler" min="1" step="0.5" aria-label="The line measures, mm"><span>mm</span></div>
-  <div class="calres"><span>New $100 <b id="calNew100">–</b></span><button class="btn sm end" data-act="save100" disabled>Save</button></div>
+  <p class="calsay">2. Hold a ruler under the pen. Press Move.</p>
+  <div class="calres"><button class="btn sm" data-act="move">Move</button><span class="end">Plotter says <b id="calLine">–</b> mm</span></div>
+  <div class="calres"><span>Ruler says</span><input type="number" id="calRuler" min="1" step="0.5" aria-label="The pen moved, mm"><span>mm</span></div>
+  <div class="calres"><span>New $100 <b id="calNew100">–</b></span><span class="unit" id="calRaw100"></span><button class="btn sm end" data-act="save100" disabled>Save</button></div>
   <label class="switch" id="calXFlipRow" hidden><input type="checkbox" id="calXFlip"><span></span>Reverse direction</label>
 </div>
 
-<div class="calstep" data-n="4" hidden>
+<div class="calstep" data-n="5" hidden>
   <h3>Find center <button class="q" type="button" data-q="calFindHelp" aria-label="What is this?">?</button></h3>
-  <p class="help" id="calFindHelp" hidden>The pen draws a circle, then crosses it. The platter center is halfway between the two sides of the circle.</p>
+  <p class="help" id="calFindHelp" hidden>The mark is found twice, half a turn apart. The center is halfway between the two spots. Any extra turn it needed gives the center gap.</p>
   <p class="calsay">1. Jog the pen left, about halfway to the edge.</p>
   ${xJog}
-  <p class="calsay">2. Draw a circle.</p>
-  <button class="btn" data-act="circle">Draw circle</button>
-  <p class="calsay">3. Cross it. Stop with the pen over the far side.</p>
-  <button class="btn" data-act="cross">Cross slowly</button>
-  <p class="calsay">4. Nudge onto the line with Left or Right.</p>
+  <p class="calsay">2. Put a small mark on the platter, under the tip.</p>
+  <button class="btn" data-act="half">Half turn</button>
+  <p class="calsay">3. Jog right to the mark. Line it up exactly.</p>
+  <div class="calres"><button class="btn sm" data-act="yCcw" aria-label="Turn counterclockwise">↺</button><button class="btn sm" data-act="yCw" aria-label="Turn clockwise">↻</button>
+    <span class="seg dstep"><button data-step="0.2">0.2°</button><button data-step="1" class="on">1°</button><button data-step="5">5°</button></span></div>
   <button class="btn" data-act="center">Set center</button>
-</div>
-
-<div class="calstep" data-n="5" hidden>
-  <h3>Center gap <button class="q" type="button" data-q="calGapHelp" aria-label="What is this?">?</button></h3>
-  <p class="help" id="calGapHelp" hidden>A line through the center should be one straight line. Two offset halves mean the gap setting is off.</p>
-  <p class="calsay">Draws a line through the center. Is it one straight line?</p>
-  <button class="btn" data-act="drawLine">Draw test</button>
-  <div class="calres"><span>Halves apart</span><input type="number" id="calApart" min="0" step="0.1" aria-label="Halves apart, mm"><span>mm</span></div>
-  <label class="switch"><input type="checkbox" id="calSide"><span></span>Other side</label>
-  <div class="calres"><span>New gap <b id="calNewGap">–</b></span><button class="btn sm end" data-act="saveGap" disabled>Save</button></div>
-</div>
-
-<div class="calstep" data-n="6" hidden>
-  <h3>Mirror check</h3>
-  <p class="calsay">Draws a small F. Does it read the right way?</p>
-  <button class="btn" data-act="drawF">Draw F</button>
-  <div class="row"><button class="btn wide" data-act="fOk">Reads right</button><button class="btn wide" data-act="fBad">Mirrored</button></div>
 </div>
 
 <p class="calsay" id="calMsg"></p>
@@ -274,26 +271,25 @@ export function initCalibrate(api) {
   const $ = id => document.getElementById(id);
   const num = id => parseFloat($(id).value);
 
-  let step = 1, busy = false, grbl = null, vals = {}, zTimer = 0, lineTurn = 0, fDrawn = false;
+  let step = 1, busy = false, grbl = null, vals = {}, zTimer = 0;
   let slow = null;    // { act, stopping } while a slow move runs
-  let job = null;     // { act, stopped } while a move with a Stop runs (circle, set center, drawings)
+  let job = null;     // { act, stopped } while a move with a Stop runs (set center)
   let turn = null;    // { from, at, tested }: platter machine position when the turn began / where it is now
-  let line = null;    // { a, b }: machine X where the carriage test's line begins / ends
-  let ring = null;    // { a, b }: machine X the circle was drawn at / where the pen crossed it again
+  let line = null;    // { a, b }: machine X where the carriage test's move begins / ends
+  let mark = null;    // { x, y }: machine position the mark was under the pen at, before the half turn
   const msg = t => { $('calMsg').textContent = t; };
   const err = t => { $('calErr').textContent = t; };
   const alive = () => grbl && m.getGrbl() === grbl;
   const fmt = v => Number.isFinite(v) ? v.toFixed(3) : '–';
   const same = (a, b) => Math.abs(a - b) < 0.0005;
-  const penTo = async (g, live, k) => { await g.send(`G90 G0 Z${api.getSettings()[k]}`); await waitIdle(g, live); };
 
   // ---------- the slow moves: the same button starts and stops ----------
   // done(at, from): Stop was pressed. end(at, from): the move ran out by itself (without an `end`
-  // that is a failure). pre / post: before and after the move (pen down, pen up).
-  function lineDone(at, from) {
-    if (Math.abs(at - from) * vals[100] < 200) { line = null; msg('Too short to measure. Draw again.'); return; }
+  // that is a failure).
+  function moved(at, from) {
+    if (Math.abs(at - from) * vals[100] < 200) { line = null; msg('Too short to measure. Move again.'); return; }
     line = { a: from, b: at };
-    msg('Measure the line, then type it in.');
+    msg('Type how far the pen moved.');
   }
   const SLOWS = {
     turn: { axis: 'Y', label: 'Turn slowly', go: 'Stop when the mark comes back around.',
@@ -302,11 +298,11 @@ export function initCalibrate(api) {
       ok: () => plausible(101, vals[101]) ? '' : 'Do the turn test first.',
       done() { turn = null; msg('Stopped.'); },
       end(at, from) { turn = { from, at, tested: true }; msg('Mark lined up? Done. If not, nudge to it and Save.'); } },
-    line: { axis: 'X', label: 'Draw line', dir: -1, max: LINE, go: 'Drawing a line toward the center.',
-      pre: (g, live) => penTo(g, live, 'penDown'), post: (g, live) => penTo(g, live, 'penUp'),
-      done: lineDone, end: lineDone },
-    cross: { axis: 'X', label: 'Cross slowly', dir: -1, go: 'Stop when the pen is over the far side of the circle.',
-      done(at) { ring.b = at; msg('Nudge onto the line, then Set center.'); } },
+    move: { axis: 'X', label: 'Move', dir: -1, max: LINE, go: 'Moving. Watch the ruler.', done: moved, end: moved },
+    half: { axis: 'Y', label: 'Half turn', go: 'Turning half a circle.', cmd: () => partTurn(180, vals[101]),
+      ok: () => badAxes(vals).length ? 'Do the turn test and the carriage test first.' : '',
+      done() { mark = null; msg('Stopped.'); },
+      async end(at, from) { mark = { x: (await grbl.nextStatus()).mpos[0], y: from }; msg('Now jog right to the mark.'); } },
   };
   async function slowGo(act) {
     if (slow?.act === act) {                           // second press: Stop
@@ -316,14 +312,12 @@ export function initCalibrate(api) {
     if (busy || slow || !alive()) return;
     const d = SLOWS[act], i = 'XYZ'.indexOf(d.axis), g = grbl, me = slow = { act, stopping: false };
     const mine = () => slow === me && m.getGrbl() === g;
-    let lowered = false;
     err(''); msg(d.go); refresh();
     try {
       const no = d.ok?.();
       if (no) throw new Error(no);
       const reset = await fit(g, d.axis);
       if (reset) msg(`${reset} ${d.go}`);
-      if (d.pre) { lowered = true; await d.pre(g, mine); }
       const from = (await g.nextStatus()).mpos[i];
       await g.send(d.cmd ? d.cmd() : slowJog(d.axis, d.dir ?? 1, vals[100 + i], vals[120 + i], d.max));
       while (mine() && !me.stopping) {
@@ -333,10 +327,9 @@ export function initCalibrate(api) {
       }
       if (!mine()) return;                             // the tool was closed (that cancels the move)
       const at = (await stopJog(g, mine))[i];          // Stop pressed before the move began: cancel again
-      if (d.post) { await d.post(g, mine); lowered = false; }
       if (me.stopping) await d.done(at, from); else if (d.end) await d.end(at, from); else msg('It stopped by itself. Try again.');
     } catch (e) {
-      if (slow === me) { err(e.message); if (lowered) d.post(g, mine).catch(() => {}); }
+      if (slow === me) err(e.message);
     }
     if (slow === me) { slow = null; refresh(); }
   }
@@ -353,20 +346,21 @@ export function initCalibrate(api) {
     $('calNew101').textContent = fmt(n101);
     $('calRaw101').textContent = Number.isFinite(n101) && !same(n101, raw101) ? `measured ${raw101.toFixed(3)}` : '';
     // carriage test
-    const drawn = line ? Math.abs(line.b - line.a) : NaN;
-    const n100 = corrected(vals[100], drawn, num('calRuler'));
-    $('calLine').textContent = Number.isFinite(drawn) ? drawn.toFixed(1) : '–';
+    const went = line ? Math.abs(line.b - line.a) : NaN;
+    const raw100 = corrected(vals[100], went, num('calRuler'));
+    const n100 = beltSteps(vals[100], went, num('calRuler'));
+    $('calLine').textContent = Number.isFinite(went) ? went.toFixed(1) : '–';
     $('calNew100').textContent = fmt(n100);
-    const gap = offsetFromGap(s.offset, num('calApart'), $('calSide').checked ? -1 : 1);
-    $('calNewGap').textContent = Number.isFinite(gap) ? gap + ' mm' : '–';
+    $('calRaw100').textContent = Number.isFinite(n100) && !same(n100, raw100) ? `measured ${raw100.toFixed(3)}` : '';
+    $('calDir').textContent = `Saved: ${s.flip ? 'counterclockwise' : 'clockwise'}`;
     $('calPens').textContent = `Saved: up ${s.penUp} · down ${s.penDown}`;
     $('calZFlipRow').hidden = $('calXFlipRow').hidden = !Number.isFinite(vals[3]);   // the pretend plotters have no $3
     $('calZFlip').checked = s.zFlip !== false;
     $('calXFlip').checked = !!(vals[3] & 1);
     // enabled?
-    const need = { save101: same(n101, vals[101]) ? NaN : n101, save100: n100, saveGap: gap,
+    const need = { save101: same(n101, vals[101]) ? NaN : n101, save100: same(n100, vals[100]) ? NaN : n100,
       turnBack: raw101, turnMore: raw101, turnTest: plausible(101, vals[101]) ? 1 : NaN,
-      cross: ring ? 1 : NaN, center: ring?.b === undefined ? NaN : 1 };
+      quarter: plausible(101, vals[101]) ? 1 : NaN, center: mark ? 1 : NaN };
     root.querySelectorAll('[data-act]').forEach(b => {
       const act = b.dataset.act;
       const stop = slow?.act === act;
@@ -376,9 +370,7 @@ export function initCalibrate(api) {
       if (SLOWS[act]) b.textContent = stop ? 'Stop' : SLOWS[act].label;
     });
     root.querySelectorAll('.switch input').forEach(i => { i.disabled = busy || !!slow; });
-    const label = { circle: ring ? 'Draw again' : 'Draw circle', center: 'Set center',
-      drawLine: lineTurn ? 'Draw again' : 'Draw test', drawF: fDrawn ? 'Draw again' : 'Draw F' };
-    for (const [act, text] of Object.entries(label)) root.querySelector(`[data-act=${act}]`).textContent = job?.act === act ? 'Stop' : text;
+    root.querySelector('[data-act=center]').textContent = job?.act === 'center' ? 'Stop' : 'Set center';
   }
   function showZ() {
     const z = alive() ? grbl.status?.wpos?.[2] : undefined;
@@ -398,7 +390,7 @@ export function initCalibrate(api) {
     await me.stopped;
     busy = false; job = null; refresh();
   }
-  // Stop the circle / drawing / move to the center where it is, and lift the pen.
+  // Stop the move to the center where it is, and lift the pen.
   function stopRun() {
     if (!job || job.stopped) return;
     job.stopped = stopMove(grbl, api.getSettings().penUp).then(() => msg('Stopped.'), e => err(e.message));
@@ -419,7 +411,7 @@ export function initCalibrate(api) {
     vals[n] = await sane(g, n, was);
     if (vals[n] === was) return '';
     if (n === 101) turn = null;
-    if (n === 100) ring = line = null;
+    if (n === 100) mark = line = null;
     await m.check();
     return `$${n} was ${was}: reset to ${vals[n]}.`;
   }
@@ -428,15 +420,10 @@ export function initCalibrate(api) {
     const old = vals[n];
     await saveSetting(g, n, v, old);
     vals[n] = r3(v);
-    if (n === 101) turn = null;
-    if (n === 100) { line = null; if (ring) for (const k in ring) ring[k] *= old / vals[n]; $('calRuler').value = ''; }
+    if (n === 101) turn = mark = null;
+    if (n === 100) { line = null; if (mark) mark.x *= old / vals[n]; $('calRuler').value = ''; }
     await m.check();
   }, `Saved $${n}=${v.toFixed(3)}. ${then}`);
-  const draw = (strokes, act) => run(async g => {
-    if (badAxes(vals).length) throw new Error('Do the turn test and the carriage test first.');
-    if (!g.center) throw new Error('Find the center first.');
-    await g.stream(gcodeLines(placedToGcode(strokes, api.getSettings()).gcode));
-  }, '', act);
   // the step size picked in the step on screen
   const segStep = cls => +root.querySelector(`.calstep[data-n="${step}"] .${cls} .on`).dataset.step;
   // a short move, then `then(machine position)` once it has stopped
@@ -450,10 +437,20 @@ export function initCalibrate(api) {
   // degrees on the dial, in the plotter's present units: the turn so far is 360°
   const turnNudge = dir => nudge('Y', dir * segStep('tstep') * Math.abs(turn.at - turn.from) / 360, 300, p => { turn.at = p[1]; });
   const zNudge = dir => nudge('Z', dir * segStep('zstep'), 200);
-  const xNudge = dir => nudge('X', dir * segStep('xstep'), 1000, p => { if (step === 4 && ring?.b !== undefined) ring.b = p[0]; });
+  const xNudge = dir => nudge('X', dir * segStep('xstep'), 1000);
+  // ↺ / ↻ as on the main panel: ↺ is Y+, or Y− for a platter that turns the other way
+  const yNudge = dir => nudge('Y', dir * (api.getSettings().flip ? -1 : 1) * segStep('dstep'), 300);
+  // Which way Y+ turns the platter. A gap measured for the other direction changes sides.
+  const setFlip = flip => {
+    const s = api.getSettings();
+    api.setSettings(!s.flip === !flip ? { flip } : { flip, offset: -s.offset || 0 });
+    msg('Saved.'); refresh();
+  };
 
   const acts = {
-    turn: () => slowGo('turn'), turnTest: () => slowGo('turnTest'), line: () => slowGo('line'), cross: () => slowGo('cross'),
+    turn: () => slowGo('turn'), turnTest: () => slowGo('turnTest'), move: () => slowGo('move'), half: () => slowGo('half'),
+    quarter: () => run(async (g, live) => { await g.send(partTurn(90, vals[101])); await waitIdle(g, live); }),
+    cw: () => setFlip(false), ccw: () => setFlip(true),
     turnBack: () => turnNudge(-1), turnMore: () => turnNudge(1),
     save101: () => save(101, turnSteps(vals[101], Math.abs(turn.at - turn.from), turn.tested), 'Press Test to check.'),
     zUp: () => zNudge(1), zDown: () => zNudge(-1),
@@ -463,20 +460,19 @@ export function initCalibrate(api) {
       api.setSettings(await touchLift(g, vals[102], live));
     }, 'Saved. The pen is up, ready to travel.'),
     xLeft: () => xNudge(1), xRight: () => xNudge(-1),     // left = away from the center (X+)
-    save100: () => save(100, corrected(vals[100], Math.abs(line.b - line.a), num('calRuler')), 'Draw again to check.'),
-    circle: () => run(async (g, live) => {
-      if (!plausible(101, vals[101])) throw new Error('Do the turn test first.');
-      ring = null; ring = { a: await drawCircle(g, api.getSettings(), vals[101], live) };
-    }, 'Circle drawn. Now press Cross slowly.', 'circle'),
-    center: () => run(async (g, live) => { await centerBetween(g, ring.a, ring.b, api.getSettings().penUp, live); m.refresh(); }, 'Center set. The pen is over it.', 'center'),
-    drawLine: () => { const a = lineTurn * 30; lineTurn++; draw(centerLine(a), 'drawLine').then(() => refresh()); },
-    saveGap: () => {
-      const gap = offsetFromGap(api.getSettings().offset, num('calApart'), $('calSide').checked ? -1 : 1);
-      api.setSettings({ offset: gap }); $('calApart').value = ''; msg(`Gap saved: ${gap} mm. Draw again to check.`); refresh();
-    },
-    drawF: () => { fDrawn = true; draw(letterF(), 'drawF'); },
-    fOk: () => msg('Rotation is right.'),
-    fBad: () => { const f = !api.getSettings().flip; api.setSettings({ flip: f }); msg(`Reverse rotation ${f ? 'on' : 'off'}. Draw again to check.`); },
+    save100: () => save(100, beltSteps(vals[100], Math.abs(line.b - line.a), num('calRuler')), 'Move again to check.'),
+    yCcw: () => yNudge(1), yCw: () => yNudge(-1),
+    center: () => run(async (g, live) => {
+      const p = (await g.nextStatus()).mpos, s = api.getSettings();
+      if (Math.abs(p[0] - mark.x) * vals[100] < 400) throw new Error('Jog right to the mark first.');
+      if (Math.abs(wrap180(p[1] - mark.y - 180)) > 30) throw new Error('Press Half turn again, then line up the mark.');
+      const gap = gapFromMark(mark.x, mark.y, p[0], p[1], s.flip);
+      await centerBetween(g, mark.x, p[0], s.penUp, live);
+      mark = null;
+      api.setSettings({ offset: gap });
+      m.refresh();
+      msg(`Center set. Center gap ${gap} mm.`);
+    }, '', 'center'),
     back: () => go(step - 1), next: () => go(step + 1),
   };
   function go(n) {
@@ -502,12 +498,12 @@ export function initCalibrate(api) {
     api.setSettings({ zFlip: api.getSettings().zFlip === false });
     await m.check();
     await read();
-  }, 'Pen direction reversed. Find the paper again.'));
+  }, 'Pen direction reversed. Touch down again.'));
   // the carriage runs the wrong way: flip its bit in GRBL's direction mask. Every position is off after that.
   $('calXFlip').addEventListener('change', () => run(async g => {
     const v = vals[3] ^ 1;
     await g.send(`$3=${v}`);
-    vals[3] = v; ring = line = null; g.center = null;
+    vals[3] = v; mark = line = null; g.center = null;
     await m.check();
   }, 'Carriage direction reversed.'));
 
@@ -515,15 +511,12 @@ export function initCalibrate(api) {
     const { openTool } = await import('./tool.js');   // tool.js needs a page; the tests import this file without one
     grbl = m.getGrbl();
     if (!grbl) return;
-    step = 1; vals = {}; lineTurn = 0; fDrawn = false; turn = line = ring = slow = job = null;
+    step = 1; vals = {}; turn = line = mark = slow = job = null;
     msg(''); err('');
     openTool('calTool', () => {
       clearInterval(zTimer);
-      if (slow) {                                      // never leave a slow move running, or the pen down
-        grbl?.realtime('\x85');
-        if (SLOWS[slow.act].post) grbl?.send(`G90 G0 Z${api.getSettings().penUp}`).catch(() => {});
-      }
-      stopRun();                                       // …or a circle or a drawing
+      if (slow) grbl?.realtime('\x85');                // never leave a slow move running
+      stopRun();                                       // …or the move to the center
       slow = null; grbl = null;
     });
     refresh();
