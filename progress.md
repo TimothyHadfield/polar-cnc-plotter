@@ -28,6 +28,14 @@ problems like these are impossible?"
   platter plug / driver is half seated again (the 11-10 / 11-11 pattern). Told Tim: hard-refresh,
   read the number in Calibrate step 1, Turn test; still jiggling at a sane number = reseat with
   12 V AND USB out.
+- **Tim, after the safeguards:** "I unplugged everything and tried again and it's still not moving
+  normally. It's making tiny movements back and forth when I do step 2 for calibrate and joging
+  does the same." No more scream = the speed is sane now; tiny back-and-forth at slow speed = one
+  coil without current (plug a pin off or half seated, a loose wire, or the Y driver). COM3 still
+  busy, `$$` still unread. **Waiting on Tim:** (1) does the carriage jog normally; (2) swap test,
+  power off: platter plug on the X header, jog Out step 10. Smooth = motor + cable fine, so the Y
+  driver / its seating (reseat, then swap the X and Y driver boards). Still jiggling = the platter
+  plug or cable (a middle wire, as on 11-11; each coil should read ~3 Ω on pins 1-2 and 3-4).
 - **Built (`js/safe.js`, new):** `RANGE` `$100` 5-800, `$101` 0.5-150 (factory 250 on the platter
   = not calibrated). `machine.js` reads `$$` on connect, after a console `$n=` / `$RST=`, and when
   Calibrate saves (`m.check()`): a bad axis = its jog buttons off, Plot/Resume off ("Calibrate
