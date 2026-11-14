@@ -158,6 +158,7 @@ a.btn { text-decoration: none; color: inherit; }
 .calstep h3 { margin: 0; }
 .calstep .grid { margin-top: 0; }
 .calstep .switch { margin-top: 0; }
+.calstep .switch[hidden] { display: none; }
 .calstep .help { margin: 0; }
 .calvals { display: grid; grid-template-columns: auto auto 1fr; gap: 6px 10px; font-size: 14px; align-items: baseline; }
 .calvals span:not(.unit) { color: var(--muted); }

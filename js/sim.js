@@ -154,7 +154,7 @@ function draw(r, a, b) {
 
 view.onFrame(t => {
   if (link?.alive) {
-    const pts = link.trail.splice(0).concat([link.pos]).map(p => p.map((v, i) => v + offset[i]));
+    const pts = link.trail.splice(0).concat([link.real()]).map(p => p.map((v, i) => v + offset[i]));
     if (rigged) for (const p of pts) { draw(rigged, phys, p); phys = p; }
     else phys = pts.at(-1);
   }
@@ -209,6 +209,6 @@ window.plotterSim = {
   // true while the pen is still right over the platter centre (radius 0), as it is when the page opens
   atCenter: () => Math.abs(phys[0]) < 0.01,
   // the G-code that puts the pen back over the real platter centre (radius 0), in GRBL's work coordinates
-  centerMove: () => link && `G90 G0 X${(-offset[0] - link.wco[0]).toFixed(3)}`,
+  centerMove: () => link && `G90 G0 X${(-offset[0] / link.real([1, 0, 0])[0] - link.wco[0]).toFixed(3)}`,
 };
 await import('./app.js');

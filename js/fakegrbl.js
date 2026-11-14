@@ -83,7 +83,12 @@ export class FakeGrbl {
     if (line === '$$') { Object.entries(this.settings).forEach(([n, v]) => this.emit(`$${n}=${v}`)); return 'ok'; }
     if (this.state === 'Alarm') return 'error:9';
     const set = /^\$(\d+)=(-?[\d.]+)$/.exec(line);
-    if (set) { this.settings[set[1]] = (+set[2]).toFixed(3); return 'ok'; }
+    if (set) {
+      // GRBL counts steps: with new steps per unit ($100-$102) the same spot reads differently
+      const a = +set[1] - 100, k = +this.settings[set[1]] / +set[2];
+      if (a >= 0 && a <= 2 && k > 0 && Number.isFinite(k)) this.rescale(a, k);
+      this.settings[set[1]] = (+set[2]).toFixed(3); return 'ok';
+    }
     if (/^\$\d+=/.test(line)) return 'ok';
     // M0 program pause: everything before it has finished (lines run one at a time here); hold
     // until `~`, which also sends this line's ok.
@@ -110,6 +115,8 @@ export class FakeGrbl {
     }
     return 'ok';
   }
+
+  rescale(axis, k) { this.pos[axis] *= k; }
 
   close() { this.alive = false; clearInterval(this.timer); return Promise.resolve(); }
 }

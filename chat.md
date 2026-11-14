@@ -129,3 +129,28 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   only under the cage roof), GLB centres measured at y 3.00, 115/115 tests, headless WebKit 393 px
   + 1440 px of build.html and sim.html (v1 + v2), no exceptions.
 - **Open:** the print itself; his "other problems"; the rail photo; pen clip for the new slider.
+
+## 2026-11-13 (late) · calibration by Stop button, pen holder, cutting circles
+- **Asked:** "I have the entire thing built perfectly and I'm ready to start working on the
+  calibration. Could you make the calibration system more intuitive? For example, have the plate
+  move slowly in a circle until the user says stop at 360 degrees ... Or have the linear motor
+  slowly move down until the user clicks stop ... For the X axis maybe Calibrate it so that it
+  knows where the edges of the plate are, and then it can calculate where the center is itself?"
+  Also: the missing pen-holder piece ("the longer flat part with round holders on the end"), and
+  "a pdf that has circles on it with the same size as the plate" for the paper and the rubber.
+  Earlier: what the printed bar with an indent is (the collar gauge).
+- **Decided (Claude, flagged to Tim):** the pen cannot reach both plate edges (93 mm one side, 78
+  the other), so the center comes from a circle the pen draws and then crosses; that circle,
+  measured with a ruler, also gives `$100` (the old 20 mm rail test is gone). Slow speeds are set in
+  motor steps per second. `$101` rounds to the exact direct-drive value within 2 %. Pen heights are
+  saved as up 0 / down -lift with `G92 Z0` at the up height. Holder neck narrowed 18 -> 13.6 mm so
+  his printed clip (14 mm opening) goes over it. Paper circle 196 mm, pad 200 mm.
+- **Built:** `js/calibrate.js` rewritten (steps 2-5), `grbl.penZero` + `setPenZero()` + Z restored
+  after Stop, the pretend GRBLs count steps (`rescale`, `SimGrbl.real()`), 5 new tests;
+  `pen_holder()` + `build/stl/pen_holder.stl` + `build/print/plate6_pen_holder.3mf`;
+  `tools/make-circles-pdf.py` + `build/print/paper_and_pad_circles.pdf`.
+- **Verified how:** node tests 120/120, each new one seen failing against a one-line mutation;
+  headless WebKit of sim.html?v=2 driving every step; OpenSCAD intersection clip-over-neck = 0 mm³
+  (120 mm³ on the original 18 mm neck); headless Bambu slice 8 min / 3.8 g; PDF sizes read back
+  from the file (196.0 / 200.0 mm, scale line 100.0 mm).
+- **Open:** nothing run on the real plotter. Pen holder not in the 3D model or guide.

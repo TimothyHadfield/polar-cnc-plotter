@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-11-13 (BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-13 late (CALIBRATE 2: search "CALIBRATE 2"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -10,8 +10,45 @@ _Last updated 2026-11-13 (BASE 2: search "BASE 2"; engineering review: search "E
    settings + Vref, §7 improvements incl. what the builders made 2026-10-26).
 
 ## Goal right now
-**2026-11-13: Tim reprints the base** (`build/print/plate2_base_only.3mf`, see "BASE 2"), sets the
-platter motor under the pen tip, prints plate 5, then Calibrate. The older text below is history.
+**2026-11-13 late: Tim: "I have the entire thing built perfectly and I'm ready to start working on
+the calibration."** Next is his first run of the new Calibrate flow on the real plotter (nothing in
+it has run on the machine yet), then a first real drawing. The older text below is history.
+
+**CALIBRATE 2 (2026-11-13 late).** Tim asked for calibration by Stop button: "have the plate move
+slowly in a circle until the user says stop at 360 degrees ... have the linear motor slowly move
+down until the user clicks stop ... For the X axis maybe Calibrate it so that it knows where the
+edges of the plate are, and then it can calculate where the center is itself?" Built in
+`js/calibrate.js` (6 steps):
+1. Current settings (+ calculator), unchanged.
+2. Turn test: **Turn slowly / Stop** when a taped mark comes back, Back / Further nudges (0.5, 2,
+   10°), New `$101` = old × units travelled / 360. Within 2 % of an exact direct-drive value
+   (200 or 400 full steps × 1..64 microsteps / 360) it shows that value plus "measured x".
+3. Pen heights: **Lower slowly / Stop** at the paper, **Raise slowly / Stop** clear of it. Then
+   `G92 Z0` at the up height (`grbl.setPenZero()`, `grbl.penZero`), settings saved as penUp 0 /
+   penDown = -(lift). So the heights hold in a later session as long as the pen was left up
+   (the app parks it up). ▲▼ move whichever height was set last. "Reverse direction" switch = Lower
+   jogs Z+ (no firmware write).
+4. Find center: jog out, **Draw circle** (pen down, Y 370, pen up), **Cross slowly / Stop** over
+   the line on the far side (X-), **Set center** = go to the midpoint, `G92 X0 Y0`. "Plotter says
+   N mm" vs "Ruler says" -> New `$100`. His literal "edges of the plate" is out of reach (93 mm one
+   side, 78 the other, plate edge at 100), so the circle stands in. A "Reverse direction" switch
+   (writes `$3` bit 0, clears the center) shows only when `$$` reports `$3` (real GRBL, not the
+   pretend ones).
+5. Center gap (Draw test, Halves apart, Other side), 6. Mirror check: as before.
+- Slow speeds are in motor steps per second (`SLOW`: X 300, Y 107, Z 150), capped so the stop takes
+  at most `coast` steps at the current `$12x`; a jog that ends by itself is not counted.
+- Saving `$100`/`$101` moves every reading (GRBL counts steps): `saveSetting(grbl, n, v, old)` puts
+  the work zero back with `G92` and updates `grbl.center`. FakeGrbl/SimGrbl model this (`rescale`);
+  SimGrbl keeps the machine's real scale in `true` and reports real positions with `real()`.
+- `Grbl.stop()` now restores Z too when `penZero` is set (a soft reset drops G92).
+- The old "Turn once / It turned" and "Move 20 mm" tests and `testMove` are gone.
+
+**Pen holder + circles (2026-11-13 late).** `pen_holder()` in `cad/plotter-parts.scad` (redrawn from
+the original guide's `Pen+Holder+Parts.stl` in Tim's OneDrive, neck 18 -> 13.6 mm so his clip's
+14 mm opening goes over it), `build/stl/pen_holder.stl`, `build/print/plate6_pen_holder.3mf`
+(8 min, 3.8 g). `tools/make-circles-pdf.py` -> `build/print/paper_and_pad_circles.pdf` (page 1
+paper 196 mm, page 2 pad 200 mm, each with a 100 mm scale line). The holder is NOT in the 3D model
+or the build guide; with it the pen sits about 6 mm nearer the rods than the model's `pen_y`.
 
 Get all three axes moving, then run the app's Calibrate tool. **X (carriage) works.** Y (platter)
 and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Claude guides.
@@ -310,8 +347,8 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 | Plotter app | live | node tests: see Map |
 | Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). Also on sim.html (the plan inset fills the stage while drawing). |
 | Simulate (`js/handoff.js`) | live 2026-11-13 | Tim: "allow the user to simulate the drawing aswell". A "Simulate" link beside Download G-code opens `sim.html?v=2`; the drawing on screen (strokes + colours + center/radius + turn/move/crop) rides along in sessionStorage `polar-plotter-handoff`, consumed once by app.js when `window.plotterSim` exists. A picture arrives already traced (no Darkness slider there). Then Connect plotter -> Plot in the simulator. |
-| Machine X axis | works (Tim, 10-27) | uncalibrated |
-| Machine Y / Z | not moving | Y channel (driver or slot) suspected; see Goal |
+| Machine | built, all three axes move (Tim, 11-13) | uncalibrated; Tim starts Calibrate next |
+| Calibrate tool | rewritten 2026-11-13 (CALIBRATE 2) | tests + simulator only, never on the machine |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
 | Carriage plate pocket for micro stage | live STL (3fed47d) | 81.9 x 25.5 x 1.5 mm; Tim to caliper the stage |
 | Upgrade parts (builders, 10-26) | STLs merged | platter_hub, motor_stand, motor_plate 2 mm recess, pulley_m3 + idler_washer, big_pulley_gt2, paper_ring; nothing printed or fitted |
@@ -375,6 +412,12 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   by Tim.
 - Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
 - Web Serial flows only exercised with `?demo` (FakeGrbl).
+- CALIBRATE 2 on the real plotter: jog cancel (0x85) over Web Serial, how far the platter coasts
+  after Stop, whether 107 / 150 / 300 steps per second feel right, the pen stage at G0 speed with
+  factory `$102`/`$112`, which way Z and X run (the two Reverse switches), `$3` write. In `?demo`
+  the slow moves jump at once ("It stopped by itself"): FakeGrbl has no real-time motion.
+- Pen holder: fit on the real slider (how it fixes to it is unknown), clip over the 13.6 mm neck
+  (OpenSCAD intersection only). Circles PDF: not printed; depends on printing at 100 %.
 - Base 2 is not printed. Not measured on the real parts: stage body depth (10 assumed), where the
   pen really sits (the motor's +-10 mm travel is meant to cover it), whether the 3 mm boss channel
   and 8 mm shaft slot come out clean over supports, how hard the cage supports are to remove.
@@ -393,7 +436,12 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-13: 115 passed / 0 failed
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-13 late: 120 passed / 0 failed
+- Calibrate browser check: phone-view on `sim.html?v=2` with `--do click:` steps (speed buttons
+  `#simSpeed [data-speed="20"]`, `#connect`, `#calOpen`, `[data-act=turn|lower|raise|circle|cross|center]`,
+  `wait:[data-act=x]:not([disabled])`), then `--eval` on `plotterSim.grbl` (`pos`, `real()`, `wco`,
+  `received`). The whole run takes about 4 minutes: start it with the background option.
+- Scratch tools (not in the repo): trimesh for Python 3.14 without scipy (`mesh.section()` fails).
 - Draw tool browser check (mouse drag, touch tap, undo, clear, done, move + reopen, reload):
   `node <scratchpad>/draw/drawtest.mjs phone|desktop <outdir>` pattern = Playwright WebKit from
   `~/.claude/tools/node_modules`, `page.mouse` on `#preview`, read `localStorage['polar-plotter-sketch']`.

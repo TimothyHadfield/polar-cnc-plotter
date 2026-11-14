@@ -7,7 +7,8 @@
 // and never faster than the max rates allow. Y is platter degrees, counted as "mm" like GRBL does.
 // Not modelled: acceleration ($120-$122), so moves start and stop at full speed.
 // `speed` runs the clock faster (2 = twice as fast). `pos` is the live machine position;
-// `trail` collects the end of every finished block, so a drawing can follow every corner.
+// `trail` collects the end of every finished block (as real positions, see real()), so a drawing
+// can follow every corner.
 import { FakeGrbl } from './fakegrbl.js';
 
 export const PLANNER_BLOCKS = 15;
@@ -25,8 +26,15 @@ export class SimGrbl extends FakeGrbl {
     this.g93 = false; this.feed = 0; this.rapid = true;
     // factory GRBL 1.1 max rates (Tim's EEPROM is factory: progress.md 11-10)
     Object.assign(this.settings, { 110: '500.000', 111: '500.000', 112: '500.000' });
+    // the steps per unit this machine was built with: a different $100-$102 makes every move
+    // come out longer or shorter, as on the real plotter (see real())
+    this.true = [100, 101, 102].map(n => +this.settings[n]);
     this.last = now();
   }
+
+  // where the machine really is (mm, degrees, mm) for a position GRBL reports
+  real(p = this.pos) { return p.map((v, i) => v * +this.settings[100 + i] / this.true[i]); }
+  rescale(axis, k) { this.pos[axis] *= k; this.end[axis] *= k; }
 
   // replies arrive as soon as possible (a microtask), so the sender can keep the planner full
   emit(line) { if (this.alive) Promise.resolve().then(() => this.alive && this.onLine?.(line)); }
@@ -88,7 +96,7 @@ export class SimGrbl extends FakeGrbl {
       if (dt >= left) {
         dt -= left;
         this.pos = b.to.slice();
-        this.trail.push(this.pos.slice());
+        this.trail.push(this.real());
         this.block = null;
       } else {
         this.done += dt;

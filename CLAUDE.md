@@ -31,8 +31,11 @@ previews it, and can stream it to the plotter over USB.
 - `js/place.js`: drag to move, Turn slider, Crop box (steps aside while `api.sketching`).
 - `js/grbl.js`: GRBL streaming (character counting, 127-byte RX limit), pause/stop/resume, Web Serial.
 - `js/machine.js`: plotter panel (connect, jog, set center, plot, pen changes via M0).
-- `js/calibrate.js`: 6-step calibration tool ($100, $101, pen heights, center gap, mirror check).
-- `js/fakegrbl.js`: pretend GRBL used by the tests and `?demo`.
+- `js/calibrate.js`: 6-step calibration tool. Slow moves the user stops (jog + jog cancel 0x85):
+  turn once -> $101, lower to the paper -> pen heights (`G92 Z0` at pen up, `grbl.penZero`), cross a
+  circle the pen drew -> center + $100; then center gap and mirror check.
+- `js/fakegrbl.js`: pretend GRBL used by the tests and `?demo`. `js/simgrbl.js`: the simulator's
+  (real-time moves). Both count steps like GRBL: a `$100`-`$102` write changes what a position reads.
 - `tests/`: `node:test` suites; `tests/machine/*.nc` are hand-run machine check files;
   `tests/grblplotter-port.mjs` reproduces GRBL-Plotter's broken polar conversion for comparison.
 - `tools/serve.mjs` (static server, default port 8765), `tools/make-fixtures.mjs` (needs Playwright
@@ -45,7 +48,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (11 files, 115 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (11 files, 120 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with

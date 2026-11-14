@@ -63,6 +63,7 @@ export class Grbl {
     this.status = null;
     this.wco = [0, 0, 0];
     this.center = null;     // machine X/Y where "set center" was pressed
+    this.penZero = null;    // machine Z of work Z0, once Calibrate has set it (G92 Z0)
     this.job = null;
     this.waiters = [];      // { test(line), resolve }
     this.expectReset = false;
@@ -107,7 +108,7 @@ export class Grbl {
     for (const c of [...this.pending, ...this.queue]) if (!c.job) c.reject(err);
     this.pending = []; this.queue = []; this.inFlight = 0;
     if (this.job) this.endJob(err);
-    if (!this.expectReset) this.center = null;   // a hardware reset zeroes the position
+    if (!this.expectReset) this.center = this.penZero = null;   // a hardware reset zeroes the position
     this.onLog(banner);
     this.onEvent('reset');
   }
@@ -233,9 +234,9 @@ export class Grbl {
     this.realtime('\x18');
     try { await banner; } finally { this.expectReset = false; }
     const s = await this.nextStatus();
-    if (s.state === 'Alarm') { await this.send('$X'); this.center = null; return false; }
+    if (s.state === 'Alarm') { await this.send('$X'); this.center = this.penZero = null; return false; }
     this.center = center;
-    if (center) await this.restoreCenter();
+    await this.restoreCenter();
     return !!center;
   }
 
@@ -244,6 +245,12 @@ export class Grbl {
     await this.send('G92 X0 Y0');
     const s = await this.nextStatus();
     this.center = [s.mpos[0], s.mpos[1]];
+  }
+  // Work Z0 = the pen where it is now (Calibrate: the pen-up height).
+  async setPenZero() {
+    await this.send('G92 Z0');
+    const s = await this.nextStatus();
+    this.penZero = s.mpos[2];
   }
   // `$$` -> { 100: 47.62, 101: 17.132, … } (the `$n=value` lines GRBL prints before its ok).
   async readSettings() {
@@ -256,9 +263,12 @@ export class Grbl {
   }
   // G92 may not survive a reset; put it back from the remembered machine position.
   async restoreCenter() {
+    if (!this.center && this.penZero === null) return;
     const s = await this.nextStatus();
     const f = v => v.toFixed(3);
-    await this.send(`G92 X${f(s.mpos[0] - this.center[0])} Y${f(s.mpos[1] - this.center[1])}`);
+    const xy = this.center ? ` X${f(s.mpos[0] - this.center[0])} Y${f(s.mpos[1] - this.center[1])}` : '';
+    const z = this.penZero === null ? '' : ` Z${f(s.mpos[2] - this.penZero)}`;
+    await this.send('G92' + xy + z);
   }
 }
 
