@@ -11,13 +11,15 @@
   --accent: #1f3a93;
   --accent-ink: #ffffff;
   --err: #b3261e;
+  --ok: #2e7d32;
+  --ruler: #f2dc8c;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #17181b; --panel: #202226; --ink: #ececef; --muted: #9a9aa2; --line: #34363c;
     --paper: #2a2c31; --paper-edge: #44474f; --pen: #8fb0ff; --travel: #ff8a80;
-    --accent: #8fb0ff; --accent-ink: #10131a; --err: #ff8a80; color-scheme: dark;
+    --accent: #8fb0ff; --accent-ink: #10131a; --err: #ff8a80; --ok: #7bd389; --ruler: #6b5d2a; color-scheme: dark;
   }
 }
 
@@ -177,7 +179,48 @@ a.btn { text-decoration: none; color: inherit; }
 .calz { min-width: 3ch; font-variant-numeric: tabular-nums; }
 .calsay { margin: 0; font-size: 14px; color: var(--muted); min-height: 1.35em; }
 .calnav { display: flex; align-items: center; gap: 10px; margin-top: auto; }
-.calnav span { flex: 1; text-align: center; color: var(--muted); font-size: 14px; }
+.calmid { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 14px; }
+/* Calibrate: where each step stands (grey not started, blue in progress, green done, red problems) */
+#calTool [hidden] { display: none !important; }
+#calTool .calstep { position: relative; }   /* keeps the switches' hidden checkboxes inside the scrolling panel */
+#calTool .top { gap: 8px; }
+#calTool .top h2 { margin-right: auto; }
+.pill { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.pill[data-st=on] { background: var(--accent); color: var(--accent-ink); }
+.pill[data-st=done] { background: var(--ok); color: var(--panel); }
+.pill[data-st=bad] { background: var(--err); color: var(--panel); }
+.caldots { display: flex; gap: 6px; }
+.caldots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.caldots i[data-st=on] { background: var(--accent); }
+.caldots i[data-st=done] { background: var(--ok); }
+.caldots i.now { outline: 2px solid var(--muted); outline-offset: 1px; }
+#calTool .btn.go:not(:disabled) { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.calask { margin: 0; font-weight: 600; min-height: 1.35em; }
+.calchecks { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--muted); }
+.calchecks li[data-st=on] { color: var(--accent); font-weight: 600; }
+.calchecks li[data-st=done] { color: var(--ok); }
+.calchecks li[data-st=done]::after { content: ' ✓'; }
+.calchecks li[data-st=bad] { color: var(--err); }
+.calchecks li[data-st=bad]::after { content: ' ✗'; }
+#calRedo { flex-wrap: wrap; }
+#calRedo:empty { display: none; }
+/* step pictures */
+.calpic { display: block; width: 100%; height: 96px; flex: none; }
+.calpic text { font-size: 10px; fill: var(--muted); }
+.calpic .plate { fill: var(--paper); stroke: var(--paper-edge); stroke-width: 2; }
+.calpic .tape { fill: var(--travel); }
+.calpic .fix { fill: var(--ink); }
+.calpic .pen { fill: var(--line); stroke: var(--muted); stroke-width: 1.5; }
+.calpic .tip { fill: var(--pen); }
+.calpic .ruler { fill: var(--ruler); stroke: var(--paper-edge); }
+.calpic .tick { stroke: var(--ink); stroke-width: 1; }
+.calpic .path { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.calpic .cross { stroke: var(--ink); stroke-width: 1.5; }
+.calpic .mark { fill: var(--travel); }
+.calpic .mark.ghost { fill: none; stroke: var(--travel); stroke-dasharray: 2 2; }
+.calpic .tipring { fill: none; stroke: var(--pen); stroke-width: 2.5; }
+.calpic .arrow { fill: none; stroke: var(--pen); stroke-width: 1.5; }
+#calGapHelp .calpic { height: 90px; }
 .mstatus .link { font-size: 14px; }
 
 /* settings sheet */

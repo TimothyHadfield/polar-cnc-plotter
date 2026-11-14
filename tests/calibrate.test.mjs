@@ -122,6 +122,7 @@ test('Test is about 5 s a circle; the platter\'s factory speed limits are raised
   assert.equal(fullTurn(4.444), '$J=G91 G21 Y360.000 F4320');        // 360° in 5 s
   assert.equal(fullTurn(17.132), '$J=G91 G21 Y360.000 F4320');
   assert.equal(fullTurn(150), '$J=G91 G21 Y360.000 F1600');          // never over 4000 motor steps/s
+  assert.equal(fullTurn(4.444, -1), '$J=G91 G21 Y-360.000 F4320');   // the quick check, platter reversed
   const { sim, g } = await plotter({ 101: 4.444 }, false);
   const vals = await g.readSettings();
   sim.settings[121] = '10.000'; vals[121] = 10;                      // GRBL's factory acceleration

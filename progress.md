@@ -15,6 +15,27 @@ run on the real plotter: Turn test + Test, Turn direction, Pen height (is Down r
 Carriage test (ruler under the pen), Find center (a mark + Half turn); then a first real drawing.
 If the platter is slow: the turn test now raises `$111`/`$121` itself (Test = 5 s a circle). The older text below is history.
 
+**CALIBRATE 5 (2026-11-14, night): Start / Done per step, pictures, quick check.** Tim: "a button
+that says start and done ... on each step with color changes ... a redo as a start button ... some
+sort of picture or diagram or animation on each step ... especially step 4 and 5 ... point 4 on step
+5 is really unclear ... After step 5, the "next" button should turn into a "finished" button ...
+a quick test button ... the plotter automatically moveing to the center, edges, full rotation, etc.
+and the user just clicking yes". Built in `js/calibrate.js` (panel part rewritten), `css/app.css`,
+headers of index.html + sim.html. Per step: `st[n]` idle/on/done; a pill by the title (Not started /
+In progress / ✓ Done) and 5 dots by "Step n of 5". **Start** (then **Redo**) begins; controls marked
+`data-on` work only while the step is 'on'; **Done** saves (old Save101 / Touching / Save100 / Set
+center are now Done). The next button to press gets class `go` (filled blue). Step 1: Start = the
+old first-arrow work (START reset, platterSpeed, `turn`); after Test, "Back on the mark?" Yes / No
+(No reopens the step with `turn.tested`). Step 2: Start = the quarter turn. Step 5: Start records
+the mark (`mark` at Start, not at Half turn); line 4 reads "Only if needed" with a "?" holding a gap
+picture (`PIC.gap`). Next on step 5 reads **Finished** and closes the tool. Header: **Check** +
+**Close** (was Done). **Quick check** (`CHECKS`, view 6): pen up to X0 (Y untouched), pen down / up,
+X50, one full turn clockwise (`fullTurn(spu, yDir())`), five Yes / No questions; any No = ✗ Problems
++ "Redo step n" buttons. Needs the center set this session. Pictures: inline SVG + SMIL in `PIC`.
+`#calTool .calstep { position: relative }` stops the switches' hidden checkbox from making the page
+scroll on the phone. Verified: `tools/check-calibrate.mjs` 54 checks pass at 393 px and 1440 px
+(screenshots looked at); 134 node tests. NOT verified: the pictures' clarity to Tim; real plotter.
+
 **CALIBRATE 4 (2026-11-14, evening).** Tim: "for the calibration, there shouldn't be any
 proceedures that require you to draw on the paper, because it's hard to get the paper and It
 needs to be as easy as possible." Rebuilt in `js/calibrate.js`, `STEPS = 5`; the pen is never
@@ -431,7 +452,7 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
 - Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 133 passed / 0 failed
 - Calibrate browser check: `node tools/check-calibrate.mjs phone|desktop <outdir> [baseUrl]`
-  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 42 checks, writes screenshots and
+  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 54 checks, writes screenshots and
   `<mode>-report.json` to outdir; about 3 minutes, so use the background option). It pretends a platter
   that needs 4.444 and a carriage that needs 40 at factory 250, `$3=0`, old flipped pen heights,
   then walks every step. Next button is `#calTool [data-act=next]` (it sits outside `.calstep`).

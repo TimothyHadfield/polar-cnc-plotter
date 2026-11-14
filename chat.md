@@ -247,3 +247,10 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   asked for carriage buttons instead. Built: line 3 has its own Left/Right row; rotation moved to
   a line 4 for small side alignment only (0.2° / 1°). Verified: walk 42/42 at 393 px and 1440 px
   (80 mm across with line 3's Right, gap 0.7 found), 133/133 tests.
+- **Then:** Start / Done buttons with colors, Redo, pictures per step, point 4 unclear, Finished
+  after step 5, a quick test with Yes clicks (full quote in progress.md CALIBRATE 5). Also asked if
+  the circles PDF exists: yes, `build/print/paper_and_pad_circles.pdf` (since 11-13), link given.
+  **Built:** see CALIBRATE 5. **Decided (Claude, flagged):** pill + dots for state, filled blue =
+  next button, header Check + Close, Set center became step 5's Done, line 4 "Only if needed" with
+  a picture behind "?", quick check order center / pen / 5 cm / direction / full turn. **Verified:**
+  walk 54/54 at 393 px and 1440 px, 134/134 node tests. **Open:** Tim's view of the pictures; real plotter.
