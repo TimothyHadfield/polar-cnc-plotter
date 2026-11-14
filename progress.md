@@ -32,14 +32,14 @@ problems like these are impossible?"
   normally. It's making tiny movements back and forth when I do step 2 for calibrate and joging
   does the same." No more scream = the speed is sane now; tiny back-and-forth at slow speed = one
   coil without current (plug a pin off or half seated, a loose wire, or the Y driver). COM3 still
-  busy, `$$` still unread. Tim's test: "carraige and pen linear motor move normally. The carraige
-  doesn't move at all when I plug the platter motor's wiring into the Y axis motor instead, but
-  the Z axis still moves." Read as (Claude's reading, told Tim): the platter's channel/cable on
-  the carriage motor = nothing, so the fault feeds the platter motor (Y driver, its seat, or that
-  cable), not the motor. **Waiting on Tim:** power off, swap the X and Y driver boards, motors on
-  their own headers. Fault moves to the carriage = Y driver dead -> a spare from the 5-pack, Vref
-  ~1.0 V. Platter still bad + carriage fine = platter cable/plug (~3 Ω on pins 1-2 and 3-4) or
-  the Y socket.
+  busy, `$$` still unread. Tim then swapped the two motor plugs: both motors moved (the carriage on
+  Y only in tiny steps = small `$101`, expected); swapped back: **"everything is moving normally
+  again"** -> it was contact, cured by replugging (third time: 11-10, 11-11, 11-13). Drivers,
+  cables and motors are fine. Tim rejected a question box asking to read/move the plotter from
+  Claude's serial session: don't ask again unprompted. **Next = Tim: Calibrate step 2 Turn test.**
+  Open (reasoned, never read): if `$111`/`$121` are still factory (500 / 10), a calibrated
+  platter tops out near 8°/s (37 steps/s at 4.444); the guide's start values are `$111=7200
+  $121=300`. Calibrate does not set these; add a speed step if Tim reports it slow.
 - **Built (`js/safe.js`, new):** `RANGE` `$100` 5-800, `$101` 0.5-150 (factory 250 on the platter
   = not calibrated). `machine.js` reads `$$` on connect, after a console `$n=` / `$RST=`, and when
   Calibrate saves (`m.check()`): a bad axis = its jog buttons off, Plot/Resume off ("Calibrate
@@ -346,7 +346,7 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 | Plotter app | live | node tests: see Map |
 | Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). Also on sim.html (the plan inset fills the stage while drawing). |
 | Simulate (`js/handoff.js`) | live 2026-11-13 | Tim: "allow the user to simulate the drawing aswell". A "Simulate" link beside Download G-code opens `sim.html?v=2`; the drawing on screen (strokes + colours + center/radius + turn/move/crop) rides along in sessionStorage `polar-plotter-handoff`, consumed once by app.js when `window.plotterSim` exists. A picture arrives already traced (no Darkness slider there). Then Connect plotter -> Plot in the simulator. |
-| Machine | built (Tim, 11-13); platter `$101` wrongly saved (~1607, reasoned) | waiting on Tim: Turn test with the new build; if it still jiggles, reseat the platter plug/driver |
+| Machine | built; all axes move normally again after replugging (Tim, 11-13 night) | `$101` holds some wrong value until Tim runs the Turn test |
 | Calibrate tool | rewritten 2026-11-13 (CALIBRATE 2) + safeguards | tests + simulator only; the new flow has never run on the machine |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
 | Carriage plate pocket for micro stage | live STL (3fed47d) | 81.9 x 25.5 x 1.5 mm; Tim to caliper the stage |
