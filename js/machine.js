@@ -1,9 +1,10 @@
 // The plotter controls: connect over USB (Web Serial), jog, pen, set center, plot / pause / stop.
 // Shown only in browsers that can talk to USB serial (Chrome / Edge on a computer), or with ?demo.
 
-import { Grbl, openSerial, gcodeLines, resumeLines, resumePoint, RESUME_HEADER, isPause } from './grbl.js';
+import { Grbl, openSerial, pickPort, gcodeLines, resumeLines, resumePoint, RESUME_HEADER, isPause } from './grbl.js';
 import { FakeGrbl } from './fakegrbl.js';
 import { badAxes, trouble, jogFeed } from './safe.js';
+import { setDirection, uprightPen } from './calibrate.js';
 
 const $ = id => document.getElementById(id);
 
@@ -125,12 +126,19 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   }
 
   // ---------- connect ----------
+  // The only port this browser already knows is opened without the browser's list. If that fails,
+  // the next Connect shows the list again (askPort), so a wrong remembered port is never a trap.
+  let askPort = false;
   async function connect() {
+    let picked = null;
     try {
       say('Connecting…');
       if (sim) link = sim.connect();
       else if (demo) link = new FakeGrbl({ lineMs: 16, moveTicks: 1 });
-      else link = await openSerial(await navigator.serial.requestPort(), () => lost());
+      else {
+        picked = await pickPort(navigator.serial, !askPort);
+        link = await openSerial(picked.port, () => lost());
+      }
       grbl = new Grbl(link, {
         onStatus: showStatus,
         onLog: log,
@@ -141,6 +149,7 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
         },
       });
       await grbl.ready();
+      askPort = false;
       await check();
       poll = setInterval(() => grbl?.realtime('?'), 250);
       if (sim?.atCenter?.()) {   // the simulator starts with the pen over the centre: no need to set it by hand
@@ -149,6 +158,7 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       } else say(warn() ? '' : 'Move the pen over the platter center, then Set center.');
       refresh();
     } catch (e) {
+      if (picked?.auto) askPort = true;        // the remembered port did not work out
       if (e.name !== 'NotFoundError') say(e.message.includes('open') ? 'Could not open the port. Is UGS or the Arduino app still connected?' : e.message, true);
       else say('');
       await drop();
@@ -161,9 +171,23 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     try { v = await g.readSettings(); } catch {}
     if (grbl !== g) return;
     vals = v;
+    if (v && !running) try { await penDirection(g); } catch (e) { log(e.message); }
+    if (grbl !== g) return;
     // a new warning goes on screen at once; one that is over only leaves if it is still showing
     if (warn() !== was && (warn() || !$('mMsg').textContent || $('mMsg').textContent === was)) say('');
     refresh();
+  }
+  // Which way the pen motor turns is kept in the plotter (GRBL's direction mask, $3 bit 2) and
+  // follows the zFlip setting, so Z+ lifts the pen in everything the app sends. The pretend
+  // plotters report no $3 and are left alone.
+  async function penDirection(g) {
+    const s = getSettings();
+    const mask = await setDirection(g, vals[3], 2, s.zFlip !== false);
+    if (mask === vals[3]) return;
+    vals[3] = mask;
+    log(`> $3=${mask} (pen direction)`);
+    const fix = uprightPen(s);                 // heights measured while Z+ still lowered the pen
+    if (fix) api.setSettings(fix);
   }
   async function drop() {
     clearInterval(poll);
@@ -187,7 +211,6 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     const s = getSettings();
     let [axis, dir] = [b.dataset.jog[0], b.dataset.jog[1] === '+' ? 1 : -1];
     if (axis === 'Y' && s.flip) dir = -dir;                          // keep ↺ matching the preview
-    if (axis === 'Z' && s.penUp < s.penDown) dir = -dir;             // ▲ always lifts
     // never faster than the motor can turn, whatever the plotter's steps per unit are
     let feed;
     try { feed = jogFeed(axis, axis === 'Z' ? 200 : 1000, vals?.[100 + 'XYZ'.indexOf(axis)]); }

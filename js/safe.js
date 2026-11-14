@@ -6,7 +6,7 @@
 // Platter ($101, per degree): a 200-step motor at full step is 0.556; geared or at 1/64 it stays
 // under 150. GRBL's factory 250 on the platter is outside: it has not been calibrated yet.
 export const RANGE = { 100: [5, 800], 101: [0.5, 150] };
-export const NAME = { 100: 'Rail', 101: 'Platter' };
+export const NAME = { 100: 'Carriage', 101: 'Platter' };
 export const plausible = (n, v) => !RANGE[n] || (v >= RANGE[n][0] && v <= RANGE[n][1]);
 
 // The axes whose steps per unit cannot be right. `vals` = the plotter's `$$` (parseSettings);

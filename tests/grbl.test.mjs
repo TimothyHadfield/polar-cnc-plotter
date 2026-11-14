@@ -1,7 +1,7 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { Grbl, parseStatus, gcodeLines, RX_LIMIT } from '../js/grbl.js';
+import { Grbl, parseStatus, gcodeLines, pickPort, RX_LIMIT } from '../js/grbl.js';
 import { FakeGrbl } from '../js/fakegrbl.js';
 import { DEFAULTS, convert } from '../js/polar.js';
 
@@ -127,4 +127,21 @@ test('an alarm ends the plot and is reported', async () => {
   await assert.rejects(done, /hard limit/);
   assert.ok(events.some(e => e[0] === 'alarm'));
   fake.close();
+});
+
+test('Connect: the one port the browser already knows is opened without its list', async () => {
+  const uno = { name: 'uno' }, other = { name: 'other' }, chosen = { name: 'chosen' };
+  let asked = 0;
+  const serial = known => ({ getPorts: async () => known, requestPort: async () => { asked++; return chosen; } });
+  assert.deepEqual(await pickPort(serial([uno])), { port: uno, auto: true });
+  assert.equal(asked, 0);                                                    // no list shown
+  assert.deepEqual(await pickPort(serial([])), { port: chosen, auto: false });       // first time: the list
+  assert.deepEqual(await pickPort(serial([uno, other])), { port: chosen, auto: false });   // two known: the list
+  assert.equal(asked, 2);
+  // the remembered port just failed: the list, so a wrong port is never a trap
+  assert.deepEqual(await pickPort(serial([uno]), false), { port: chosen, auto: false });
+  // a browser whose getPorts fails still gets the list; closing the list passes its error on
+  assert.deepEqual(await pickPort({ getPorts: async () => { throw new Error('no'); }, requestPort: async () => chosen }), { port: chosen, auto: false });
+  const closed = Object.assign(new Error('No port selected'), { name: 'NotFoundError' });
+  await assert.rejects(pickPort({ getPorts: async () => [], requestPort: async () => { throw closed; } }), { name: 'NotFoundError' });
 });

@@ -43,7 +43,7 @@ test('real plotters pass; factory, missing and unread settings do not', () => {
   assert.deepEqual(badAxes({ 100: 250, 101: 250 }), ['Y']);          // GRBL's factory values: not calibrated
   assert.deepEqual(badAxes({ 100: 0, 101: 4.444 }), ['X']);
   assert.deepEqual(badAxes({ 100: 4000, 101: NaN }), ['X', 'Y']);
-  assert.match(trouble({ 100: 4000, 101: 0.1 }), /^Rail and platter steps look wrong/);
+  assert.match(trouble({ 100: 4000, 101: 0.1 }), /^Carriage and platter steps look wrong/);
   assert.deepEqual(badAxes(null), ['X', 'Y']);                       // nothing read: nothing may move
   assert.match(trouble(null), /Could not read/);
   assert.match(trouble({}), /Could not read/);
@@ -69,7 +69,7 @@ test('Calibrate refuses to save an impossible value', async () => {
   try {
     await g.ready();
     await assert.rejects(saveSetting(g, 101, TIMS, 250), /Platter steps must be 0\.5 to 150\. Not saved\./);
-    await assert.rejects(saveSetting(g, 100, 4000, 100), /Rail steps must be 5 to 800/);
+    await assert.rejects(saveSetting(g, 100, 4000, 100), /Carriage steps must be 5 to 800/);
     await assert.rejects(saveSetting(g, 101, NaN, 250), /Not saved/);
     await assert.rejects(saveSetting(g, 101, RANGE[101][1] + 0.01, 250), /Not saved/);
     assert.equal(fake.received.some(l => /^\$10[01]=/.test(l)), false, fake.received.join(' | '));

@@ -18,7 +18,8 @@ const PAPER = 200;  // mm, the round sheet on the platter
 const KEY = 'polar-plotter-settings';
 const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset', 'gap'];
 const STYLES = ['outline', 'center', 'spiral', 'hatch'];   // picture style
-let settings = { ...DEFAULTS, showTravel: false, gap: 1.2 };
+// zFlip: the pen motor is mounted so that GRBL's Z direction has to be reversed (js/machine.js)
+let settings = { ...DEFAULTS, showTravel: false, gap: 1.2, zFlip: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
 if (!STYLES.includes(settings.style)) settings.style = settings.center ? 'center' : 'outline';   // old Centerlines switch
 delete settings.center;
@@ -334,7 +335,12 @@ document.querySelectorAll('[data-test]').forEach(b => b.addEventListener('click'
 const api = {
   setDrawing,
   getSettings: () => settings,
-  setSettings: patch => { Object.assign(settings, patch); save(); rebuild(); },
+  setSettings: patch => {
+    Object.assign(settings, patch); save(); rebuild();
+    for (const [k, v] of Object.entries(patch)) {      // keep the Settings sheet's inputs in step
+      if (FIELDS.includes(k)) $(k).value = v; else if (k === 'flip' || k === 'showTravel') $(k).checked = !!v;
+    }
+  },
   getResult: () => result,
   rebuild, draw,
   addOverlay: f => overlays.push(f),

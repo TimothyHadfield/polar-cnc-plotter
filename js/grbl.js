@@ -297,6 +297,16 @@ export function resumePoint(lines, drawn, overlap = 5) {
 }
 
 // ---------- Web Serial (Chrome / Edge) ----------
+// Which port Connect opens. The browser's own list is needed only once: after that it remembers
+// the port, and when exactly one remembered port is plugged in, that one is taken without asking.
+// `auto` false = always show the list (the remembered port just failed).
+export async function pickPort(serial, auto = true) {
+  let known = [];
+  if (auto) try { known = await serial.getPorts(); } catch {}
+  if (known.length === 1) return { port: known[0], auto: true };
+  return { port: await serial.requestPort(), auto: false };
+}
+
 export async function openSerial(port, onClose = () => {}) {
   await port.open({ baudRate: 115200 });
   const writer = port.writable.getWriter();

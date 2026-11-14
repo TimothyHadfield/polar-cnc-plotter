@@ -31,9 +31,15 @@ previews it, and can stream it to the plotter over USB.
 - `js/place.js`: drag to move, Turn slider, Crop box (steps aside while `api.sketching`).
 - `js/grbl.js`: GRBL streaming (character counting, 127-byte RX limit), pause/stop/resume, Web Serial.
 - `js/machine.js`: plotter panel (connect, jog, set center, plot, pen changes via M0).
-- `js/calibrate.js`: 6-step calibration tool. Slow moves the user stops (jog + jog cancel 0x85):
-  turn once -> $101, lower to the paper -> pen heights (`G92 Z0` at pen up, `grbl.penZero`), cross a
-  circle the pen drew -> center + $100; then center gap and mirror check.
+- `js/calibrate.js`: 6-step calibration tool. Turn test (slow turn the user stops, jog cancel 0x85,
+  then Test = one full turn to check) -> $101; Pen height (click Down to the paper, Touching lifts
+  it and saves up 0 / down -lift, `G92 Z0` at pen up, `grbl.penZero`); Carriage test (pen draws a
+  line, ruler) -> $100; Find center (cross a circle the pen drew); then center gap and mirror check.
+- Pen direction: setting `zFlip` (default true: Tim's pen motor is mounted so GRBL's Z runs
+  backwards) is written to the plotter as `$3` bit 2 by `machine.js` on connect. Nothing else in
+  the app flips Z.
+- Connect: `pickPort` (`js/grbl.js`) opens the one remembered serial port without the browser's
+  list; none, several, or a failed open -> the list.
 - `js/safe.js`: guards against wild settings. Plausible ranges for `$100` / `$101`, the warning
   line, step-rate caps for jogs. machine.js reads `$$` on connect and switches off jogs + Plot for
   an axis whose steps per unit cannot be right; calibrate.js refuses to save such a value.
@@ -42,7 +48,8 @@ previews it, and can stream it to the plotter over USB.
 - `tests/`: `node:test` suites; `tests/machine/*.nc` are hand-run machine check files;
   `tests/grblplotter-port.mjs` reproduces GRBL-Plotter's broken polar conversion for comparison.
 - `tools/serve.mjs` (static server, default port 8765), `tools/make-fixtures.mjs` (needs Playwright
-  + server on 8765), `tools/make-machine-tests.mjs`.
+  + server on 8765), `tools/make-machine-tests.mjs`, `tools/check-calibrate.mjs` and
+  `tools/check-connect.mjs` (headless WebKit walks of Calibrate and Connect; usage in progress.md Map).
 - `build.html`, `css/build.css`, `js/build.js` (three.js viewer, tap-to-select card),
   `js/build-look.js` (textures, lighting, wires), `js/build-steps.js` (steps, parts, links, `about`
   text): the 3D build guide. GLB nodes are `<part>` or `<part>__<piece>`; steps list base names. Model: `cad/plotter-assembly.scad` -> `python tools/make-build-model.py`
@@ -51,7 +58,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (12 files, 127 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (12 files, 131 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with

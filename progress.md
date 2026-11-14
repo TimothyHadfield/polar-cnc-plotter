@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-11-13 night (SAFEGUARDS: search "SAFEGUARDS"; CALIBRATE 2: search "CALIBRATE 2"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-14 (CALIBRATE 3 = the tool as it is now: search "CALIBRATE 3"; SAFEGUARDS: search "SAFEGUARDS"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -10,9 +10,11 @@ _Last updated 2026-11-13 night (SAFEGUARDS: search "SAFEGUARDS"; CALIBRATE 2: se
    settings + Vref, §7 improvements incl. what the builders made 2026-10-26).
 
 ## Goal right now
-**2026-11-13 late: Tim: "I have the entire thing built perfectly and I'm ready to start working on
-the calibration."** Next is his first run of the new Calibrate flow on the real plotter (nothing in
-it has run on the machine yet), then a first real drawing. The older text below is history.
+**2026-11-14: Tim ran Calibrate on the real plotter and asked for five changes plus auto-connect
+(CALIBRATE 3, built and live).** Next is his run of the reworked flow: Turn test + Test, Pen height
+(is Down really down now?), Carriage test, Find center; then a first real drawing. If the platter
+is slow (factory `$111`/`$121`: a Test turn can take ~43 s), a speed step was offered, not built.
+The older text below is history.
 
 **SAFEGUARDS (2026-11-13 night).** Tim ran the OLD turn test (app not hard-refreshed): "counted 56
 full rotations", Save, "did it again, it completely freaked out ... tried to spin at an extreamly
@@ -55,34 +57,50 @@ problems like these are impossible?"
 - **Not covered, told Tim:** moves typed by hand into the Settings console; a value inside the
   range but still wrong (e.g. Stop at half a turn).
 
-**CALIBRATE 2 (2026-11-13 late).** Tim asked for calibration by Stop button: "have the plate move
-slowly in a circle until the user says stop at 360 degrees ... have the linear motor slowly move
-down until the user clicks stop ... For the X axis maybe Calibrate it so that it knows where the
-edges of the plate are, and then it can calculate where the center is itself?" Built in
-`js/calibrate.js` (6 steps):
-1. Current settings (+ calculator), unchanged.
-2. Turn test: **Turn slowly / Stop** when a taped mark comes back, Back / Further nudges (0.5, 2,
-   10°), New `$101` = old × units travelled / 360. Within 2 % of an exact direct-drive value
-   (200 or 400 full steps × 1..64 microsteps / 360) it shows that value plus "measured x".
-3. Pen heights: **Lower slowly / Stop** at the paper, **Raise slowly / Stop** clear of it. Then
-   `G92 Z0` at the up height (`grbl.setPenZero()`, `grbl.penZero`), settings saved as penUp 0 /
-   penDown = -(lift). So the heights hold in a later session as long as the pen was left up
-   (the app parks it up). ▲▼ move whichever height was set last. "Reverse direction" switch = Lower
-   jogs Z+ (no firmware write).
-4. Find center: jog out, **Draw circle** (pen down, Y 370, pen up), **Cross slowly / Stop** over
-   the line on the far side (X-), **Set center** = go to the midpoint, `G92 X0 Y0`. "Plotter says
-   N mm" vs "Ruler says" -> New `$100`. His literal "edges of the plate" is out of reach (93 mm one
-   side, 78 the other, plate edge at 100), so the circle stands in. A "Reverse direction" switch
-   (writes `$3` bit 0, clears the center) shows only when `$$` reports `$3` (real GRBL, not the
-   pretend ones).
-5. Center gap (Draw test, Halves apart, Other side), 6. Mirror check: as before.
-- Slow speeds are in motor steps per second (`SLOW`: X 300, Y 107, Z 150), capped so the stop takes
-  at most `coast` steps at the current `$12x`; a jog that ends by itself is not counted.
-- Saving `$100`/`$101` moves every reading (GRBL counts steps): `saveSetting(grbl, n, v, old)` puts
-  the work zero back with `G92` and updates `grbl.center`. FakeGrbl/SimGrbl model this (`rescale`);
-  SimGrbl keeps the machine's real scale in `true` and reports real positions with `real()`.
-- `Grbl.stop()` now restores Z too when `penZero` is set (a soft reset drops G92).
-- The old "Turn once / It turned" and "Move 20 mm" tests and `testMove` are gone.
+**CALIBRATE 3 (2026-11-14).** Tim ran the tool on the real plotter (first time) and asked: "I'm
+not really sure what the first step is but it's not necessary. For step 2, allow the user to
+"test" it which means to have it rotate in what it thinks is a full circle. If it's not in a full
+circle, the user will either click the forward or back button to show where the true full circle
+mark is, or they will redo step 2. For the linear motor, any time the cite says "down", the motor
+goes up, and vice versa, so I think we put it upside down (which is the way that I want it), so
+reverse the directions on the cite. For step 3, instead of the slow movement, just have the user
+click down or up to mark exactly where the pen is touching the plate ... move it up a little bit
+off that and then put it back down to draw. For step 4, I'm not really sure what's happening ...
+make the instructions more clear. Step 4 should be a carraige motor calibration though." Mid-turn
+he added: "if you click connect and there's only one option to connect to, it automatically
+connects". Built in `js/calibrate.js` (still 6 steps; the old one is in
+`docs/archive/progress-2026-11-14-calibrate2-and-driver-debug.md`):
+1. **Turn test**: Turn slowly / Stop, Back / Further, Save as before, plus **Test** = one full turn
+   by the plotter's count (`fullTurn`, a jog at 400 steps/s, the button is Stop meanwhile). When
+   it ends, Back / Further mark the true full circle and Save takes the value AS MEASURED
+   (`turnSteps(old, moved, tested)`: no rounding to a plain motor's value after Test, since that
+   value just missed). Save is off when nothing would change. Test is off until `$101` is plausible.
+2. **Pen height**: Up / Down clicks (0.02 / 0.1 / 0.5), then **Touching** = `touchLift`: this Z is
+   pen down, lift `LIFT` = 100 motor steps (0.4 units at `$102`=250; about 2 mm REASONED for a
+   20-step, 3 mm-lead stage at 1/8), `G92 Z0` there, save penUp 0 / penDown -(lift). The slow Z
+   moves are gone (`SLOW.Z` too).
+3. **Carriage test** (new): jog out near the edge, **Draw line** = pen down, slow jog of `LINE` =
+   2000 motor steps toward the center (50 mm at 40 steps/mm; Stop or running out both count), pen
+   up; "Plotter says N mm" + "Ruler says" -> New `$100`. The X "Reverse direction" switch is here.
+4. **Find center**: four numbered lines (jog halfway out, Draw circle, Cross slowly, nudge + Set
+   center). No ruler here any more.
+5. Center gap, 6. Mirror check: unchanged.
+- **Pen direction:** new setting `zFlip` (default TRUE = Tim's upside-down stage). `machine.js`
+  `check()` -> `penDirection()` makes GRBL's `$3` bit 2 match it on connect and after every
+  settings read (`setDirection`), logging `> $3=4 (pen direction)`; so Z+ lifts in everything the
+  app sends. If that write happens and the saved heights were measured the old way (penUp <
+  penDown) they are negated (`uprightPen`). The old in-app flip and the main panel's "penUp <
+  penDown reverses ▲" rule are gone. Pen step's "Reverse direction" switch toggles `zFlip` (shown
+  only when the plotter reports `$3`). ASSUMES his `$3` bit 2 is 0 now (never read): if the pen
+  still runs backwards after this, he flips that switch.
+- **Connect:** `pickPort(serial, auto)` in `grbl.js`: exactly one port the browser already knows
+  (`getPorts()`) = opened with no list; none or several = the browser's list; if the remembered
+  port fails, the next Connect shows the list (`askPort`). The very first pick cannot be skipped
+  (browser rule). Whether Chrome keeps the permission after unplugging is REASONED (Windows: yes).
+- `api.setSettings` now also updates the Settings sheet's inputs. Wording: "Carriage" replaces
+  "Rail" in the warnings (`safe.js` `NAME`). Messages name steps, not numbers.
+- Unchanged from before: slow speeds in motor steps per second (`SLOW` X 300, Y 107), `saveSetting`
+  puts the work zero back after a `$100`/`$101` change, `Grbl.stop()` restores Z when `penZero` is set.
 
 **Pen holder + circles (2026-11-13 late).** `pen_holder()` in `cad/plotter-parts.scad` (redrawn from
 the original guide's `Pen+Holder+Parts.stl` in Tim's OneDrive, neck 18 -> 13.6 mm so his clip's
@@ -91,98 +109,12 @@ the original guide's `Pen+Holder+Parts.stl` in Tim's OneDrive, neck 18 -> 13.6 m
 paper 196 mm, page 2 pad 200 mm, each with a 100 mm scale line). The holder is NOT in the 3D model
 or the build guide; with it the pen sits about 6 mm nearer the rods than the model's `pen_y`.
 
-Get all three axes moving, then run the app's Calibrate tool. **X (carriage) works.** Y (platter)
-and Z (pen lift) don't. Tim is debugging at the machine with his multimeter; Claude guides.
-
-**Update 2026-11-10 (Tim at the machine; he drives the jogs, Claude advises — "I'll tell you what's
-happening with everything and you tell me what to do"):** not rebuilt yet, "get the motors correct
-before I fully rebuild". Hookup: X header = platter motor, Y = carriage, Z = pen; both NEMA cables
-middle-swapped (1-3-2-4). Jogging: only the platter moves, jerking back and forth; carriage and pen
-nothing. Tim rejected the Ω/wiggle test (rightly: both coils read 3 Ω on 10-27 and the platter ran
-smoothly on X right after). Re-read of the 10-27/28 transcript: carriage on X perfect (10-28 19:11);
-then Tim pulled a motor plug off the X header while powered (19:13); X never re-proven since. Next:
-(1) carriage motor on X — smooth = X fine, difference is the platter motor/cable (swap the cables at
-the motor end); jerky too = X driver hurt by the hot-unplug; (2) X/Y driver-board swap for the dead
-Y channel.
-**Result 11-10:** carriage on X ALSO jerks -> X driver (or X slot) is the fault, not the platter
-motor. Next: Y's TMC2209 into the X slot, carriage on X, jog X. Smooth = old X driver dead (bin; then
-Y's trouble is the slot/Uno pin, not its driver). Still jerky = X slot / Uno X pins.
-Tim then: swapping the middle wires "usually works". So first: swap the carriage plug's middle
-wires on X; if smooth, X driver is fine -> have him write down the working colour order pin 1->4
-for each motor (likely the "swapped/not swapped" state got lost across many plug moves).
-Result: carriage on X jerky in BOTH middle-wire orders -> X driver/slot confirmed. Next = driver
-board swap (Y's black TMC2209 into X slot).
-Result: Y's driver in X slot + carriage on X = NO movement at all -> Y driver likely dead (would
-explain the dead Y channel); X driver = jerky (half-damaged). Next: old X driver into the Y slot,
-carriage on Y header, jog Y (jerky = Y slot works, so both black drivers are bad -> new TMC2209s =
-money, Tim's call).
-Result: X driver in Y slot = nothing, BUT Tim inserted it with power still connected (may have
-killed it). Next: X driver back in X slot, carriage on X: jerky = it survived -> Y slot dead (no
-driver ever moves on Y) + Y driver dead; nothing = hot-insert killed it.
-Result: X driver back in X slot, carriage (middle-swapped) on X = PERFECT. Same driver/slot/motor
-jerked in both orders earlier -> intermittent CONTACT (driver pins in the shield sockets, or the
-motor plug), fixed by reseating; not a dead driver. Y driver's "nothing" in the X slot may also be
-seating. Next: label carriage plug colours; platter motor on X (find + label its order); then Y
-driver pressed firmly into the Y slot, carriage on Y, jog Y.
-State then: X drv+carriage on X (works); Y drv+platter on Y = nothing; Z drv+pen on Z = nothing.
-Next: the now-proven X driver into the Y slot (power OFF), carriage on Y header, jog Y: moves = Y
-slot fine, Y driver dead; nothing = Y slot / Uno Y pins dead. Same method for Z after.
-Result: X driver in Y slot (platter left on Y header) = platter JERKS -> Y slot works; old Y driver
-dead. Next: swap platter plug middle wires; still jerky both ways -> reseat driver, then carriage on Y.
-Result: platter plug "wasn't fully connected"; reseated -> platter PERFECT on Y (with the X driver).
-**Both NEMA motors + X and Y slots proven. Old Y driver dead. Only one proven driver** (the old X
-one, now in Y) -> carriage needs a driver: new TMC2209s = money, Tim's call (flagged 11-10).
-Lesson: most "jerky" was half-seated plugs/drivers. Next: Z (pen) — Ω its 4 wires (brown/red/orange/
-yellow) for the pairs (never done), pairs on 1-2 / 3-4, plug fully seated, small Z jogs (app Z feed
-200 mm/min); ask which driver is on Z and its Vref.
-Tim then jogged the pen motor on the X driver (Vref 1.2 V ≈ 0.85 A): "moved a little the first
-time". Told him: very unlikely damaged ($1=25 -> current only during the move + 25 ms); check it's
-not hot and both pairs still read their Ω. Next: pen back on its own Z driver at low Vref (red
-A4988 ~0.15-0.2 V ≈ 0.19-0.25 A; it was 0.08 V = too weak -> the 10-27 "hum, no move").
-Correction (Tim): Z driver is a BLACK TMC2209 (Vref ~0.3 V); it never moved the pen. Pen moved with
-the X driver in the Z slot -> Z slot + pen motor OK; X driver back in X. Next: Z driver into the X
-slot with the carriage (known-good slot+motor): any motion = driver OK (seating/low current: reseat
-in Z, Vref ~0.4 V); nothing = dead like Y -> 2 new drivers needed.
-Simplified (Z driver Vref ~0.2 V, too low to judge on the carriage): Z driver reseated in Z, Vref up
-to ~0.4 V (≈0.28 A), pen on Z, smallest jog. Moves = done; nothing = Z driver dead.
-Result: Z driver at 0.5 V, seated in Z, pen still nothing -> **Z black driver DEAD**. Drivers now:
-X black = only proven one; Y black dead; Z black dead; red A4988 (13 kΩ, never proven) spare.
-Recommended: red A4988 on Z at ~0.15-0.2 V; buy TMC2209s (money = Tim's call) for the second NEMA.
-Tim asked for a for-sure check. Given: (1) one-variable swap = suspect driver in the X slot at the
-good X driver's Vref (1.0 V), carriage on X; (2) hold test: `$1=255` in the app's Settings console,
-shaft stiff = driver powers the coils, free = output dead (10-27 hold test already had Z loose);
-`$1=25` after.
-Result (same X slot + carriage, only the driver changed): Z 1.0 V / 7 kΩ no move; Y 1.3 V / 14 kΩ no
-move; X 1.2 V / 12 kΩ perfect. **Y and Z black drivers confirmed dead** (Ω/Vref only test the
-reference + shorts, not the output stage). Waiting on Tim: buy TMC2209s; red A4988 on Z meanwhile.
-Then: GOOD X driver on Z slot, 0.4 V, pen = the NEW micro linear stage (20 steps/rev, 100-300 mA)
--> still no move. Likely the jog is just too small to see: `$102`=250 factory, app 0.1 step = 25
-microsteps ≈ 1.5 full steps ≈ 0.04 mm (Claude had said "smallest step" — wrong advice). Also the
-slider may be parked at an end of travel. Next: step 10, both directions, watch the lead screw,
-feel for buzz; Ω its pairs (expect ~17-50 Ω each).
-Result: step 10 still nothing, no sound. Claude on COM3: settings factory ($100-102=250, $1=25), Idle;
-4 Z jogs (±2 mm F60, ±5 mm F200) all "ok", MPos Z went 2 -> 0 -> 0 -> GRBL sends Z steps; Tim saw
-nothing. Next: carriage NEMA on the Z header (good driver in Z slot, 0.4 V): moves = Z slot fine ->
-pen motor wiring/pairs; nothing = Z slot / Uno Z pins.
-Result: carriage on Z header: first 5 mm move perfect, then jerky (0.4 V ≈ 0.28 A is weak for a
-belted NEMA, or contact) -> **Z slot works**. Problem = the new pen motor or its wiring. Next: Ω its
-4 wires, pairs on 1-2 / 3-4, seat, retest.
-Result: pen coils = wires 1-3 and 2-4, 20 Ω each (split across the plug). Middle wires swapped ->
-**pen stage MOVES** (Claude's ±5 mm Z jogs F150/F60, Tim watched). END OF 11-10: all 3 motors and
-all 3 slots proven; Y + Z black drivers dead; only 1 good black + red A4988 (untested). Rule
-learned: every motor plug needs its coil pairs on 1-2 / 3-4 (all three were middle-swapped), and
-plugs/drivers pushed fully home. Next: Tim buys TMC2209s (his call); meanwhile red A4988 on Z
-(~0.15-0.2 V); then `$102` from measured travel per rev, then Calibrate.
-**2026-11-11:** Tim installed NEW TMC2209s (same Teyleten 5-pack): all 3 motors move, but the platter
-on Y jerks back and forth. Advice: (1) set the new Y driver's Vref (~1.0 V; new boards come
-unset); (2) power off, reseat the platter plug fully, coil pairs on 1-2/3-4 (swap middle wires);
-(3) still jerky -> platter plug on the X header: smooth = Y driver/seating, jerky = platter cable.
-Vref X/Y 1.3 V, Z 0.4 V (fine). Platter jerky in BOTH orders on Y AND on X -> platter plug/cable/
-motor. Next: Ω the plug holes to find the real pairs (a 1-4/2-3 pairing can't be fixed by the
-middle swap — that's how the pen was found); then wiggle; then bypass the orange/yellow extension.
-**Result 11-11: a middle wire of the platter plug wasn't fully connected; fixed. ALL 3 AXES WORK on
-their own headers with their own drivers (Tim).** Next: finish the rebuild, then `$102` for the pen
-stage (measure travel per rev), then the app's Calibrate (`$100`, `$101`).
+**11-10 / 11-11 driver and wiring debug: moved verbatim to
+`docs/archive/progress-2026-11-14-calibrate2-and-driver-debug.md`.** Still true from it: two old
+black TMC2209s died and were replaced (new Teyleten TMC2209s, Vref X/Y 1.3 V, Z 0.4 V); every
+motor plug needs its coil pairs on pins 1-2 / 3-4 (all three were middle-swapped; the pen stage's
+coils are wires 1-3 and 2-4, 20 Ω each); most "jerky" was a half-seated plug or driver; all three
+axes have worked on their own headers since 11-11.
 **11-11 design history (rebuild ideas, prototype 1, prototype 2 and its revisions, pen centring
 audit, soft pad, pre-print check): moved verbatim to `docs/archive/progress-2026-11-13.md`.** Still
 true from it: Tim's rules for the frame = no screws/bolts between stands and base, nothing below the
@@ -346,8 +278,9 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 | Plotter app | live | node tests: see Map |
 | Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). Also on sim.html (the plan inset fills the stage while drawing). |
 | Simulate (`js/handoff.js`) | live 2026-11-13 | Tim: "allow the user to simulate the drawing aswell". A "Simulate" link beside Download G-code opens `sim.html?v=2`; the drawing on screen (strokes + colours + center/radius + turn/move/crop) rides along in sessionStorage `polar-plotter-handoff`, consumed once by app.js when `window.plotterSim` exists. A picture arrives already traced (no Darkness slider there). Then Connect plotter -> Plot in the simulator. |
-| Machine | built; all axes move normally again after replugging (Tim, 11-13 night) | `$101` holds some wrong value until Tim runs the Turn test |
-| Calibrate tool | rewritten 2026-11-13 (CALIBRATE 2) + safeguards | tests + simulator only; the new flow has never run on the machine |
+| Machine | built; all axes move (Tim, 11-13 night); pen motor mounted so GRBL's Z ran backwards (Tim, 11-14: "the way that I want it") | `$100`/`$101` unknown until Tim runs the Turn and Carriage tests; `$$` never read by Claude |
+| Calibrate tool | reworked 2026-11-14 (CALIBRATE 3) + safeguards | Tim used the 11-13 version on the plotter; the 11-14 flow is tests + simulator only |
+| Connect | 2026-11-14: one remembered port connects without the browser's list (`pickPort` in `js/grbl.js`) | stand-in `navigator.serial` only; the first ever pick still shows the list |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
 | Carriage plate pocket for micro stage | live STL (3fed47d) | 81.9 x 25.5 x 1.5 mm; Tim to caliper the stage |
 | Upgrade parts (builders, 10-26) | STLs merged | platter_hub, motor_stand, motor_plate 2 mm recess, pulley_m3 + idler_washer, big_pulley_gt2, paper_ring; nothing printed or fitted |
@@ -411,10 +344,13 @@ TMC2209s, all three axes move) and 11-13 (fully built).
   by Tim.
 - Upgrade-part fits (shaft flat, bore on M3, magnet press-fit, GT2 seating, platter clearance).
 - Web Serial flows only exercised with `?demo` (FakeGrbl).
-- CALIBRATE 2 on the real plotter: jog cancel (0x85) over Web Serial, how far the platter coasts
-  after Stop, whether 107 / 150 / 300 steps per second feel right, the pen stage at G0 speed with
-  factory `$102`/`$112`, which way Z and X run (the two Reverse switches), `$3` write. In `?demo`
-  the slow moves jump at once ("It stopped by itself"): FakeGrbl has no real-time motion.
+- CALIBRATE 3 on the real plotter (Tim used the 11-13 tool there; nothing of 11-14 has run on
+  it): the `$3` write on connect (assumes his bit 2 was 0; if Down still goes up he flips "Reverse
+  direction" in Pen height), Test (a full turn at 400 steps/s, slower if `$111` caps it), the
+  Touching lift (100 motor steps ≈ 2 mm is reasoned from a 3 mm lead), Draw line (2000 steps
+  toward the center, pen down), how far the platter coasts after Stop. Auto-connect in real Chrome:
+  that it remembers the port across unplug/restart, and that the list still opens when
+  `getPorts()` ran first. In `?demo` slow moves jump at once: FakeGrbl has no real-time motion.
 - SAFEGUARDS: the plotter's real `$$` (never read), so 1607 and 1/8 microstepping are reasoned;
   why the slow turn jiggled; `grbl.stop()` (hold + soft reset) from Calibrate's Stop on real GRBL;
   the step caps are guesses for a stepper at unknown microstepping, not measured stall speeds.
@@ -438,15 +374,20 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-13 night: 127 passed / 0 failed
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 131 passed / 0 failed
+- Calibrate 3 browser check: `node tools/check-calibrate.mjs phone|desktop <outdir> [baseUrl]`
+  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 35 checks, writes screenshots and
+  `<mode>-report.json` to outdir; about 3 minutes, so use the background option). It pretends a platter
+  that needs 4.444 and a carriage that needs 40 at factory 250, `$3=0`, old flipped pen heights,
+  then walks every step. Next button is `#calTool [data-act=next]` (it sits outside `.calstep`).
+- Connect check: `node tools/check-connect.mjs <outdir> [baseUrl]` (stand-in `navigator.serial`
+  on `index.html`, 5 checks: one known port, a dead one, none, two).
 - Safeguards browser check: `<scratchpad>/safecheck.mjs phone|desktop <outdir>` pattern = Playwright
   WebKit on `sim.html?v=2`; set `plotterSim.grbl.true[1] = 4.444`, send `$101=1607.143` through
   `#cmdForm.requestSubmit()`, then read `#mMsg`, `[data-jog]` disabled, `#plot`, `#calErr`; for the
   turn test slow the sim (`plotterSim.grbl.speed = 0.05`) near 360° so Stop lands within 1 %.
-- Calibrate browser check: phone-view on `sim.html?v=2` with `--do click:` steps (speed buttons
-  `#simSpeed [data-speed="20"]`, `#connect`, `#calOpen`, `[data-act=turn|lower|raise|circle|cross|center]`,
-  `wait:[data-act=x]:not([disabled])`), then `--eval` on `plotterSim.grbl` (`pos`, `real()`, `wco`,
-  `received`). The whole run takes about 4 minutes: start it with the background option.
+- Simulator speed buttons for any such run: `#simSpeed [data-speed="20"]`; read results with
+  `plotterSim.grbl` (`pos`, `real()`, `wco`, `received`).
 - Scratch tools (not in the repo): trimesh for Python 3.14 without scipy (`mesh.section()` fails).
 - Draw tool browser check (mouse drag, touch tap, undo, clear, done, move + reopen, reload):
   `node <scratchpad>/draw/drawtest.mjs phone|desktop <outdir>` pattern = Playwright WebKit from

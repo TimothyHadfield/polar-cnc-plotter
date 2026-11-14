@@ -179,3 +179,37 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   `sim.html?v=1` load clean.
 - **Open:** Tim to hard-refresh, read `$101` in Calibrate step 1, run the Turn test. If the platter
   still jiggles at a sane value: reseat the platter plug and driver (12 V and USB out).
+
+## 2026-11-14 · Calibrate reworked after Tim's first run; auto-connect
+- **Asked:** "I'm not really sure what the first step is but it's not necessary. For step 2, allow
+  the user to "test" it which means to have it rotate in what it thinks is a full circle. If it's
+  not in a full circle, the user will either click the forward or back button to show where the
+  true full circle mark is, or they will redo step 2. For the linear motor, any time the cite says
+  "down", the motor goes up, and vice versa, so I think we put it upside down (which is the way
+  that I want it), so reverse the directions on the cite. For step 3, instead of the slow movement,
+  just have the user click down or up to mark exactly where the pen is touching the plate ... move
+  it up a little bit off that and then put it back down to draw. For step 4, I'm not really sure
+  what's happening but It sounds like you need to make the instructions more clear. Step 4 should
+  be a carraige motor calibration though." Mid-turn: "if you click connect and there's only one
+  option to connect to, it automatically connects to that connection?"
+- **Decided (Claude, flagged to Tim):** his "step 4" read as: a carriage step of its own (Draw line
+  + ruler -> `$100`), with Find center after it and its instructions numbered. Pen direction is
+  written into the plotter (`$3` bit 2) on connect, so Down is down everywhere, with a "Reverse
+  direction" switch in Pen height in case it is still backwards. Touching lifts 100 motor steps.
+  After Test the new `$101` is not rounded to a "nice" value. "Rail" -> "Carriage" in warnings.
+  Auto-connect only when exactly one port is already remembered; a port that fails to open makes
+  the next Connect show the list.
+- **Built:** `js/calibrate.js` rewritten (Turn test + Test, Pen height, Carriage test, Find center,
+  Center gap, Mirror check; the settings step and calculator are gone), `zFlip` setting + `$3` on
+  connect in `machine.js`, `pickPort` in `grbl.js`, `tools/check-calibrate.mjs`,
+  `tools/check-connect.mjs`; old CALIBRATE 2 notes and the 11-10/11 debug log moved to
+  `docs/archive/progress-2026-11-14-calibrate2-and-driver-debug.md`.
+- **Verified how:** node tests 131/131; 8 one-line mutations of calibrate.js and 1 of `pickPort`
+  each failed a test; Playwright WebKit on `sim.html?v=2`, 35 checks at 1440 px and at 393 px (a
+  platter needing 4.444 at factory 250 -> Turn slowly -> 4.444 -> Test lands on 360°; one needing
+  4.5 -> Test stops 4.5° short -> Further -> 4.500; `$3` 0 -> 4 and old heights 0/1.5 -> 0/-1.5;
+  Down/Up/Touching -> up 0 / down -1; line 50 mm -> `$100=40.000`; circle/cross/Set center), no
+  page errors, no page scroll; connect check 5/5 with a stand-in `navigator.serial`.
+- **Open:** nothing of this has run on the real plotter (see NOT verified). Speed step if the
+  platter turns slowly. Mistake to avoid: `git checkout -- file` after a mutation test also throws
+  away uncommitted work in that file; reverse the edit instead.
