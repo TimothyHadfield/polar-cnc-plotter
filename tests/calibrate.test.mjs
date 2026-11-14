@@ -2,7 +2,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { corrected, gapFromMark, parseSettings, saveSetting, snapDirect, snapBelt, beltSteps, turnSteps, slowJog,
   nudgeJog, fullTurn, partTurn, stopJog, waitIdle, centerBetween, touchLift, setDirection, uprightPen,
-  SLOW, LINE, LIFT } from '../js/calibrate.js';
+  SLOW, LINE, LIFT, START, FAST, platterSpeed } from '../js/calibrate.js';
 import { Grbl } from '../js/grbl.js';
 import { FakeGrbl } from '../js/fakegrbl.js';
 import { SimGrbl } from '../js/simgrbl.js';
@@ -99,26 +99,40 @@ test('a measured $101 near a direct-drive value becomes that value', () => {
   assert.equal(snapDirect(NaN), null);
 });
 
-test('turn test: factory $101, Stop after one real turn gives the real value', async () => {
-  const { sim, g } = await plotter({ 101: 8.889 });       // platter straight on a 1.8° motor, 16 microsteps
-  await g.send('$101=250');                               // what GRBL ships with
+test('turn test by arrow clicks: the counted clicks for one real turn give the real value', async () => {
+  const { sim, g } = await plotter({ 101: 1600 / 360 }, false);   // Tim's platter: 1.8° motor, 8 microsteps
+  await g.send(`$101=${START[101]}`);                       // where the tool starts a factory 250 from
   const vals = await g.readSettings();
   const from = (await g.nextStatus()).mpos[1];
-  const line = slowJog('Y', 1, vals[101], vals[121]);
-  await g.send(line);
-  const perSec = sim.real([0, 1, 0])[1] * feedOf(line) / 60;   // real degrees a second
-  assert.ok(perSec > 8 && perSec < 14, `${perSec}°/s`);         // about half a minute a turn
-  sim.advance(360 / perSec * 1000);                             // the mark comes back around: Stop
-  const at = (await stopJog(g))[1];
-  near(sim.real()[1], 360, 0.01);                               // it stopped there, not at the jog's far end
-  const raw = corrected(vals[101], Math.abs(at - from), 360);
-  near(raw, 8.889, 0.002);
-  await saveSetting(g, 101, snapDirect(raw) ?? raw, vals[101]);
-  assert.equal(sim.received.at(-1), '$101=8.889');
+  let at = from;
+  for (const d of [90, 90]) {                               // two clicks of "90°"
+    await g.send(nudgeJog('Y', d, Infinity, vals[101]));
+    at = (await waitIdle(g)).mpos[1];
+  }
+  near(sim.real()[1], 360, 0.1);                            // the mark is back (8.889 is not quite 2 × 4.444)
+  assert.equal(turnSteps(vals[101], Math.abs(at - from)), 4.444);
+  await saveSetting(g, 101, 4.444, vals[101]);
   await g.send('G91 G0 Y90');
   await g.send('G90');
-  sim.advance(600000);
-  near(sim.real()[1], 450, 0.01);                               // 90 now means 90
+  await waitIdle(g);
+  near(sim.real()[1], 450, 0.01);                           // 90 now means 90
+});
+
+test('Test is about 5 s a circle; the platter\'s factory speed limits are raised first', async () => {
+  assert.equal(fullTurn(4.444), '$J=G91 G21 Y360.000 F4320');        // 360° in 5 s
+  assert.equal(fullTurn(17.132), '$J=G91 G21 Y360.000 F4320');
+  assert.equal(fullTurn(150), '$J=G91 G21 Y360.000 F1600');          // never over 4000 motor steps/s
+  const { sim, g } = await plotter({ 101: 4.444 }, false);
+  const vals = await g.readSettings();
+  sim.settings[121] = '10.000'; vals[121] = 10;                      // GRBL's factory acceleration
+  assert.deepEqual(await platterSpeed(g, vals), [111, 121]);         // factory $111 = 500 °/min: 43 s a turn
+  assert.ok(sim.received.includes(`$111=${FAST[111]}`) && sim.received.includes(`$121=${FAST[121]}`));
+  assert.deepEqual(await platterSpeed(g, vals), []);                 // already fast: nothing written
+  const before = sim.real()[1];
+  await g.send(fullTurn(vals[101]));
+  await waitIdle(g);
+  near(sim.real()[1] - before, 360, 0.01);
+  assert.deepEqual(await platterSpeed(g, { 111: 4319, 121: 150 }), [111]);   // just under 5 s a turn
 });
 
 test('pen height: click Down to the paper, Touching lifts the pen and saves both heights', async () => {
@@ -189,13 +203,13 @@ test('Test: one full turn by the plotter\'s count; a miss is nudged out and give
   const vals = await g.readSettings();
   const from = (await g.nextStatus()).mpos[1];
   const cmd = fullTurn(vals[101]);
-  assert.equal(cmd, '$J=G91 G21 Y360.000 F5400.54');       // 400 motor steps a second
+  assert.equal(cmd, '$J=G91 G21 Y360.000 F4320');          // a circle in 5 s
   await g.send(cmd);
   near((await waitIdle(g)).mpos[1] - from, 360, 1e-6);     // the plotter counts a full turn
   near(sim.real()[1], 355.52, 0.01);                       // the mark stops 4.5° short
   let at = 0;
-  for (const d of [2, 2, 0.5]) {                           // Further, Further, Further (0.5°)
-    await g.send(nudgeJog('Y', d, 300, vals[101]));
+  for (const d of Array(9).fill(0.5)) {                    // ↺ nine times at 0.5°
+    await g.send(nudgeJog('Y', d, Infinity, vals[101]));
     at = (await waitIdle(g)).mpos[1];
   }
   near(sim.real()[1], 360, 0.05);                          // the mark lines up

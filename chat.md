@@ -237,3 +237,9 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   first. Verified: the simulator walk turned 720° before the fix, 360° after (check 36, 42/42 at
   393 px and 1440 px), 132/132 node tests. Also told Tim calibration is once (stored in GRBL +
   this browser) except Set center at every connect.
+- **Then:** "instead of having it slowly spin until it goes in a full circle, have the user spin it
+  ... using the turn arrow things and different sizes of steps ... Still allow a test, but make the
+  test spin faster ... around 5 seconds". Built: Turn test = ↺ / ↻ at 0.5° / 5° / 90° + Start over;
+  Test at 4320 °/min; `$111=7200` / `$121=300` written when lower (`platterSpeed`). Verified:
+  133/133 node tests; walk 42/42 at 393 px and 1440 px (two 90° clicks from factory 250 = one real
+  turn = 4.444; Test 360° in ~6 s wall time; Tim's no-Save case still one circle).

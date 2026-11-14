@@ -1,5 +1,5 @@
 // Calibrate: a guided tool panel, one step at a time. Nothing in it draws, so it needs no paper.
-// The platter's steps ($101: turn it once, then Test a full turn), which way it turns, the pen
+// The platter's steps ($101: turn it once with the arrows, then Test a full turn), which way it turns, the pen
 // height (click down until the tip touches), the carriage's steps ($100: move, and read a ruler),
 // the platter center and the center gap (a mark found twice, half a turn apart). The slow moves
 // stop when their button is pressed again. Needs a connected plotter (the link sits in the
@@ -103,8 +103,21 @@ export function nudgeJog(axis, dist, feed, spu) {
   return `$J=G91 G21 ${axis}${dist.toFixed(3)} F${jogFeed(axis, feed, spu, NUDGE[axis])}`;
 }
 
-// Test, after the turn test: one full turn by the plotter's own count, at the nudges' step rate.
-export const fullTurn = spu => nudgeJog('Y', 360, Infinity, spu);
+// Test, after the turn test: one full turn by the plotter's own count, in about TEST_TIME seconds
+// (Tim, 2026-11-14: "around 5 seconds for the test to spin in 1 circle is good").
+export const TEST_TIME = 5;
+export const fullTurn = spu => `$J=G91 G21 Y360.000 F${jogFeed('Y', 360 * 60 / TEST_TIME, spu)}`;
+
+// GRBL caps every move at $111 (°/min) and speeds up at $121 (°/s²). At the factory 500 and 10 a
+// full turn takes over 40 s, so the turn test raises them to the build guide's values first.
+export const FAST = { 111: 7200, 121: 300 };
+export async function platterSpeed(grbl, vals) {
+  const low = [];
+  if (!(vals[111] >= 360 * 60 / TEST_TIME)) low.push(111);
+  if (!(vals[121] >= 150)) low.push(121);
+  for (const n of low) { await grbl.send(`$${n}=${FAST[n]}`); vals[n] = FAST[n]; }
+  return low;
+}
 
 // The carriage test's move: this many motor steps (50 mm at 40 steps per mm), so it stays short
 // whatever $100 says. It may be stopped early; either way how far it went is what the ruler checks.
@@ -204,12 +217,14 @@ const xJog = `<div class="calres"><button class="btn sm" data-act="xLeft">Left</
 const HTML = `
 <div class="calstep" data-n="1">
   <h3>Turn test <button class="q" type="button" data-q="calTurnHelp" aria-label="What is this?">?</button></h3>
-  <p class="help" id="calTurnHelp" hidden>One full turn shows how many motor steps make 360°. Test then turns what the plotter counts as one turn. A result within 2 % of a plain motor's exact value is rounded to it.</p>
-  <p class="calsay">Tape a mark on the platter edge, lined up with something fixed.</p>
-  <div class="row"><button class="btn wide" data-act="turn">Turn slowly</button><button class="btn wide" data-act="turnTest">Test</button></div>
-  <div class="calres"><button class="btn sm" data-act="turnBack">Back</button><button class="btn sm" data-act="turnMore">Further</button>
-    <span class="seg tstep"><button data-step="0.5">0.5°</button><button data-step="2" class="on">2°</button><button data-step="10">10°</button></span></div>
-  <div class="calres"><span>New $101 <b id="calNew101">–</b></span><span class="unit" id="calRaw101"></span><button class="btn sm end" data-act="save101" disabled>Save</button></div>
+  <p class="help" id="calTurnHelp" hidden>The site counts the arrow clicks. One full circle shows how many motor steps make 360°. Until then a click may turn more or less than its label. A result within 2 % of a plain motor's exact value is rounded to it.</p>
+  <p class="calsay">1. Tape a mark on the platter edge, lined up with something fixed.</p>
+  <p class="calsay">2. Turn with the arrows until the mark is back.</p>
+  <div class="calres"><button class="btn sm" data-act="tCcw" aria-label="Turn counterclockwise">↺</button><button class="btn sm" data-act="tCw" aria-label="Turn clockwise">↻</button>
+    <span class="seg tstep"><button data-step="0.5">0.5°</button><button data-step="5">5°</button><button data-step="90" class="on">90°</button></span></div>
+  <div class="calres"><span>New $101 <b id="calNew101">–</b></span><span class="unit" id="calRaw101"></span><button class="btn sm" data-act="turnReset">Start over</button><button class="btn sm end" data-act="save101" disabled>Save</button></div>
+  <p class="calsay">3. Press Test. It should turn exactly once.</p>
+  <button class="btn" data-act="turnTest">Test</button>
 </div>
 
 <div class="calstep" data-n="2" hidden>
@@ -297,15 +312,17 @@ export function initCalibrate(api) {
     return plausible(101, n) && !same(n, vals[101]) ? n : NaN;
   }
   const SLOWS = {
-    turn: { axis: 'Y', label: 'Turn slowly', go: 'Stop when the mark comes back around.',
-      done(at, from) { turn = { from, at }; msg('Nudge until the mark lines up, then Save or Test.'); } },
     // Test checks the number on screen: one measured but not saved yet is saved first. (Tim,
     // 2026-11-14: stopped after one circle, pressed Test, and the OLD value turned it twice.)
     turnTest: { axis: 'Y', label: 'Test', go: 'Turning one full circle.', cmd: () => fullTurn(vals[101]),
-      async pre(g) { const n = pending101(); if (Number.isFinite(n)) await store(g, 101, n); },
+      async pre(g) {
+        const n = pending101();
+        if (Number.isFinite(n)) await store(g, 101, n);
+        if (plausible(101, vals[101])) await platterSpeed(g, vals);
+      },
       ok: () => plausible(101, vals[101]) ? '' : 'Do the turn test first.',
       done() { turn = null; msg('Stopped.'); },
-      end(at, from) { turn = { from, at, tested: true }; msg('Mark lined up? Done. If not, nudge to it and Save.'); } },
+      end(at, from) { turn = { from, at, tested: true }; msg('Mark lined up? Done. If not, use the arrows, then Save.'); } },
     move: { axis: 'X', label: 'Move', dir: -1, max: LINE, go: 'Moving. Watch the ruler.', done: moved, end: moved },
     half: { axis: 'Y', label: 'Half turn', go: 'Turning half a circle.', cmd: () => partTurn(180, vals[101]),
       ok: () => badAxes(vals).length ? 'Do the turn test and the carriage test first.' : '',
@@ -368,7 +385,7 @@ export function initCalibrate(api) {
     $('calXFlip').checked = !!(vals[3] & 1);
     // enabled?
     const need = { save101: same(n101, vals[101]) ? NaN : n101, save100: same(n100, vals[100]) ? NaN : n100,
-      turnBack: raw101, turnMore: raw101, turnTest: plausible(101, vals[101]) || Number.isFinite(pending101()) ? 1 : NaN,
+      turnReset: turn ? 1 : NaN, turnTest: plausible(101, vals[101]) || Number.isFinite(pending101()) ? 1 : NaN,
       quarter: plausible(101, vals[101]) ? 1 : NaN, center: mark ? 1 : NaN };
     root.querySelectorAll('[data-act]').forEach(b => {
       const act = b.dataset.act;
@@ -444,8 +461,23 @@ export function initCalibrate(api) {
     const s = await waitIdle(g, alive);
     await then?.(s.mpos);
   });
-  // degrees on the dial, in the plotter's present units: the turn so far is 360°
-  const turnNudge = dir => nudge('Y', dir * segStep('tstep') * Math.abs(turn.at - turn.from) / 360, 300, p => { turn.at = p[1]; });
+  // The turn test's arrows: the plotter counts every click; the count since the first click (or
+  // since Test) is the turn. A value no real plotter has (factory 250: a 90° click would be 14
+  // turns) is first replaced by a plain one, and the platter's speed limits are raised.
+  const turnArrow = dir => run(async g => {
+    let note = '';
+    if (!plausible(101, vals[101])) {
+      const was = vals[101];
+      await store(g, 101, START[101]);
+      note = `$101 was ${was}: starting from ${START[101]}. `;
+    }
+    if ((await platterSpeed(g, vals)).length) note += `Platter speed raised ($111=${FAST[111]}, $121=${FAST[121]}).`;
+    const from = (await g.nextStatus()).mpos[1];
+    if (!turn) turn = { from, at: from };
+    await g.send(nudgeJog('Y', dir * (api.getSettings().flip ? -1 : 1) * segStep('tstep'), Infinity, vals[101]));
+    turn.at = (await waitIdle(g, alive)).mpos[1];
+    msg(note.trim());
+  });
   const zNudge = dir => nudge('Z', dir * segStep('zstep'), 200);
   const xNudge = dir => nudge('X', dir * segStep('xstep'), 1000);
   // ↺ / ↻ as on the main panel: ↺ is Y+, or Y− for a platter that turns the other way
@@ -458,10 +490,11 @@ export function initCalibrate(api) {
   };
 
   const acts = {
-    turn: () => slowGo('turn'), turnTest: () => slowGo('turnTest'), move: () => slowGo('move'), half: () => slowGo('half'),
+    turnTest: () => slowGo('turnTest'),
+    tCcw: () => turnArrow(1), tCw: () => turnArrow(-1),
+    turnReset: () => { turn = null; msg(''); refresh(); }, move: () => slowGo('move'), half: () => slowGo('half'),
     quarter: () => run(async (g, live) => { await g.send(partTurn(90, vals[101])); await waitIdle(g, live); }),
     cw: () => setFlip(false), ccw: () => setFlip(true),
-    turnBack: () => turnNudge(-1), turnMore: () => turnNudge(1),
     save101: () => save(101, turnSteps(vals[101], Math.abs(turn.at - turn.from), turn.tested), 'Press Test to check.'),
     zUp: () => zNudge(1), zDown: () => zNudge(-1),
     touch: () => run(async (g, live) => {

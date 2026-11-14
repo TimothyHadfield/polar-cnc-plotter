@@ -13,15 +13,25 @@ _Last updated 2026-11-14 (CALIBRATE 4 = the tool as it is now, nothing draws: se
 **2026-11-14: Calibrate is 5 steps and never draws (CALIBRATE 4, built and live).** Next is Tim's
 run on the real plotter: Turn test + Test, Turn direction, Pen height (is Down really down now?),
 Carriage test (ruler under the pen), Find center (a mark + Half turn); then a first real drawing.
-If the platter is slow (factory `$111`/`$121`: a Test turn can take ~43 s), a speed step was
-offered, not built. The older text below is history.
+If the platter is slow: the turn test now raises `$111`/`$121` itself (Test = 5 s a circle). The older text below is history.
 
 **CALIBRATE 4 (2026-11-14, evening).** Tim: "for the calibration, there shouldn't be any
 proceedures that require you to draw on the paper, because it's hard to get the paper and It
 needs to be as easy as possible." Rebuilt in `js/calibrate.js`, `STEPS = 5`; the pen is never
 lowered except by his own Down clicks in Pen height. (The drawing steps it replaced:
 `docs/archive/progress-2026-11-14-calibrate3-drawing-steps.md`.)
-1. **Turn test**: as in CALIBRATE 3, plus: **Test saves an unsaved New `$101` first.** Tim, 11-14
+1. **Turn test** (arrows since 11-14 late; Tim: "instead of having it slowly spin until it goes in
+   a full circle, have the user spin it ... using the turn arrow things and different sizes of
+   steps until it's gone in a full circle, then have the cite calculate how far it went ... make
+   the test spin faster ... around 5 seconds for the test to spin in 1 circle is good"). Tape a
+   mark, ↺ / ↻ at 0.5° / 5° / 90° (plotter's count, NUDGE 400 steps/s) until it is back; the count
+   since the first click (or since Test) gives New `$101` (`turnSteps`, snapped). **Start over**
+   drops the count. An implausible `$101` (factory 250) is first replaced by `START` 8.889. "Turn
+   slowly" and Back/Further are gone (`SLOW.Y`/`slowJog('Y')` remain, unused by the UI). **Test** =
+   `fullTurn` at `360·60/TEST_TIME` = 4320 °/min (5 s), capped at 4000 steps/s; before it and
+   before the arrows `platterSpeed` writes `$111=7200` if under 4320 and `$121=300` if under 150
+   (the build guide's values; factory 500 / 10 made a turn take 43 s). Walk: Test took ~6 s wall
+   time in the simulator, which has no acceleration. **Test also saves an unsaved New `$101` first.** Tim, 11-14
    on the real plotter: "I calibrated it so that It goes around the circle once and then I stopped
    it, but then when I tested it, it did 2 full rotations rather than just 1." Reproduced in the
    simulator (held 4.5, true 2.222, Test without Save turned 720°); fixed (`pending101`, Test's
@@ -415,7 +425,7 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 132 passed / 0 failed
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 133 passed / 0 failed
 - Calibrate browser check: `node tools/check-calibrate.mjs phone|desktop <outdir> [baseUrl]`
   (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 42 checks, writes screenshots and
   `<mode>-report.json` to outdir; about 3 minutes, so use the background option). It pretends a platter

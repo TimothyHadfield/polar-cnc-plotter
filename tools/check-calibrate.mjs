@@ -58,28 +58,30 @@ try {
   ok('06 opens on Turn test, step 1 of 5; the settings step is gone', (await title()).startsWith('Turn test') && (await txt('#calCount')) === 'Step 1 of 5' && !(await page.evaluate(() => document.body.textContent.includes('Current settings'))), { t: await title(), c: await txt('#calCount'), err: await txt('#calErr') });
   ok('07 Test is off until the platter value is believable', (await dis(act('turnTest')))[0] === true);
   await shot('1-turn');
+  // the arrows: click `n` times at step size `size` (° by the plotter's count)
+  const arrow = async (a, size, n) => {
+    await page.click(`.calstep:not([hidden]) .tstep [data-step="${size}"]`);
+    for (let i = 0; i < n; i++) { await click(a); await idle(a, a === 'tCcw' ? '↺' : '↻'); }
+  };
   let before = await sim('plotterSim.grbl.real()[1]');
-  await click('turn');
-  await page.waitForFunction(b => plotterSim.grbl.real()[1] - b >= 335, before, { timeout: 60000, polling: 20 });
-  await sim('plotterSim.grbl.speed = 0.05');   // the last stretch in slow motion, so Stop lands on the mark
-  await page.waitForFunction(b => plotterSim.grbl.real()[1] - b >= 359.6, before, { timeout: 90000, polling: 20 });
-  await click('turn');
-  await sim('plotterSim.grbl.speed = 1');
-  await page.waitForSelector(act('save101') + ':not([disabled])');
-  ok('08 one turn gives 4.444', (await txt('#calNew101')) === '4.444', { shown: await txt('#calNew101'), raw: await txt('#calRaw101') });
+  await arrow('tCcw', 90, 1);                  // factory 250 -> 8.889 first: a "90°" click is 180° real
+  const m8 = await txt('#calMsg');
+  await arrow('tCcw', 90, 1);
+  ok('08 arrows: factory 250 restarts at 8.889, speed raised, two 90° clicks = one real turn = 4.444', Math.abs(await sim('plotterSim.grbl.real()[1]') - before - 360) < 0.1 && (await txt('#calNew101')) === '4.444' && m8 === '$101 was 250: starting from 8.889. Platter speed raised ($111=7200, $121=300).' && (await sim('plotterSim.grbl.settings[111]')) === '7200.000', { went: await sim('plotterSim.grbl.real()[1]') - before, shown: await txt('#calNew101'), m8, s111: await sim('plotterSim.grbl.settings[111]') });
   await click('save101');
   await page.waitForTimeout(1500);
   ok('09 saved, and told to press Test', (await sim('plotterSim.grbl.settings[101]')) === '4.444' && (await txt('#calMsg')) === 'Saved $101=4.444. Press Test to check.' && (await dis(act('turnTest')))[0] === false, await txt('#calMsg'));
   before = await sim('plotterSim.grbl.real()[1]');
-  await sim('plotterSim.grbl.speed = 6');
+  const t0 = Date.now();                       // real time: Tim wants about 5 s a circle
   await click('turnTest');
   await page.waitForTimeout(700);
   const tl = await txt(act('turnTest'));
-  await idle('turnTest', 'Test');
-  await sim('plotterSim.grbl.speed = 1');
+  await page.waitForFunction(s => { const b = document.querySelector(s); return b.textContent === 'Test' && !b.disabled; }, act('turnTest'), { timeout: 90000, polling: 50 });
+  const secs = (Date.now() - t0) / 1000;
+  await page.waitForTimeout(300);
   let went = await sim('plotterSim.grbl.real()[1]') - before;
-  ok('10 Test turns one full circle (button is Stop meanwhile)', tl === 'Stop' && Math.abs(went - 360) < 0.5, { tl, went });
-  ok('11 lined up: nothing to save', (await txt('#calMsg')) === 'Mark lined up? Done. If not, nudge to it and Save.' && (await dis(act('save101')))[0] === true && (await txt('#calNew101')) === '4.444', { msg: await txt('#calMsg'), n: await txt('#calNew101') });
+  ok('10 Test turns one full circle in about 5 s (button is Stop meanwhile)', tl === 'Stop' && Math.abs(went - 360) < 0.5 && secs > 4 && secs < 7.5, { tl, went, secs, cmd: await sim('plotterSim.grbl.received.filter(l => l.startsWith("$J=") && l.includes("Y360")).at(-1)') });
+  ok('11 lined up: nothing to save', (await txt('#calMsg')) === 'Mark lined up? Done. If not, use the arrows, then Save.' && (await dis(act('save101')))[0] === true && (await txt('#calNew101')) === '4.444', { msg: await txt('#calMsg'), n: await txt('#calNew101') });
   await shot('2-tested');
   ok('12 no page scroll (turn test)', !(await scrolls()));
 
@@ -92,13 +94,10 @@ try {
   await idle('turnTest', 'Test');
   await sim('plotterSim.grbl.speed = 1');
   went = await sim('plotterSim.grbl.real()[1]') - before;
-  await click('turnMore'); await idle('turnMore', 'Further');
-  await click('turnMore'); await idle('turnMore', 'Further');
-  await page.click('.calstep:not([hidden]) .tstep [data-step="0.5"]');
-  await click('turnMore'); await idle('turnMore', 'Further');
+  await arrow('tCcw', 0.5, 9);
   const back = await sim('plotterSim.grbl.real()[1]') - before;
   const n2 = await txt('#calNew101');
-  ok('13 Test stops short, Further brings the mark round, new value 4.5', Math.abs(went - 355.52) < 0.5 && Math.abs(back - 360) < 0.1 && Math.abs(+n2 - 4.5) < 0.002, { went, back, n2 });
+  ok('13 Test stops short, the 0.5° arrow brings the mark round, new value 4.5', Math.abs(went - 355.52) < 0.5 && Math.abs(back - 360) < 0.1 && Math.abs(+n2 - 4.5) < 0.005, { went, back, n2 });
   await shot('3-test-miss');
   await click('save101');
   await page.waitForTimeout(1500);
@@ -241,20 +240,16 @@ try {
   ok('34 main panel: the up arrow sends Z+', (await sim('plotterSim.grbl.pos[2]')) > zb, { zb, za: await sim('plotterSim.grbl.pos[2]') });
   ok('35 no warning left', !(await txt('#mMsg')).includes('look wrong'), await txt('#mMsg'));
 
-  // ----- Tim, 2026-11-14: stopped the slow turn after one circle, pressed Test, got 2 full turns.
-  // The plotter holds about double the true value; Test is pressed WITHOUT Save.
+  // ----- Tim, 2026-11-14: turned one circle, pressed Test without Save, got 2 full turns.
+  // The plotter holds 4.5, the platter really needs 3: 240 clicked degrees are one real turn.
   const held = +(await sim('plotterSim.grbl.settings[101]'));
-  await sim('plotterSim.grbl.true[1] = 2.222');
+  await sim('plotterSim.grbl.true[1] = 3');
   await page.click('#calOpen');
   await page.waitForTimeout(900);
   before = await sim('plotterSim.grbl.real()[1]');
-  await click('turn');
-  await page.waitForFunction(b => plotterSim.grbl.real()[1] - b >= 335, before, { timeout: 60000, polling: 20 });
-  await sim('plotterSim.grbl.speed = 0.05');
-  await page.waitForFunction(b => plotterSim.grbl.real()[1] - b >= 359.6, before, { timeout: 90000, polling: 20 });
-  await click('turn');
-  await sim('plotterSim.grbl.speed = 1');
-  await page.waitForSelector(act('save101') + ':not([disabled])');
+  await arrow('tCcw', 90, 2);
+  await arrow('tCcw', 5, 12);
+  const one = await sim('plotterSim.grbl.real()[1]') - before;
   const shown = await txt('#calNew101');
   before = await sim('plotterSim.grbl.real()[1]');
   await sim('plotterSim.grbl.speed = 6');
@@ -264,7 +259,7 @@ try {
   await sim('plotterSim.grbl.speed = 1');
   went = await sim('plotterSim.grbl.real()[1]') - before;
   const kept = +(await sim('plotterSim.grbl.settings[101]'));
-  ok('36 Test right after the slow turn (no Save) checks the NEW value: one circle, not two', held > 4 && shown === '2.222' && Math.abs(went - 360) < 1 && kept === 2.222 && (await txt('#calMsg')) === 'Mark lined up? Done. If not, nudge to it and Save.', { held, shown, went, kept, msg: await txt('#calMsg'), err: await txt('#calErr') });
+  ok('36 Test right after the arrows (no Save) checks the NEW value: one circle, not two', held > 4 && Math.abs(one - 360) < 0.01 && shown === '3.000' && Math.abs(went - 360) < 1 && kept === 3 && (await txt('#calMsg')) === 'Mark lined up? Done. If not, use the arrows, then Save.', { held, one, shown, went, kept, msg: await txt('#calMsg'), err: await txt('#calErr') });
 } catch (e) { errors.push('SCRIPT: ' + e.message); await shot('error').catch(() => {}); }
 R.errors = errors;
 writeFileSync(`${out}/${mode}-report.json`, JSON.stringify(R, null, 1));
