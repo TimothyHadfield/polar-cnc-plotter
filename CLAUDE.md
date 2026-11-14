@@ -34,6 +34,9 @@ previews it, and can stream it to the plotter over USB.
 - `js/calibrate.js`: 6-step calibration tool. Slow moves the user stops (jog + jog cancel 0x85):
   turn once -> $101, lower to the paper -> pen heights (`G92 Z0` at pen up, `grbl.penZero`), cross a
   circle the pen drew -> center + $100; then center gap and mirror check.
+- `js/safe.js`: guards against wild settings. Plausible ranges for `$100` / `$101`, the warning
+  line, step-rate caps for jogs. machine.js reads `$$` on connect and switches off jogs + Plot for
+  an axis whose steps per unit cannot be right; calibrate.js refuses to save such a value.
 - `js/fakegrbl.js`: pretend GRBL used by the tests and `?demo`. `js/simgrbl.js`: the simulator's
   (real-time moves). Both count steps like GRBL: a `$100`-`$102` write changes what a position reads.
 - `tests/`: `node:test` suites; `tests/machine/*.nc` are hand-run machine check files;
@@ -48,7 +51,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (11 files, 120 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (12 files, 127 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with

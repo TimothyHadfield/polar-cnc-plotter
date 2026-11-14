@@ -154,3 +154,28 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   (120 mm³ on the original 18 mm neck); headless Bambu slice 8 min / 3.8 g; PDF sizes read back
   from the file (196.0 / 200.0 mm, scale line 100.0 mm).
 - **Open:** nothing run on the real plotter. Pen holder not in the 3D model or guide.
+
+## 2026-11-13 (night) · a wrong `$101` made the platter scream; safeguards
+- **Asked:** "I did the proceedure where it says go and then you count how many full rotations it
+  did, and i counted 56 full rotations, and then when I clicked save and did it again, it
+  completely freaked out and sounded like it tried to spin at an extreamly fast speed. I'm afraid I
+  broke the motor ... when I did the slow turn thing that we discussed it doesn't even move and
+  just kinda jiggles back and forth while still. When I jog the motor individually, it sounds like
+  it tries to spin at an incredibly fast speed again. Do you know what's happening? Is the motor
+  fine? Can we set up safeguards on our cite which make it so that problems like these are
+  impossible?"
+- **Decided (Claude):** cause = 56 (turns) typed where the old step wanted degrees -> `$101` 1607
+  instead of ~4.444 (reasoned, COM3 was in use so `$$` was not read). A stalled stepper is not
+  damaged. Guards go in the app, not in advice: range check on connect and on save, step-rate caps,
+  Stop on every long Calibrate move, self-reset of absurd values.
+- **Built:** `js/safe.js`; `machine.js` reads `$$` (connect, console setting, Calibrate save) and
+  switches off the bad axis' jogs + Plot with a red line; `calibrate.js` refuses out-of-range
+  saves, caps nudges in steps/s, resets values above 5000, Stop for circle / set center / test
+  drawings; `tests/safe.test.mjs` (7 tests, Tim's 56 as the fixture).
+- **Verified how:** node tests 127/127; six one-line mutations each failed a new test; Playwright
+  WebKit on local `sim.html?v=2` at 393 px and 1440 px, 16 checks each (warning text, jogs and Plot
+  off, turn test from 1607 on a 4.444 platter -> 4.444 saved, calculator value 888.889 refused,
+  circle stopped at 18-19°, pen up, 578571 reset to 8.889), no exceptions; `index.html?demo` and
+  `sim.html?v=1` load clean.
+- **Open:** Tim to hard-refresh, read `$101` in Calibrate step 1, run the Turn test. If the platter
+  still jiggles at a sane value: reseat the platter plug and driver (12 V and USB out).

@@ -3,6 +3,7 @@
 
 import { Grbl, openSerial, gcodeLines, resumeLines, resumePoint, RESUME_HEADER, isPause } from './grbl.js';
 import { FakeGrbl } from './fakegrbl.js';
+import { badAxes, trouble, jogFeed } from './safe.js';
 
 const $ = id => document.getElementById(id);
 
@@ -33,6 +34,10 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   // active: the plot being streamed ({ gcode, lines, from, head, pens }); its line i is line
   // from + (i - head) of the whole drawing. resume: where a plot that ended early can pick up.
   let active = null, resume = null, handledPause = -1, lastDone = null, lastPen = '';
+  // The plotter's own settings ($$), read on connect and after every change. While its steps per
+  // unit cannot be right (js/safe.js), jogging that axis and plotting are switched off.
+  let vals = null;
+  const warn = () => grbl ? trouble(vals) : '';
   const panel = document.querySelector('.panel');
 
   // ---------- messages ----------
@@ -41,7 +46,12 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     el.textContent = (el.textContent + line + '\n').split('\n').slice(-80).join('\n');
     el.scrollTop = el.scrollHeight;
   };
-  const say = (text, bad = false) => { $('mMsg').textContent = text; $('mMsg').classList.toggle('bad', bad); };
+  // (a settings warning stays on screen whenever there is nothing else to say)
+  const say = (text, bad = false) => {
+    const w = text ? '' : warn();
+    $('mMsg').textContent = text || w;
+    $('mMsg').classList.toggle('bad', bad || !!w);
+  };
 
   // ---------- state shown on screen ----------
   function refresh() {
@@ -52,16 +62,17 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     $('run').hidden = !running;
     $('plotRow').hidden = running;
     const busy = running || !on;
-    document.querySelectorAll('[data-jog],[data-pen],#setCenter').forEach(b => { b.disabled = busy; });
+    const bad = on ? badAxes(vals) : [];
+    document.querySelectorAll('[data-jog],[data-pen],#setCenter').forEach(b => { b.disabled = busy || bad.includes(b.dataset.jog?.[0]); });
     const job = getJob();
     if (resume && !running && job?.gcode !== resume.gcode) resume = null;   // a different drawing
     const rb = $('resumePlot');
     rb.hidden = !resume || !grbl?.center;
-    rb.disabled = busy;
+    rb.disabled = busy || bad.length > 0;
     if (resume) rb.textContent = `Resume ${Math.floor(resume.from / resume.total * 100)}%`;
     const plot = $('plot');
-    plot.disabled = busy || !grbl?.center || !job;
-    plot.textContent = !job ? 'Plot' : grbl && !grbl.center ? 'Set center first' : 'Plot';
+    plot.disabled = busy || !grbl?.center || !job || bad.length > 0;
+    plot.textContent = bad.length ? 'Calibrate first' : !job ? 'Plot' : grbl && !grbl.center ? 'Set center first' : 'Plot';
     $('pause').textContent = paused ? 'Resume' : 'Pause';
   }
 
@@ -124,17 +135,18 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
         onStatus: showStatus,
         onLog: log,
         onEvent: (e, msg) => {
-          if (e === 'reset' && !running) { say('The plotter restarted. Set center again.'); refresh(); }
+          if (e === 'reset' && !running && !grbl?.expectReset) { say('The plotter restarted. Set center again.'); refresh(); }
           if (e === 'alarm') say(`Alarm: ${msg.replace(/^alarm \d+: /, '')}. Unlock with $X in the Settings console.`, true);
           if (e === 'jobError') { paused = true; say(msg, true); refresh(); }
         },
       });
       await grbl.ready();
+      await check();
       poll = setInterval(() => grbl?.realtime('?'), 250);
       if (sim?.atCenter?.()) {   // the simulator starts with the pen over the centre: no need to set it by hand
         await grbl.setCenter();
-        say('Center set. Pick a drawing, text or pattern, then Plot.');
-      } else say('Move the pen over the platter center, then Set center.');
+        say(warn() ? '' : 'Center set. Pick a drawing, text or pattern, then Plot.');
+      } else say(warn() ? '' : 'Move the pen over the platter center, then Set center.');
       refresh();
     } catch (e) {
       if (e.name !== 'NotFoundError') say(e.message.includes('open') ? 'Could not open the port. Is UGS or the Arduino app still connected?' : e.message, true);
@@ -142,12 +154,23 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       await drop();
     }
   }
+  // Read the plotter's settings again (on connect, and after Calibrate or the console changed one).
+  async function check() {
+    const g = grbl, was = warn();
+    let v = null;
+    try { v = await g.readSettings(); } catch {}
+    if (grbl !== g) return;
+    vals = v;
+    // a new warning goes on screen at once; one that is over only leaves if it is still showing
+    if (warn() !== was && (warn() || !$('mMsg').textContent || $('mMsg').textContent === was)) say('');
+    refresh();
+  }
   async function drop() {
     clearInterval(poll);
     if (running && grbl?.job) remember(grbl.drawnLines());   // unplugged mid-plot
     active = null;
     const l = link;
-    grbl = null; link = null; running = false; paused = false;
+    grbl = null; link = null; vals = null; running = false; paused = false;
     onPen(null);
     refresh();
     try { await l?.close(); } catch {}
@@ -165,7 +188,10 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     let [axis, dir] = [b.dataset.jog[0], b.dataset.jog[1] === '+' ? 1 : -1];
     if (axis === 'Y' && s.flip) dir = -dir;                          // keep ↺ matching the preview
     if (axis === 'Z' && s.penUp < s.penDown) dir = -dir;             // ▲ always lifts
-    const feed = axis === 'Z' ? 200 : 1000;
+    // never faster than the motor can turn, whatever the plotter's steps per unit are
+    let feed;
+    try { feed = jogFeed(axis, axis === 'Z' ? 200 : 1000, vals?.[100 + 'XYZ'.indexOf(axis)]); }
+    catch (e) { say(e.message, true); return; }
     run(grbl.send(`$J=G91 G21 ${axis}${(dir * step).toFixed(3)} F${feed}`));
   }));
   document.querySelectorAll('[data-pen]').forEach(b => b.addEventListener('click', () => {
@@ -190,7 +216,7 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   // from = 0: the whole drawing. from > 0: pick up a plot that ended early at that line.
   async function plot(from) {
     const job = getJob();
-    if (!job || !grbl?.center) return;
+    if (!job || !grbl?.center || badAxes(vals).length) return;
     const all = gcodeLines(job.gcode);
     const lines = from ? resumeLines(all, from, getSettings().penUp) : all;
     active = { gcode: job.gcode, lines: all, from, head: from ? RESUME_HEADER : 0, pens: penChanges(job.gcode) };
@@ -245,14 +271,15 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     if (!grbl) { log('Not connected.'); return; }
     log('> ' + text);
     $('cmd').value = '';
-    grbl.send(text).then(() => log('ok'), () => {});
+    // a setting typed here ($101=…, $RST=…) may be the wrong one: look at them again
+    grbl.send(text).then(() => { log('ok'); if (/^\$(\d+|RST)\s*=/i.test(text)) check(); }, () => {});
   });
 
   $('connect').addEventListener('click', connect);
-  $('disconnect').addEventListener('click', () => { say(''); drop(); });
+  $('disconnect').addEventListener('click', () => { drop(); say(''); });
   window.addEventListener('beforeunload', e => { if (running) { e.preventDefault(); e.returnValue = ''; } });
   if (!demo) navigator.serial.addEventListener('disconnect', () => lost());
 
   refresh();
-  return { refresh, getGrbl: () => grbl, say, doneLine };
+  return { refresh, getGrbl: () => grbl, say, doneLine, check };
 }

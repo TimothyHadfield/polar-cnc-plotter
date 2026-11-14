@@ -6,6 +6,7 @@
 
 import { placedToGcode } from './polar.js';
 import { gcodeLines } from './grbl.js';
+import { plausible, badAxes, refusal, jogFeed } from './safe.js';
 export { parseSettings } from './grbl.js';
 
 // ---------- math ----------
@@ -74,7 +75,28 @@ export function slowJog(axis, dir, spu, accel) {
   const { rate, max, coast } = SLOW[axis];
   if (!(spu > 0)) throw new Error('Could not read the settings.');
   const v = accel > 0 ? Math.min(rate, Math.sqrt(2 * accel * spu * coast)) : rate;
-  return `$J=G91 G21 ${axis}${(dir * max / spu).toFixed(3)} F${(v * 60 / spu).toFixed(2)}`;
+  const feed = v * 60 / spu;
+  // GRBL runs nothing slower than 1 unit a minute: below that this move would not be slow
+  if (feed < 1) throw new Error(`$${100 + 'XYZ'.indexOf(axis)} is far too high (${spu}).`);
+  return `$J=G91 G21 ${axis}${(dir * max / spu).toFixed(3)} F${feed.toFixed(2)}`;
+}
+
+// The tool's short moves (nudges): their feed, but never more motor steps a second than this.
+export const NUDGE = { X: 1000, Y: 400, Z: 400 };
+export function nudgeJog(axis, dist, feed, spu) {
+  return `$J=G91 G21 ${axis}${dist.toFixed(3)} F${jogFeed(axis, feed, spu, NUDGE[axis])}`;
+}
+
+// Steps per unit above EXTREME are not a measurement to correct, they are a mistake (a real
+// plotter has a few hundred at most), and the slow moves could not be slow with them. Before a
+// move the tool starts again from a plain value. Returns the steps per unit to work with.
+export const EXTREME = 5000;
+export const START = { 100: 100, 101: 8.889, 102: 250 };
+export async function sane(grbl, n, spu) {
+  if (!(spu >= 0)) throw new Error('Could not read the settings.');
+  if (spu > 0 && spu <= EXTREME) return spu;
+  await saveSetting(grbl, n, START[n], spu);
+  return START[n];
 }
 
 // Stop a jog where it is (GRBL's jog cancel) and return the machine position it stopped at.
@@ -86,6 +108,8 @@ export async function stopJog(grbl, alive) {
 // GRBL counts steps, so new steps per unit change what every position reads. `old` = the value
 // being replaced: with it, the work zero (the center) is put back on the same physical spot.
 export async function saveSetting(grbl, n, value, old) {
+  const no = refusal(n, value);                      // $100 / $101 no real plotter can have
+  if (no) throw new Error(no);
   const v = +value.toFixed(3), a = n - 100;
   const keep = grbl.center && old > 0 && (a === 0 || a === 1);
   const was = keep ? (await grbl.nextStatus()).wpos[a] : 0;
@@ -94,6 +118,13 @@ export async function saveSetting(grbl, n, value, old) {
   const now = was * old / v;
   await grbl.send(`G92 ${'XY'[a]}${now.toFixed(3)}`);
   grbl.center[a] = (await grbl.nextStatus()).mpos[a] - now;
+}
+
+// Stop a move that is under way (a circle, a test drawing) and lift the pen. GRBL's buffers are
+// emptied; the center and the pen zero are put back.
+export async function stopMove(grbl, penUp) {
+  await grbl.stop();
+  await grbl.send(`G90 G0 Z${penUp}`);
 }
 
 // Pen down, one turn and a bit, pen up. Returns the machine X the circle was drawn at.
@@ -226,6 +257,7 @@ export function initCalibrate(api) {
 
   let step = 1, busy = false, grbl = null, vals = {}, zTimer = 0, lineTurn = 0, fDrawn = false;
   let slow = null;    // { act, stopping } while a slow move runs
+  let job = null;     // { act, stopped } while a move with a Stop runs (circle, set center, drawings)
   let turn = null;    // { from, at }: platter machine position when the turn began / where it is now
   let pen = null;     // { down, up }: machine Z where the tip touched / where it was raised to
   let ring = null;    // { a, b }: machine X the circle was drawn at / where the pen crossed it again
@@ -265,6 +297,8 @@ export function initCalibrate(api) {
     const mine = () => slow === me && m.getGrbl() === g;
     err(''); msg(d.go); refresh();
     try {
+      const reset = await fit(g, d.axis);
+      if (reset) msg(`${reset} ${d.go}`);
       const from = (await g.nextStatus()).mpos[i];
       await g.send(slowJog(d.axis, d.dir(), vals[100 + i], vals[120 + i]));
       while (mine() && !me.stopping) {
@@ -291,6 +325,7 @@ export function initCalibrate(api) {
     $('calCount').textContent = `Step ${step} of ${STEPS}`;
     $('calV100').textContent = fmt(vals[100]);
     $('calV101').textContent = fmt(vals[101]);
+    for (const n of [100, 101]) $('calV' + n).classList.toggle('bad', n in vals && !plausible(n, vals[n]));
     // calculator
     const a = +$('calAngle').value, ms = +$('calMicro').value;
     const c101 = stepsPerDegree({ stepAngle: a, microsteps: ms, small: num('calSmall'), big: num('calBig') });
@@ -320,14 +355,15 @@ export function initCalibrate(api) {
       const act = b.dataset.act;
       if (act === 'calc') return;
       const stop = slow?.act === act;
-      b.disabled = act === 'back' ? !!slow || step === 1 : act === 'next' ? !!slow || step === STEPS
-        : stop ? slow.stopping : busy || !!slow || !alive() || (act in need && !Number.isFinite(need[act]));
+      b.disabled = act === 'back' ? !!slow || !!job || step === 1 : act === 'next' ? !!slow || !!job || step === STEPS
+        : stop ? slow.stopping : job?.act === act ? !!job.stopped
+        : busy || !!slow || !alive() || (act in need && !Number.isFinite(need[act]));
       if (SLOWS[act]) b.textContent = stop ? 'Stop' : SLOWS[act].label;
     });
     root.querySelectorAll('.switch input').forEach(i => { i.disabled = busy || !!slow; });
-    root.querySelector('[data-act=circle]').textContent = ring ? 'Draw again' : 'Draw circle';
-    root.querySelector('[data-act=drawLine]').textContent = lineTurn ? 'Draw again' : 'Draw test';
-    root.querySelector('[data-act=drawF]').textContent = fDrawn ? 'Draw again' : 'Draw F';
+    const label = { circle: ring ? 'Draw again' : 'Draw circle', center: 'Set center',
+      drawLine: lineTurn ? 'Draw again' : 'Draw test', drawF: fDrawn ? 'Draw again' : 'Draw F' };
+    for (const [act, text] of Object.entries(label)) root.querySelector(`[data-act=${act}]`).textContent = job?.act === act ? 'Stop' : text;
   }
   function showZ() {
     const z = alive() ? grbl.status?.wpos?.[2] : undefined;
@@ -335,17 +371,42 @@ export function initCalibrate(api) {
   }
 
   // ---------- running things on the plotter ----------
-  async function run(fn, done) {
+  // `act` = the button that started it: while it runs, that button is Stop (see stopRun).
+  // fn(grbl, live): live() is alive(), and throws once Stop was pressed.
+  async function run(fn, done, act) {
     if (busy || slow) return;
     if (!alive()) { err('Not connected.'); return; }
-    busy = true; err(''); msg(''); refresh();
-    try { await fn(grbl); if (done) msg(done); } catch (e) { err(e.message); }
-    busy = false; refresh();
+    const me = { act, stopped: null };
+    busy = true; job = act ? me : null; err(''); msg(''); refresh();
+    const live = () => { if (me.stopped) throw new Error('Stopped.'); return alive(); };
+    try { await fn(grbl, live); if (done && !me.stopped) msg(done); } catch (e) { if (!me.stopped) err(e.message); }
+    await me.stopped;
+    busy = false; job = null; refresh();
+  }
+  // Stop the circle / drawing / move to the center where it is, and lift the pen.
+  function stopRun() {
+    if (!job || job.stopped) return;
+    job.stopped = stopMove(grbl, api.getSettings().penUp).then(() => msg('Stopped.'), e => err(e.message));
+    refresh();
   }
   async function read() {
     try { vals = { ...vals, ...await grbl.readSettings() }; }
     catch (e) { err('Could not read settings: ' + e.message); }
+    const bad = badAxes(vals);
+    if (bad.includes('Y')) err('Platter steps look wrong. Do the turn test (step 2).');
+    else if (bad.length) err('Rail steps look wrong. Measure them in step 4.');
     refresh();
+  }
+  // Steps per unit far beyond any real plotter: start again from a plain value (see sane()).
+  // Returns what to tell the user, '' when nothing was changed.
+  async function fit(g, axis) {
+    const n = 100 + 'XYZ'.indexOf(axis), was = vals[n];
+    vals[n] = await sane(g, n, was);
+    if (vals[n] === was) return '';
+    if (n === 101) turn = null;
+    if (n === 100) ring = null;
+    await m.check();
+    return `$${n} was ${was}: reset to ${vals[n]}.`;
   }
   // $100 / $101: what was measured in the old units is rescaled or dropped
   const save = (n, v) => run(async g => {
@@ -354,16 +415,19 @@ export function initCalibrate(api) {
     vals[n] = r3(v);
     if (n === 101) turn = null;
     if (n === 100) { if (ring) for (const k in ring) ring[k] *= old / vals[n]; $('calRuler').value = ''; }
-    m.refresh();
+    await m.check();
   }, `Saved $${n}=${v.toFixed(3)}.`);
-  const draw = strokes => run(async g => {
+  const draw = (strokes, act) => run(async g => {
+    if (badAxes(vals).length) throw new Error('Rail or platter steps look wrong. Do steps 2 and 4 first.');
     if (!g.center) throw new Error('Find the center first (step 4).');
     await g.stream(gcodeLines(placedToGcode(strokes, api.getSettings()).gcode));
-  });
+  }, '', act);
   const segStep = id => +$(id).querySelector('.on').dataset.step;
   // a short move, then `then(machine position)` once it has stopped
   const nudge = (axis, d, feed, then) => run(async g => {
-    await g.send(`$J=G91 G21 ${axis}${d.toFixed(3)} F${feed}`);
+    const reset = await fit(g, axis);
+    if (reset) throw new Error(`${reset} Try again.`);
+    await g.send(nudgeJog(axis, d, feed, vals[100 + 'XYZ'.indexOf(axis)]));
     const s = await waitIdle(g, alive);
     await then?.(s.mpos);
   });
@@ -384,15 +448,18 @@ export function initCalibrate(api) {
     save101: () => { const raw = corrected(vals[101], Math.abs(turn.at - turn.from), 360); save(101, snapDirect(raw) ?? raw); },
     zUp: () => zNudge(1), zDown: () => zNudge(-1),
     xIn: () => xNudge(-1), xOut: () => xNudge(1),
-    circle: () => run(async g => { ring = null; ring = { a: await drawCircle(g, api.getSettings(), vals[101], alive) }; }, 'Now cross to the far side of the circle.'),
-    center: () => run(async g => { await centerBetween(g, ring.a, ring.b, api.getSettings().penUp, alive); m.refresh(); }, 'Center set. The pen is over it.'),
+    circle: () => run(async (g, live) => {
+      if (!plausible(101, vals[101])) throw new Error('Do the turn test first (step 2).');
+      ring = null; ring = { a: await drawCircle(g, api.getSettings(), vals[101], live) };
+    }, 'Now cross to the far side of the circle.', 'circle'),
+    center: () => run(async (g, live) => { await centerBetween(g, ring.a, ring.b, api.getSettings().penUp, live); m.refresh(); }, 'Center set. The pen is over it.', 'center'),
     save100: () => save(100, corrected(vals[100], Math.abs(ring.b - ring.a), num('calRuler'))),
-    drawLine: () => { const a = lineTurn * 30; lineTurn++; draw(centerLine(a)).then(() => refresh()); },
+    drawLine: () => { const a = lineTurn * 30; lineTurn++; draw(centerLine(a), 'drawLine').then(() => refresh()); },
     saveGap: () => {
       const gap = offsetFromGap(api.getSettings().offset, num('calApart'), $('calSide').checked ? -1 : 1);
       setSettings({ offset: gap }); $('calApart').value = ''; msg(`Gap saved: ${gap} mm. Draw again to check.`); refresh();
     },
-    drawF: () => { fDrawn = true; draw(letterF()); },
+    drawF: () => { fDrawn = true; draw(letterF(), 'drawF'); },
     fOk: () => msg('Rotation is right.'),
     fBad: () => { const f = !api.getSettings().flip; setSettings({ flip: f }); msg(`Reverse rotation ${f ? 'on' : 'off'}. Draw again to check.`); },
     back: () => go(step - 1), next: () => go(step + 1),
@@ -410,6 +477,7 @@ export function initCalibrate(api) {
     const seg = e.target.closest('.seg button');
     if (seg) { seg.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === seg)); return; }
     const b = e.target.closest('[data-act]');
+    if (b && !b.disabled && job?.act === b.dataset.act) { stopRun(); return; }
     if (b && !b.disabled) acts[b.dataset.act]?.();
   });
   root.addEventListener('input', () => refresh());
@@ -427,13 +495,14 @@ export function initCalibrate(api) {
     const { openTool } = await import('./tool.js');   // tool.js needs a page; the tests import this file without one
     grbl = m.getGrbl();
     if (!grbl) return;
-    step = 1; vals = {}; lineTurn = 0; fDrawn = false; turn = pen = ring = slow = null;
+    step = 1; vals = {}; lineTurn = 0; fDrawn = false; turn = pen = ring = slow = job = null;
     const s = api.getSettings();
     zFlip = s.penUp < s.penDown;
     msg(''); err('');
     openTool('calTool', () => {
       clearInterval(zTimer);
       if (slow) grbl?.realtime('\x85');               // never leave a slow move running
+      stopRun();                                       // …or a circle or a drawing
       slow = null; grbl = null;
     });
     refresh();

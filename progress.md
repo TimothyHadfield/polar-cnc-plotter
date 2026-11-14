@@ -1,7 +1,7 @@
 # Polar CNC Plotter: progress (handoff for Claude)
 
 ## START HERE
-_Last updated 2026-11-13 late (CALIBRATE 2: search "CALIBRATE 2"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
+_Last updated 2026-11-13 night (SAFEGUARDS: search "SAFEGUARDS"; CALIBRATE 2: search "CALIBRATE 2"; BASE 2: search "BASE 2"; engineering review: search "ENGINEERING REVIEW"). For Claude only; Tim doesn't read this. Catch-up authorizes nothing: only
 "Authorized next steps" below is approved work._
 1. Read `CLAUDE.md` (project, file map, tests), then this file.
 2. Skim the last entries of `chat.md`. Full machine-debug narrative 10-24..10-27 and older detail:
@@ -13,6 +13,35 @@ _Last updated 2026-11-13 late (CALIBRATE 2: search "CALIBRATE 2"; BASE 2: search
 **2026-11-13 late: Tim: "I have the entire thing built perfectly and I'm ready to start working on
 the calibration."** Next is his first run of the new Calibrate flow on the real plotter (nothing in
 it has run on the machine yet), then a first real drawing. The older text below is history.
+
+**SAFEGUARDS (2026-11-13 night).** Tim ran the OLD turn test (app not hard-refreshed): "counted 56
+full rotations", Save, "did it again, it completely freaked out ... tried to spin at an extreamly
+fast speed"; then the new slow turn "doesn't even move and just kinda jiggles back and forth";
+jogs scream too. "Is the motor fine? Can we set up safeguards on our cite which make it so that
+problems like these are impossible?"
+- **Cause (REASONED; COM3 was busy, `$$` never read):** 56 turns for "360" at factory `$101`=250
+  = 1600 steps a turn = TMC2209 with no jumpers = 1/8 -> **true `$101` = 4.444** (and `$100` = 40
+  if the pulley is 20T). The old box wanted degrees; 56 gave `$101` = 250 x 360 / 56 = **1607.143**
+  (360x too high). A jog then asks ~13 000 steps/s: the motor stalls and screams (harmless).
+- **The slow-turn jiggle is NOT explained by 1607** (107 steps/s must creep, tested). Either a
+  second bad save made `$101` huge (above 6420 GRBL's 1 unit/min floor makes "slow" fast), or the
+  platter plug / driver is half seated again (the 11-10 / 11-11 pattern). Told Tim: hard-refresh,
+  read the number in Calibrate step 1, Turn test; still jiggling at a sane number = reseat with
+  12 V AND USB out.
+- **Built (`js/safe.js`, new):** `RANGE` `$100` 5-800, `$101` 0.5-150 (factory 250 on the platter
+  = not calibrated). `machine.js` reads `$$` on connect, after a console `$n=` / `$RST=`, and when
+  Calibrate saves (`m.check()`): a bad axis = its jog buttons off, Plot/Resume off ("Calibrate
+  first"), red line "Platter steps look wrong ($101 = …). Open Calibrate." Nothing read = both
+  axes off. Main-panel jog feeds capped in steps/s (`JOG_SPS` X 8000, Y 4000, Z 1000).
+- **Calibrate:** `saveSetting` refuses a value outside the range ("Platter steps must be 0.5 to
+  150. Not saved."); nudges use `nudgeJog` (step cap `NUDGE` X 1000, Y 400, Z 400); `slowJog` /
+  `jogFeed` throw when the feed would be under GRBL's 1 unit/min; steps per unit above `EXTREME`
+  5000 (or 0) are reset to `START` (100 / 8.889 / 250) before a move (`sane`), with a message;
+  Draw circle needs a plausible `$101`, the test drawings need both; **Draw circle, Set center,
+  Draw test, Draw F turn into Stop** while they run (`stopMove` = `grbl.stop()` + pen up); closing
+  the tool stops them. Step 1 shows a bad value in red.
+- **Not covered, told Tim:** moves typed by hand into the Settings console; a value inside the
+  range but still wrong (e.g. Stop at half a turn).
 
 **CALIBRATE 2 (2026-11-13 late).** Tim asked for calibration by Stop button: "have the plate move
 slowly in a circle until the user says stop at 360 degrees ... have the linear motor slowly move
@@ -295,51 +324,9 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   FLATTENED first (walk `inherits` in `%APPDATA%/BambuStudio/system/BBL/{machine,process,filament}`;
   unflattened it silently uses defaults). No window opens. Count `; FEATURE: Support` in the gcode.
 
-**Update 2026-10-28 (Tim's reports) — read this first, it supersedes parts of the 10-27 block:**
-- **Tim is disassembling the plotter** ("I've redesigned a lot of things"); he has NOT yet said what
-  changed. Ask, then update the model/parts. Platter was epoxied to the DVD spindle; told him heat
-  (60-120 °C) + twist to free it; spindle is expendable with direct drive.
-- Both NEMA cables now at plug order **1-3-2-4** (coils on 1-2 / 3-4). Carriage motor: perfect on
-  the X header, **nothing on the Y header** -> Y channel (driver or slot) dead. Driver-board swap
-  between X and Y slots still NOT done (Tim swapped cables instead): that's the open test.
-- **Platter motor on the X header: jerky in both wire orders** (once turned smoothly, then not).
-  Spins freely by hand unpowered, holds when powered -> not mechanical. Suspect an intermittent
-  coil connection in Tim's own orange/yellow extension or a plug pin. Next: bench test, motor
-  plugged straight into X with no extension; wiggle test with Ω (red-green, blue-black ~3 Ω).
-- Tim pulled the Y plug once while powered (idle); afterwards drivers measured unpowered X 9 kΩ,
-  Y 7 kΩ, Z 2 kΩ = not shorted. (He also measured once with power on: readings meaningless.)
-- Bench plan given (in order): 1 platter motor direct on X; 2 driver-board swap X<->Y with the
-  carriage on X (stops = Y driver bad, red spare at ~0.6 V; still works = Y slot bad -> photo of
-  shield, A-slot clone, which can't fix a dead Uno D3/D6); 3 Z last.
-
-**Machine state at end of 2026-10-27 (Tim's reports, not seen by Claude):**
-- Coil order fixed: both NEMA plugs were red-blue-green-black, coils red-green / blue-black, so the
-  middle wires were swapped. Carriage works on X. **Platter motor on the X header: turns smoothly**
-  after its middle wires were swapped (before that: glitchy back and forth).
-- **The Y channel sends nothing:** carriage motor on the Y header doesn't move; platter on Y doesn't
-  move whatever the wire order. Motors hold stiff with `$1=255` (seen 10-27 morning), so enable +
-  12 V reach the drivers; step pulses apparently don't reach Y (and Z).
-- **Last test, result unclear:** motors back on their own headers -> carriage jerky, platter
-  nothing. Not known whether Tim had also swapped the X and Y drivers (Claude asked; Tim
-  interrupted to checkpoint). **Ask him first.**
-  - Drivers swapped: the old Y driver is weak/bad (jerky on X) AND the Y slot is dead.
-  - Not swapped: the carriage got jerky for another reason (recheck its wire order/seating).
-- Drivers left after triage (Tim's meter, same two points on each driver: good black ~8 kΩ, good red
-  ~13 kΩ; low Ω = shorted, binned): 2 good black TMC2209 + 1 red A4988, all in use, **no spares**.
-  A black reading 3 kΩ made the Uno drop off USB, so it was swapped for the red (slot not recorded).
-  Vref: TMC2209 X/Y 1.0 V, Z 0.3 V (I ≈ 0.71·Vref); red A4988 on Z 0.08-0.10 V, on Y ~0.6 V
-  (I = Vref/(8·Rs), Rs unreadable, assume R100).
-- GRBL 1.1h, EEPROM still factory (`$100-102` = 250), `$1=25` (restored).
-
-**Next at the machine, in order:**
-1. Ask Tim whether the drivers were swapped in the last test.
-2. Driver vs slot: a driver that works on X goes in the Y slot.
-3. If the Y slot is dead: is it the shield socket (then clone Y onto the **A slot** with its 2
-   jumpers; check the jumper layout from a photo first) or the Uno's D3/D6? A clone can't fix a
-   dead Uno pin. A new shield/Uno is ~$10-15 = Tim's call (money).
-4. Z: same check, then Ω-test its 4 wires (expect ~10-40 Ω per coil), smallest jogs (factory
-   `$102` = 250 is too fast for the 20 step/rev stage).
-5. Then Calibrate (`$100` ≈ 100, `$101` ≈ 26.67 belt / 8.89 direct drive, at 1/16).
+**Machine state 10-27 / 10-28 (dead Y channel, driver triage, bench plan): moved verbatim to
+`docs/archive/progress-2026-11-13-october-machine-state.md`.** All superseded by 11-11 (new
+TMC2209s, all three axes move) and 11-13 (fully built).
 
 ## Status
 | Area | State | Notes |
@@ -347,8 +334,8 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 | Plotter app | live | node tests: see Map |
 | Draw tool (`js/sketch.js`) | live 2026-11-12 | Tim: "draw your own design yourself on the plate". Draw button next to Pattern; pointer draws on the preview; Undo / Clear / Done. Strokes in "paper units" (`strokes.center=[0,0]`, `strokes.radius=1` -> `fitFrame` keeps the scale, `layout()` clips at the circle). Kept in localStorage `polar-plotter-sketch`. Reopening after Turn/move/Crop bakes the placement (`bake`). Light smoothing (0.5 mm, corner cut 0.27 mm). Also on sim.html (the plan inset fills the stage while drawing). |
 | Simulate (`js/handoff.js`) | live 2026-11-13 | Tim: "allow the user to simulate the drawing aswell". A "Simulate" link beside Download G-code opens `sim.html?v=2`; the drawing on screen (strokes + colours + center/radius + turn/move/crop) rides along in sessionStorage `polar-plotter-handoff`, consumed once by app.js when `window.plotterSim` exists. A picture arrives already traced (no Darkness slider there). Then Connect plotter -> Plot in the simulator. |
-| Machine | built, all three axes move (Tim, 11-13) | uncalibrated; Tim starts Calibrate next |
-| Calibrate tool | rewritten 2026-11-13 (CALIBRATE 2) | tests + simulator only, never on the machine |
+| Machine | built (Tim, 11-13); platter `$101` wrongly saved (~1607, reasoned) | waiting on Tim: Turn test with the new build; if it still jiggles, reseat the platter plug/driver |
+| Calibrate tool | rewritten 2026-11-13 (CALIBRATE 2) + safeguards | tests + simulator only; the new flow has never run on the machine |
 | 3D build guide `build.html` | live | electronics redrawn from Tim's photos 10-26; upgrade parts NOT shown in it |
 | Carriage plate pocket for micro stage | live STL (3fed47d) | 81.9 x 25.5 x 1.5 mm; Tim to caliper the stage |
 | Upgrade parts (builders, 10-26) | STLs merged | platter_hub, motor_stand, motor_plate 2 mm recess, pulley_m3 + idler_washer, big_pulley_gt2, paper_ring; nothing printed or fitted |
@@ -416,6 +403,9 @@ design actively printing right now but that's it").** Base (plate 2) was printin
   after Stop, whether 107 / 150 / 300 steps per second feel right, the pen stage at G0 speed with
   factory `$102`/`$112`, which way Z and X run (the two Reverse switches), `$3` write. In `?demo`
   the slow moves jump at once ("It stopped by itself"): FakeGrbl has no real-time motion.
+- SAFEGUARDS: the plotter's real `$$` (never read), so 1607 and 1/8 microstepping are reasoned;
+  why the slow turn jiggled; `grbl.stop()` (hold + soft reset) from Calibrate's Stop on real GRBL;
+  the step caps are guesses for a stepper at unknown microstepping, not measured stall speeds.
 - Pen holder: fit on the real slider (how it fixes to it is unknown), clip over the 13.6 mm neck
   (OpenSCAD intersection only). Circles PDF: not printed; depends on printing at 100 %.
 - Base 2 is not printed. Not measured on the real parts: stage body depth (10 assumed), where the
@@ -436,7 +426,11 @@ design actively printing right now but that's it").** Base (plate 2) was printin
 - App: `index.html`, `js/*.js` (see CLAUDE.md). Build guide: `build.html`, `js/build*.js`,
   `cad/plotter-assembly.scad` -> `tools/make-build-model.py` -> `build/plotter.glb`.
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
-- Tests: `node --test tests/*.test.mjs` · last run 2026-11-13 late: 120 passed / 0 failed
+- Tests: `node --test tests/*.test.mjs` · last run 2026-11-13 night: 127 passed / 0 failed
+- Safeguards browser check: `<scratchpad>/safecheck.mjs phone|desktop <outdir>` pattern = Playwright
+  WebKit on `sim.html?v=2`; set `plotterSim.grbl.true[1] = 4.444`, send `$101=1607.143` through
+  `#cmdForm.requestSubmit()`, then read `#mMsg`, `[data-jog]` disabled, `#plot`, `#calErr`; for the
+  turn test slow the sim (`plotterSim.grbl.speed = 0.05`) near 360° so Stop lands within 1 %.
 - Calibrate browser check: phone-view on `sim.html?v=2` with `--do click:` steps (speed buttons
   `#simSpeed [data-speed="20"]`, `#connect`, `#calOpen`, `[data-act=turn|lower|raise|circle|cross|center]`,
   `wait:[data-act=x]:not([disabled])`), then `--eval` on `plotterSim.grbl` (`pos`, `real()`, `wco`,

@@ -162,6 +162,7 @@ a.btn { text-decoration: none; color: inherit; }
 .calstep .help { margin: 0; }
 .calvals { display: grid; grid-template-columns: auto auto 1fr; gap: 6px 10px; font-size: 14px; align-items: baseline; }
 .calvals span:not(.unit) { color: var(--muted); }
+.calvals b.bad { color: var(--err); }
 .calres { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
 .calres b { color: var(--ink); }
 .calres span { white-space: nowrap; }
