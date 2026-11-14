@@ -15,6 +15,24 @@ run on the real plotter: Turn test + Test, Turn direction, Pen height (is Down r
 Carriage test (ruler under the pen), Find center (a mark + Half turn); then a first real drawing.
 If the platter is slow: the turn test now raises `$111`/`$121` itself (Test = 5 s a circle). The older text below is history.
 
+**DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
+you make our settings saved right now the default settings of the app? This means if you
+recalibarte something you need to go through something that confirms you want to change the
+default settings of the app." Built `js/defaults.js` (key `polar-plotter-defaults` in this
+browser: app `offset flip penUp penDown zFlip` + plotter `$100 $101 $3`). Taken automatically at
+the first connect whose `$$` passes `badAxes` (machine.js `check`, log line "calibration saved as
+the defaults"), so Tim's values are captured at his next connect, not baked into code (REASONED: I
+could not read them reliably; Edge's leveldb copy from 14:43 showed flip true, penDown -0.4,
+offset 0, likely stale). After that every Calibrate save that would move a default (Done in steps
+1/3/4/5, Clockwise/Counterclockwise, Test saving an unsaved $101, both Reverse switches) shows
+"Change your defaults?" old → new with **Keep old** / **Change** (`guard()` in calibrate.js).
+Turn test Start with an implausible $101 starts from the default $101. A plotter whose $100/$101/$3
+differ from the defaults: mMsg "Not your defaults: …" + **Restore defaults** button (writes them,
+`saveSetting` keeps the center). Simulator and ?demo never touch defaults unless the URL has
+`?defaults`. Settings-sheet edits are NOT guarded. Verified: `tools/check-defaults.mjs` 10/10 at
+393 px and 1440 px; calibrate walk 54/54 both widths (check 15 once failed under load at 205° vs
+the 200° limit, passed alone); 136 node tests (3 new in `tests/defaults.test.mjs`).
+
 **CALIBRATE 5 (2026-11-14, night): Start / Done per step, pictures, quick check.** Tim: "a button
 that says start and done ... on each step with color changes ... a redo as a start button ... some
 sort of picture or diagram or animation on each step ... especially step 4 and 5 ... point 4 on step

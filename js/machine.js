@@ -4,7 +4,8 @@
 import { Grbl, openSerial, pickPort, gcodeLines, resumeLines, resumePoint, RESUME_HEADER, isPause } from './grbl.js';
 import { FakeGrbl } from './fakegrbl.js';
 import { badAxes, trouble, jogFeed } from './safe.js';
-import { setDirection, uprightPen } from './calibrate.js';
+import { setDirection, uprightPen, saveSetting } from './calibrate.js';
+import { loadDefaults, saveDefaults, capture, plotterOff, describe } from './defaults.js';
 
 const $ = id => document.getElementById(id);
 
@@ -38,7 +39,13 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   // The plotter's own settings ($$), read on connect and after every change. While its steps per
   // unit cannot be right (js/safe.js), jogging that axis and plotting are switched off.
   let vals = null;
-  const warn = () => grbl ? trouble(vals) : '';
+  // A plotter whose steps or directions are not the defaults (js/defaults.js) is offered them back.
+  const off = () => grbl ? plotterOff(loadDefaults(), vals) : [];
+  const warn = () => {
+    if (!grbl) return '';
+    const t = trouble(vals), o = off();
+    return t || (o.length ? `Not your defaults: ${o.map(describe).join(', ')}.` : '');
+  };
   const panel = document.querySelector('.panel');
 
   // ---------- messages ----------
@@ -75,6 +82,8 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     plot.disabled = busy || !grbl?.center || !job || bad.length > 0;
     plot.textContent = bad.length ? 'Calibrate first' : !job ? 'Plot' : grbl && !grbl.center ? 'Set center first' : 'Plot';
     $('pause').textContent = paused ? 'Resume' : 'Pause';
+    const rd = $('restoreDefaults');
+    if (rd) { rd.hidden = !on || !off().length; rd.disabled = busy; }
   }
 
   function showStatus(s) {
@@ -173,6 +182,11 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     vals = v;
     if (v && !running) try { await penDirection(g); } catch (e) { log(e.message); }
     if (grbl !== g) return;
+    // the first plotter with believable values sets the defaults (after that only Calibrate does)
+    if (v && !loadDefaults() && !badAxes(v).length) {
+      saveDefaults(capture(v, getSettings()));
+      log('> calibration saved as the defaults');
+    }
     // a new warning goes on screen at once; one that is over only leaves if it is still showing
     if (warn() !== was && (warn() || !$('mMsg').textContent || $('mMsg').textContent === was)) say('');
     refresh();
@@ -233,6 +247,16 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     await grbl.setCenter();
     say(back ? 'Pen moved to the centre. Center set.' : 'Center set.');
     refresh();
+  })()));
+
+  // Put the plotter's steps and directions back to the defaults (the center stays where it was).
+  $('restoreDefaults')?.addEventListener('click', () => run((async () => {
+    for (const c of off()) {
+      if (c.n === 3) await grbl.send(`$3=${c.to}`);
+      else await saveSetting(grbl, c.n, c.to, c.from);
+    }
+    await check();
+    say('Defaults restored.');
   })()));
 
   // ---------- plot ----------

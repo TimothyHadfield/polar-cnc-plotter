@@ -254,3 +254,10 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   next button, header Check + Close, Set center became step 5's Done, line 4 "Only if needed" with
   a picture behind "?", quick check order center / pen / 5 cm / direction / full turn. **Verified:**
   walk 54/54 at 393 px and 1440 px, 134/134 node tests. **Open:** Tim's view of the pictures; real plotter.
+- **Then:** Expo marker + whiteboard idea (answered: sheet protector to try free, dry-erase sticker
+  cut with the 200 mm PDF circle, redo Pen height, check the holder fits). Then, after his full
+  calibration: make the current settings the defaults, confirm before changing them; and is Set
+  center still needed? **Built:** DEFAULTS (progress.md). **Answered:** Set center is not
+  calibration; it tells GRBL where the center is, which it forgets at every connect/reset, and
+  after the carriage or platter is moved by hand or skips steps. **Verified:** defaults walk 10/10,
+  calibrate walk 54/54, 136 node tests.

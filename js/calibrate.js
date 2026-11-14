@@ -7,6 +7,7 @@
 
 import { wrap180 } from './polar.js';
 import { plausible, badAxes, refusal, jogFeed } from './safe.js';
+import { loadDefaults, saveDefaults, differs, apply, describe } from './defaults.js';
 export { parseSettings } from './grbl.js';
 
 // ---------- math ----------
@@ -365,6 +366,11 @@ const HTML = `
   <div class="row" id="calRedo"></div>
 </div>
 
+<div class="calconfirm" id="calConfirm" hidden>
+  <p class="calask">Change your defaults?</p>
+  <ul class="calchanges" id="calChanges"></ul>
+  <div class="row"><button class="btn wide" data-act="keep">Keep old</button><button class="btn wide go" data-act="change">Change</button></div>
+</div>
 <p class="calsay" id="calMsg"></p>
 <p class="err" id="calErr" role="alert"></p>
 <div class="calnav"><button class="btn" data-act="back">Back</button><div class="calmid"><span id="calCount"></span><span class="caldots" id="calDots"></span></div><button class="btn" data-act="next">Next</button></div>`;
@@ -429,7 +435,10 @@ export function initCalibrate(api) {
       async pre(g) {
         tested = null;
         const n = pending101();
-        if (Number.isFinite(n)) await store(g, 101, n);
+        if (Number.isFinite(n)) {
+          if (await guard([{ n: 101, to: r3(n) }])) await store(g, 101, n);
+          else turn = null;                            // keep the old value: Test checks that one
+        }
         if (plausible(101, vals[101])) await platterSpeed(g, vals);
       },
       ok: () => plausible(101, vals[101]) ? '' : 'Do the turn test first.',
@@ -505,6 +514,8 @@ export function initCalibrate(api) {
     // the quick check
     $('calChecks').innerHTML = CHECKS.map((c, i) => `<li data-st="${answers[i] === true ? 'done' : answers[i] === false ? 'bad' : asking && answers.length === i ? 'on' : 'idle'}">${c.name}</li>`).join('');
     $('calAnswer').hidden = !asking;
+    $('calConfirm').hidden = !confirming;
+    $('calChanges').innerHTML = confirming ? confirming.list.map(c => `<li>${describe(c)}</li>`).join('') : '';
     $('calAsk').textContent = asking ? CHECKS[answers.length].ask : '';
     const redo = [...new Set(CHECKS.filter((c, i) => answers[i] === false).map(c => c.redo))];
     $('calRedo').innerHTML = !asking && job?.act !== 'checkGo' ? redo.map(n => `<button class="btn sm" data-go="${n}">Redo step ${n}</button>`).join('') : '';
@@ -517,13 +528,14 @@ export function initCalibrate(api) {
       const off = b.hasAttribute('data-on') && st[n] !== 'on' || act === 'done' && !can[n] || act in need && !Number.isFinite(need[act]);
       b.disabled = act === 'back' ? !!slow || !!job || step === 1 : act === 'next' ? !!slow || !!job || step === CHECK
         : act === 'yes' || act === 'no' ? !asking
+        : act === 'change' || act === 'keep' ? !confirming
         : stop ? slow.stopping : job?.act === act && (act !== 'done' || n === step) ? !!job.stopped
         : busy || !!slow || !alive() || off;
       if (SLOWS[act]) b.textContent = stop ? 'Stop' : SLOWS[act].label;
       if (act === 'start') b.textContent = st[n] === 'idle' ? 'Start' : 'Redo';
       // the button to press next is filled in
       b.classList.toggle('go', act === 'start' ? st[n] === 'idle' : act === 'done' ? st[n] === 'on' && !!can[n]
-        : act === 'next' ? st[step] === 'done' : act === 'checkGo' ? st[CHECK] !== 'on' && !job : false);
+        : act === 'next' ? st[step] === 'done' : act === 'checkGo' ? st[CHECK] !== 'on' && !job : act === 'change');
     });
     root.querySelectorAll('[data-act=tYes], [data-act=tNo]').forEach(b => { b.disabled = busy || !!slow || !tested; });
     const nb = root.querySelector('[data-act=next]');
@@ -556,6 +568,7 @@ export function initCalibrate(api) {
   function stopRun() {
     if (!job || job.stopped) return;
     asking?.reject(new Error('Stopped.'));
+    confirming?.resolve(false);
     asking = null;
     job.stopped = stopMove(grbl, api.getSettings().penUp).then(() => msg('Stopped.'), e => err(e.message));
     refresh();
@@ -608,12 +621,33 @@ export function initCalibrate(api) {
   // ↺ / ↻ as on the main panel: ↺ is Y+, or Y− for a platter that turns the other way
   const yNudge = dir => nudge('Y', dir * yDir() * segStep('dstep'), 300);
   // Which way Y+ turns the platter. A gap measured for the other direction changes sides.
-  const setFlip = flip => {
+  const setFlip = flip => run(async () => {
     const s = api.getSettings();
-    api.setSettings(!s.flip === !flip ? { flip } : { flip, offset: -s.offset || 0 });
+    const to = !s.flip === !flip ? { flip } : { flip, offset: -s.offset || 0 };
     st[2] = 'done';
-    msg(`Saved: ${flip ? 'counterclockwise' : 'clockwise'}.`); refresh();
-  };
+    if (!await guard(Object.entries(to).map(([key, v]) => ({ key, to: v })))) { msg('Kept the defaults.'); return; }
+    api.setSettings(to);
+    msg(`Saved: ${flip ? 'counterclockwise' : 'clockwise'}.`);
+  });
+
+  // ---------- the defaults (js/defaults.js) ----------
+  // Before a value that is a default changes: "Change your defaults?" with the old and new values.
+  // Resolves true (go ahead; the defaults take the new values) or false (keep the old ones).
+  // changes = [{ n, to }] for the plotter's $n, [{ key, to }] for an app setting.
+  let confirming = null;    // { resolve, list } while the question is on screen
+  async function guard(changes) {
+    const d = loadDefaults();
+    const list = differs(d, changes);
+    if (!list.length) return true;
+    const yes = await new Promise(resolve => {
+      confirming = { resolve, list };
+      refresh();
+      $('calConfirm').scrollIntoView({ block: 'nearest' });
+    });
+    confirming = null; refresh();
+    if (yes) saveDefaults(apply(d, list));
+    return yes;
+  }
 
   // ---------- Start and Done, per step ----------
   const begin = n => { st[n] = 'on'; };
@@ -623,10 +657,11 @@ export function initCalibrate(api) {
     1: () => run(async g => {
       tested = null;
       let note = '';
-      if (!plausible(101, vals[101])) {
-        const was = vals[101];
-        await store(g, 101, START[101]);
-        note = `$101 was ${was}: starting from ${START[101]}. `;
+      if (!plausible(101, vals[101])) {                // the default if there is one, else a plain value
+        const was = vals[101], def = loadDefaults()?.grbl?.[101];
+        const v = plausible(101, def) ? def : START[101];
+        await store(g, 101, v);
+        note = `$101 was ${was}: starting from ${v}. `;
       }
       if ((await platterSpeed(g, vals)).length) note += `Platter speed raised ($111=${FAST[111]}, $121=${FAST[121]}). `;
       const from = (await g.nextStatus()).mpos[1];
@@ -654,18 +689,31 @@ export function initCalibrate(api) {
     1: () => {
       const n = turnSteps(vals[101], Math.abs(turn.at - turn.from), turn.tested);
       if (same(n, vals[101])) { turn = null; st[1] = 'done'; msg('No change needed. Press Test to check.'); refresh(); return; }
-      run(async g => { await store(g, 101, n); st[1] = 'done'; }, `Saved $101=${n.toFixed(3)}. Press Test to check.`);
+      run(async g => {
+        st[1] = 'done';
+        if (!await guard([{ n: 101, to: r3(n) }])) { turn = null; msg('Kept the defaults.'); return; }
+        await store(g, 101, n);
+        msg(`Saved $101=${n.toFixed(3)}. Press Test to check.`);
+      });
     },
     3: () => run(async (g, live) => {
       const reset = await fit(g, 'Z');
       if (reset) throw new Error(`${reset} Try again.`);
-      api.setSettings(await touchLift(g, vals[102], live));
+      const h = await touchLift(g, vals[102], live);
       st[3] = 'done';
-    }, 'Saved. The pen is up, ready to travel.'),
+      if (!await guard(Object.entries(h).map(([key, v]) => ({ key, to: v })))) { msg('Kept the defaults. The pen is up.'); return; }
+      api.setSettings(h);
+      msg('Saved. The pen is up, ready to travel.');
+    }),
     4: () => {
       const n = beltSteps(vals[100], Math.abs(line.b - line.a), num('calRuler'));
       if (same(n, vals[100])) { st[4] = 'done'; msg('No change needed.'); refresh(); return; }
-      run(async g => { await store(g, 100, n); st[4] = 'done'; }, `Saved $100=${n.toFixed(3)}.`);
+      run(async g => {
+        st[4] = 'done';
+        if (!await guard([{ n: 100, to: r3(n) }])) { line = null; msg('Kept the defaults.'); return; }
+        await store(g, 100, n);
+        msg(`Saved $100=${n.toFixed(3)}.`);
+      });
     },
     5: () => run(async (g, live) => {
       const p = (await g.nextStatus()).mpos, s = api.getSettings();
@@ -675,9 +723,10 @@ export function initCalibrate(api) {
       await centerBetween(g, mark.x, p[0], s.penUp, live);
       mark = null;
       halved = false;
+      st[5] = 'done';
+      if (!await guard([{ key: 'offset', to: gap }])) { m.refresh(); msg('Center set. The pen is over it now. Center gap kept.'); return; }
       api.setSettings({ offset: gap });
       m.refresh();
-      st[5] = 'done';
       msg(`Center set. The pen is over it now. Center gap ${gap} mm.`);
     }, '', 'done'),
   };
@@ -730,6 +779,7 @@ export function initCalibrate(api) {
     yCcw: () => yNudge(1), yCw: () => yNudge(-1),
     checkGo: () => quickCheck(),
     yes: () => asking?.resolve(true), no: () => asking?.resolve(false),
+    change: () => confirming?.resolve(true), keep: () => confirming?.resolve(false),
     back: () => go(step === CHECK ? back : step - 1),
     next: () => { if (step === STEPS) tool?.closeTool(); else go(step + 1); },
   };
@@ -756,17 +806,24 @@ export function initCalibrate(api) {
   // The pen motor runs the wrong way: machine.js keeps GRBL's direction mask in step with the
   // zFlip setting. (The panel's `input` listener has already redrawn the box, so don't read its state.)
   $('calZFlip').addEventListener('change', () => run(async () => {
-    api.setSettings({ zFlip: api.getSettings().zFlip === false });
+    const to = api.getSettings().zFlip === false;
+    const ch = [{ key: 'zFlip', to }];
+    if (Number.isFinite(vals[3])) ch.push({ n: 3, to: to ? vals[3] | 4 : vals[3] & ~4 });
+    if (!await guard(ch)) { msg('Kept the defaults.'); return; }
+    api.setSettings({ zFlip: to });
     await m.check();
     await read();
-  }, 'Pen direction reversed. Touch down again.'));
+    msg('Pen direction reversed. Touch down again.');
+  }));
   // the carriage runs the wrong way: flip its bit in GRBL's direction mask. Every position is off after that.
   $('calXFlip').addEventListener('change', () => run(async g => {
     const v = vals[3] ^ 1;
+    if (!await guard([{ n: 3, to: v }])) { msg('Kept the defaults.'); return; }
     await g.send(`$3=${v}`);
     vals[3] = v; mark = line = null; halved = false; g.center = null;
     await m.check();
-  }, 'Carriage direction reversed.'));
+    msg('Carriage direction reversed.');
+  }));
 
   link.addEventListener('click', async () => {
     tool = await import('./tool.js');                 // tool.js needs a page; the tests import this file without one
@@ -778,6 +835,7 @@ export function initCalibrate(api) {
     tool.openTool('calTool', () => {
       clearInterval(zTimer);
       if (slow) grbl?.realtime('\x85');                // never leave a slow move running
+      confirming?.resolve(false);                      // a question left open keeps the defaults
       stopRun();                                       // …or the move to the center, or the check
       slow = null; grbl = null;
     });

@@ -38,6 +38,9 @@ previews it, and can stream it to the plotter over USB.
   the tip touches, Touching lifts it and saves up 0 / down -lift, `G92 Z0` at pen up,
   `grbl.penZero`); Carriage test (pen-up move over a ruler) -> $100, rounded to a belt value;
   Find center (a mark under the tip, Half turn, the mark again) -> center + center gap `offset`.
+- `js/defaults.js`: the calibration defaults (Tim's locked-in values, in this browser): taken at the
+  first good connect; Calibrate asks "Change your defaults?" before moving one; machine.js offers
+  Restore defaults when the plotter differs. Pretend plotters skip it unless `?defaults`.
 - Pen direction: setting `zFlip` (default true: Tim's pen motor is mounted so GRBL's Z runs
   backwards) is written to the plotter as `$3` bit 2 by `machine.js` on connect. Nothing else in
   the app flips Z.
@@ -61,7 +64,7 @@ previews it, and can stream it to the plotter over USB.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (12 files, 134 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (13 files, 136 tests, about half a minute; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with
