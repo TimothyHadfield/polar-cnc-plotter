@@ -21,7 +21,12 @@ proceedures that require you to draw on the paper, because it's hard to get the 
 needs to be as easy as possible." Rebuilt in `js/calibrate.js`, `STEPS = 5`; the pen is never
 lowered except by his own Down clicks in Pen height. (The drawing steps it replaced:
 `docs/archive/progress-2026-11-14-calibrate3-drawing-steps.md`.)
-1. **Turn test**: as in CALIBRATE 3.
+1. **Turn test**: as in CALIBRATE 3, plus: **Test saves an unsaved New `$101` first.** Tim, 11-14
+   on the real plotter: "I calibrated it so that It goes around the circle once and then I stopped
+   it, but then when I tested it, it did 2 full rotations rather than just 1." Reproduced in the
+   simulator (held 4.5, true 2.222, Test without Save turned 720°); fixed (`pending101`, Test's
+   `pre`), check 36 in `tools/check-calibrate.mjs`. REASONED: he skipped Save; if he says he did
+   press Save, this is a different bug.
 2. **Turn direction** (new, replaces Mirror check): **Turn** = a 90° Y+ jog (`partTurn`), then
    **Clockwise** / **Counterclockwise** (seen from above). Clockwise = `flip` off, counterclockwise
    = `flip` on (the simulator's convention: Y+ is clockwise with `flip` off). Changing `flip`
@@ -412,7 +417,7 @@ TMC2209s, all three axes move) and 11-13 (fully built).
 - Printed parts: `cad/plotter-parts.scad` -> `build/stl/*.stl`. Parts reference: `docs/components.md`.
 - Tests: `node --test tests/*.test.mjs` · last run 2026-11-14: 132 passed / 0 failed
 - Calibrate browser check: `node tools/check-calibrate.mjs phone|desktop <outdir> [baseUrl]`
-  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 41 checks, writes screenshots and
+  (Playwright WebKit from `~/.claude/tools`, on `sim.html?v=2`; 42 checks, writes screenshots and
   `<mode>-report.json` to outdir; about 3 minutes, so use the background option). It pretends a platter
   that needs 4.444 and a carriage that needs 40 at factory 250, `$3=0`, old flipped pen heights,
   then walks every step. Next button is `#calTool [data-act=next]` (it sits outside `.calstep`).

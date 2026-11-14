@@ -291,10 +291,18 @@ export function initCalibrate(api) {
     line = { a: from, b: at };
     msg('Type how far the pen moved.');
   }
+  // The New $101 on screen when it is not saved yet and a real plotter could have it; else NaN.
+  function pending101() {
+    const n = turn ? turnSteps(vals[101], Math.abs(turn.at - turn.from), turn.tested) : NaN;
+    return plausible(101, n) && !same(n, vals[101]) ? n : NaN;
+  }
   const SLOWS = {
     turn: { axis: 'Y', label: 'Turn slowly', go: 'Stop when the mark comes back around.',
-      done(at, from) { turn = { from, at }; msg('Nudge until the mark lines up, then Save.'); } },
+      done(at, from) { turn = { from, at }; msg('Nudge until the mark lines up, then Save or Test.'); } },
+    // Test checks the number on screen: one measured but not saved yet is saved first. (Tim,
+    // 2026-11-14: stopped after one circle, pressed Test, and the OLD value turned it twice.)
     turnTest: { axis: 'Y', label: 'Test', go: 'Turning one full circle.', cmd: () => fullTurn(vals[101]),
+      async pre(g) { const n = pending101(); if (Number.isFinite(n)) await store(g, 101, n); },
       ok: () => plausible(101, vals[101]) ? '' : 'Do the turn test first.',
       done() { turn = null; msg('Stopped.'); },
       end(at, from) { turn = { from, at, tested: true }; msg('Mark lined up? Done. If not, nudge to it and Save.'); } },
@@ -314,6 +322,7 @@ export function initCalibrate(api) {
     const mine = () => slow === me && m.getGrbl() === g;
     err(''); msg(d.go); refresh();
     try {
+      await d.pre?.(g);
       const no = d.ok?.();
       if (no) throw new Error(no);
       const reset = await fit(g, d.axis);
@@ -359,7 +368,7 @@ export function initCalibrate(api) {
     $('calXFlip').checked = !!(vals[3] & 1);
     // enabled?
     const need = { save101: same(n101, vals[101]) ? NaN : n101, save100: same(n100, vals[100]) ? NaN : n100,
-      turnBack: raw101, turnMore: raw101, turnTest: plausible(101, vals[101]) ? 1 : NaN,
+      turnBack: raw101, turnMore: raw101, turnTest: plausible(101, vals[101]) || Number.isFinite(pending101()) ? 1 : NaN,
       quarter: plausible(101, vals[101]) ? 1 : NaN, center: mark ? 1 : NaN };
     root.querySelectorAll('[data-act]').forEach(b => {
       const act = b.dataset.act;
@@ -416,14 +425,15 @@ export function initCalibrate(api) {
     return `$${n} was ${was}: reset to ${vals[n]}.`;
   }
   // $100 / $101: what was measured in the old units is rescaled or dropped
-  const save = (n, v, then) => run(async g => {
+  async function store(g, n, v) {
     const old = vals[n];
     await saveSetting(g, n, v, old);
     vals[n] = r3(v);
     if (n === 101) turn = mark = null;
     if (n === 100) { line = null; if (mark) mark.x *= old / vals[n]; $('calRuler').value = ''; }
     await m.check();
-  }, `Saved $${n}=${v.toFixed(3)}. ${then}`);
+  }
+  const save = (n, v, then) => run(g => store(g, n, v), `Saved $${n}=${v.toFixed(3)}. ${then}`);
   // the step size picked in the step on screen
   const segStep = cls => +root.querySelector(`.calstep[data-n="${step}"] .${cls} .on`).dataset.step;
   // a short move, then `then(machine position)` once it has stopped

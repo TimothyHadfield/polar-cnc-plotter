@@ -231,3 +231,9 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   41/41 at 393 px and 1440 px (true gap 0.7 mm found as 0.7; no "draw" or "paper" text anywhere in
   the tool). **Open:** not run on the real plotter; lining a mark up by eye limits the gap to
   about ±0.3 mm (reasoned).
+- **Then (real plotter):** "I calibrated it so that It goes around the circle once and then I
+  stopped it, but then when I tested it, it did 2 full rotations rather than just 1." Cause: Test
+  used the value still in the plotter; the new one was not saved. Fix: Test saves the New `$101`
+  first. Verified: the simulator walk turned 720° before the fix, 360° after (check 36, 42/42 at
+  393 px and 1440 px), 132/132 node tests. Also told Tim calibration is once (stored in GRBL +
+  this browser) except Set center at every connect.

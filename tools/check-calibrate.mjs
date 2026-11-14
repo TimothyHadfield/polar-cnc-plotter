@@ -240,6 +240,31 @@ try {
   await page.waitForTimeout(900);
   ok('34 main panel: the up arrow sends Z+', (await sim('plotterSim.grbl.pos[2]')) > zb, { zb, za: await sim('plotterSim.grbl.pos[2]') });
   ok('35 no warning left', !(await txt('#mMsg')).includes('look wrong'), await txt('#mMsg'));
+
+  // ----- Tim, 2026-11-14: stopped the slow turn after one circle, pressed Test, got 2 full turns.
+  // The plotter holds about double the true value; Test is pressed WITHOUT Save.
+  const held = +(await sim('plotterSim.grbl.settings[101]'));
+  await sim('plotterSim.grbl.true[1] = 2.222');
+  await page.click('#calOpen');
+  await page.waitForTimeout(900);
+  before = await sim('plotterSim.grbl.real()[1]');
+  await click('turn');
+  await page.waitForFunction(b => plotterSim.grbl.real()[1] - b >= 335, before, { timeout: 60000, polling: 20 });
+  await sim('plotterSim.grbl.speed = 0.05');
+  await page.waitForFunction(b => plotterSim.grbl.real()[1] - b >= 359.6, before, { timeout: 90000, polling: 20 });
+  await click('turn');
+  await sim('plotterSim.grbl.speed = 1');
+  await page.waitForSelector(act('save101') + ':not([disabled])');
+  const shown = await txt('#calNew101');
+  before = await sim('plotterSim.grbl.real()[1]');
+  await sim('plotterSim.grbl.speed = 6');
+  await click('turnTest');
+  await page.waitForTimeout(700);
+  await idle('turnTest', 'Test');
+  await sim('plotterSim.grbl.speed = 1');
+  went = await sim('plotterSim.grbl.real()[1]') - before;
+  const kept = +(await sim('plotterSim.grbl.settings[101]'));
+  ok('36 Test right after the slow turn (no Save) checks the NEW value: one circle, not two', held > 4 && shown === '2.222' && Math.abs(went - 360) < 1 && kept === 2.222 && (await txt('#calMsg')) === 'Mark lined up? Done. If not, nudge to it and Save.', { held, shown, went, kept, msg: await txt('#calMsg'), err: await txt('#calErr') });
 } catch (e) { errors.push('SCRIPT: ' + e.message); await shot('error').catch(() => {}); }
 R.errors = errors;
 writeFileSync(`${out}/${mode}-report.json`, JSON.stringify(R, null, 1));
