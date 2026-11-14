@@ -244,9 +244,12 @@ design actively printing right now but that's it").** Base (plate 2) was printin
     `slider_h` 14, body 70 tall + motor 11 (= 81, fits the plate pocket), motor flush with the back.
     `pen_y` is now **3.0** in both scad files (was -11.5 / -11). `carriage_d` 36.0, still NOT
     measured. V1's platter drive follows pen_y (it is a model of a machine that no longer exists).
-  - **Base** (`printed-frame.scad`): cage centre `cage_y = 9` (20 mm behind the first print) and
-    the motor **slides front to back `motor_adj = +-10`** (shaft y -1..19 = 10 to 30 mm behind the
-    first print) in long screw slots; back ribs are now only the end of travel. Why adjustable
+  - **Base** (`printed-frame.scad`): **11-14 (1f8f3bb) `cage_y = 8.5`, `motor_adj = +-15`** (shaft
+    y -6.5..23.5; each pen guess, model 3 / Tim's inch 14, has 9.5 mm one way, 20.5 the other; the
+    front/back screw slots merged into one slot a side). Tim asked whether the guess sat mid-range: it
+    did not (old +-10 at 9 left 4-5 mm). Clash checks re-run clean; NOT sliced (expect ~3 h / 150 g).
+    Tim asked ABS vs PLA: told PLA (250 mm flat ABS warps without an enclosure). Was: cage_y 9,
+    +-10 (shaft y -1..19) in long screw slots; back ribs are now only the end of travel. Why adjustable
     (Claude's call, flagged to Tim): his "about an inch" = 25 mm, the corrected chain = 14 mm, and
     the pen holder for this slider is not final. Roof: 8 mm shaft slot through + 23.5 x 3 boss
     channel underneath (was one 23.5 slot right through), so the roof stays in one piece.
