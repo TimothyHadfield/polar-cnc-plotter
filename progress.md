@@ -15,6 +15,30 @@ run on the real plotter: Turn test + Test, Turn direction, Pen height (is Down r
 Carriage test (ruler under the pen), Find center (a mark + Half turn); then a first real drawing.
 If the platter is slow: the turn test now raises `$111`/`$121` itself (Test = 5 s a circle). The older text below is history.
 
+**PRINT ISSUES (2026-11-14, TALK ONLY: Tim "Don't build or change anything yet, just remember
+them").** NOTHING IS BUILT. Tim's five, with what Claude told him:
+1. Collar ("hub-motor connector"): M3x8 screws don't reach the shaft (10 mm would); the D-flat in
+   the bore alone "is perfect and turns great", "I don't think we need the bolts". Claude: agree,
+   drop screws, nut slot, and the wheel's head channel (the hex taper keys it). BUT the screws were
+   what held the collar's height (set by collar_gauge) -> ties to 3.
+2. Idler fork cheeks (cheek_t 4) bent when tightening the M3x25, "close to breaking". Wants thicker
+   and maybe a "horizontal connection" between them, not touching the bearing. Claude: likely root
+   cause = `idler_w` 8.5 was ASSUMED, never measured; a gap in the stack lets the cheeks fold in.
+   Fix = measure the idler, spacers fill the gap exactly (or one solid printed bushing), cheeks 4->6,
+   bridges above the top belt run and below the bottom run (box around the belt). Needs Tim's idler
+   width (calipers) first.
+3. Nothing stops the platter sinking onto the cage/motor. Tim: fill the collar's hole so it sits
+   at the right height. Claude: make the bore blind; the shaft tip (23.5 above the face) holds it.
+   Shaft tip is flush with the collar top now (collar underside 9 above the face, 14.5 tall), and
+   the socket has 2.1 mm over the collar, so a ~1.2 mm roof fits with no other change. Small reprint.
+4. Round the sharp corners (stands etc.) for safety. Claude: fine, chamfer/round outer edges and
+   gusset tips only, never mating faces (dovetail, rod holes, feet, motor face).
+5. Right stand's motor flange blocks the carriage (stops at 78 mm). Tim suggests moving the motor
+   to the other side. Claude: not needed, the app draws only on the idler side (s >= 0, reaches
+   ~99 mm, needs 90); swapping sides just moves the stop. If wanted, the real fix is motor outboard
+   of the column (longer arms; bed-size check).
+Plan when Tim says go: one batch = collar (1+3) + both stands (2+4); 5 only if he still wants it.
+
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you
 recalibarte something you need to go through something that confirms you want to change the
