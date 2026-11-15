@@ -48,6 +48,9 @@ fork; carriage at -96 touches the front cheek's round tip in the OLD file too (l
 not 99: pre-existing, still >= 90); right side unchanged (78). Wheel NOT changed (its screw channel
 is just unused); the model's wheel is drawn 0.5 low (wheel_z0 ignores cap_drop). Waiting on Tim:
 idler width (spacers), and whether he still wants 5.
+Ring 2 (same evening): with a rubber band added, 3 hooks went on tight, the 4th broke; Tim asked
+for hooks "a tiny tiny bit longer". `band_t` 0.5 (hooks 10.7 -> 11.2). plate5 (+ABS, both now with
+collar 2) sliced 32 min / 18 g. Band thickness NOT measured.
 
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you

@@ -404,8 +404,12 @@ module platter_wheel() {
 paper_t = 0.1;
 cr_in = 92;  cr_out = 104.2;  cr_t = 1.2;
 preload = 0.2;                         // hooks are this much short, so they pull the ring down
+// Ring 2 (11-14, Tim: "fits perfectly when it's just a piece of paper, but when i added the rubber
+// band ... 3 sides ... very tightly, but the 4th side was too tight and the clamp broke ... the
+// clamps need to be just a tiny tiny bit longer"): hooks band_t longer.
+band_t = 0.5;
 module clamp_ring() {
-  hook_top = -(disc_t + (platter == "disc" ? 0 : pad_t) + paper_t + (bead_z - w_h) * -1) + preload;   // catch's top face, below the ring
+  hook_top = -(disc_t + (platter == "disc" ? 0 : pad_t) + paper_t + (bead_z - w_h) * -1) + preload - band_t;   // catch's top face, below the ring
   difference() { cylinder(r = cr_out, h = cr_t, $fn = 240); translate([0, 0, -1]) cylinder(r = cr_in, h = cr_t + 2, $fn = 240); }
   for (a = hook_ang) rotate(a - 8) rotate_extrude(angle = 16, $fn = 240)
     polygon([[cr_out, 0.01], [cr_out, hook_top - 1.6], [bead_out - 0.1, hook_top - 1.6],
