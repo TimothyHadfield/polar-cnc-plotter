@@ -36,6 +36,7 @@ const MACHINES = {
   },
 };
 const P = (x, y, z) => new THREE.Vector3(x, z, -y);   // cad mm -> three.js (Y up)
+const SWITCH_X = -74;         // machine X of the homing switch (js/home.js), mm from the platter centre
 const base = n => n.split('__')[0];
 
 const view = createView($('view'), $('stage'));
@@ -202,7 +203,8 @@ window.plotterSim = {
   connect() {
     link?.close();
     offset = phys.slice();
-    link = new SimGrbl({ speed });
+    // the homing switch sits 74 mm on the X- side of the platter centre (real mm, whatever $100 says)
+    link = new SimGrbl({ speed, switchX: SWITCH_X - offset[0] });
     window.plotterSim.grbl = link;   // for headless checks
     return link;
   },

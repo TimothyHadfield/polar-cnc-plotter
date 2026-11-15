@@ -1,10 +1,16 @@
 // A pretend GRBL 1.1 on the other end of the "USB cable", for tests and for ?demo.
 // Same transport shape as openSerial(): write(text), onLine, close().
 // It keeps a real 128-byte receive buffer and records if a sender ever overflows it.
+//
+// Homing switch: with `switchX` (a carriage position, mm as the plotter was built) the X limit
+// switch is pressed whenever the carriage is at or beyond it on the X- side, and status reports
+// then carry `Pn:X` like GRBL 1.1. So that a jog can be caught at the switch, X jogs then take real
+// time (distance / F, `jogSpeed` times faster) and a jog cancel (0x85) stops them where they are.
 
 export class FakeGrbl {
-  constructor({ lineMs = 1, moveTicks = 0, rx = 128, failIf = null, bootMs = 30 } = {}) {
+  constructor({ lineMs = 1, moveTicks = 0, rx = 128, failIf = null, bootMs = 30, switchX = null, jogSpeed = 1 } = {}) {
     this.lineMs = lineMs; this.moveTicks = moveTicks; this.rx = rx; this.failIf = failIf;
+    this.switchX = switchX; this.jogSpeed = jogSpeed;
     this.onLine = null;
     this.buf = '';            // bytes received, not yet executed
     this.overflow = false;
@@ -15,8 +21,10 @@ export class FakeGrbl {
     this.wco = [0, 0, 0];     // G92 offset
     this.abs = true;
     this.moving = 0;          // ms of motion left
+    this.timed = null;        // a jog under way in real time: { from, to, t0, ms }
     this.alive = true;
     this.settings = { 100: '47.620', 101: '17.132', 102: '100.000' };   // `$n=` values, echoed by `$$`
+    this.true0 = +this.settings[100];   // the carriage's real steps per mm (see physX)
     setTimeout(() => this.emit("Grbl 1.1h ['$' for help]"), bootMs);  // opening the port resets the Uno
     this.timer = setInterval(() => this.tick(), lineMs);
   }
@@ -28,13 +36,16 @@ export class FakeGrbl {
   write(s) {
     for (const ch of s) {
       if (ch === '?') this.report();
-      else if (ch === '!') { if (this.state === 'Run' || (this.state === 'Idle' && this.buf)) { this.hold = true; this.state = 'Hold:0'; } }
+      else if (ch === '!') {
+        if (this.timed) this.endJog();   // a feed hold ends a jog
+        else if (this.state === 'Run' || (this.state === 'Idle' && this.buf)) { this.hold = true; this.state = 'Hold:0'; }
+      }
       else if (ch === '~') {
         if (this.hold) { this.hold = false; this.state = this.buf || this.moving ? 'Run' : 'Idle'; }
         if (this.m0) { this.m0 = false; this.emit('ok'); }   // like GRBL: M0's ok comes after cycle start
       }
       else if (ch === '\x18') this.softReset();
-      else if (ch === '\x85') { this.moving = 0; }
+      else if (ch === '\x85') { this.moving = 0; this.endJog(); }
       else {
         this.buf += ch;
         if (this.buf.length > this.rx) this.overflow = true;
@@ -44,15 +55,37 @@ export class FakeGrbl {
     return Promise.resolve();
   }
 
+  // where the carriage really is (mm): GRBL counts steps, so a new $100 changes what pos[0] reads
+  physX() { return this.pos[0] * +this.settings[100] / this.true0; }
+  pins() { return this.switchX !== null && this.physX() <= this.switchX + 1e-9 ? 'X' : ''; }
+
   report() {
+    this.stepJog();
     const f = a => a.map(v => v.toFixed(3)).join(',');
-    this.emit(`<${this.state}|MPos:${f(this.pos)}|FS:0,0|WCO:${f(this.wco)}>`);
+    const pn = this.pins();
+    this.emit(`<${this.state}|MPos:${f(this.pos)}|FS:0,0${pn ? `|Pn:${pn}` : ''}|WCO:${f(this.wco)}>`);
+  }
+
+  // a real-time jog: move along it to now; done at its end
+  stepJog() {
+    const j = this.timed;
+    if (!j) return;
+    const k = Math.min(1, (Date.now() - j.t0) * this.jogSpeed / j.ms);
+    this.pos = j.from.map((v, i) => v + (j.to[i] - v) * k);
+    if (k >= 1) { this.timed = null; if (this.state === 'Jog') this.state = 'Idle'; }
+  }
+  endJog() {
+    if (!this.timed) return;
+    this.stepJog();
+    this.timed = null;
+    if (this.state === 'Jog') this.state = 'Idle';
   }
 
   softReset() {
-    const lost = this.state === 'Run' && !this.hold;
+    this.stepJog();
+    const lost = (this.state === 'Run' && !this.hold) || !!this.timed;
     this.m0 = false;
-    this.buf = ''; this.moving = 0; this.hold = false; this.abs = true;
+    this.buf = ''; this.moving = 0; this.hold = false; this.abs = true; this.timed = null;
     this.wco = [0, 0, 0];     // worst case: G92 does not survive a reset
     this.state = lost ? 'Alarm' : 'Idle';
     setTimeout(() => {
@@ -65,8 +98,9 @@ export class FakeGrbl {
   // would be far too slow); a move with moveTicks > 0 makes it wait before the next line.
   tick() {
     if (this.moving > 0 && !this.hold) this.moving -= this.lineMs;
+    this.stepJog();
     for (;;) {
-      if (this.hold || this.moving > 0) return;
+      if (this.hold || this.moving > 0 || this.timed) return;
       const i = this.buf.indexOf('\n');
       if (i < 0) { if (this.state === 'Run') this.state = 'Idle'; return; }
       const line = this.buf.slice(0, i).trim();
@@ -95,7 +129,7 @@ export class FakeGrbl {
     if (/^M0+(?!\d)/i.test(line)) { this.hold = true; this.m0 = true; this.state = 'Hold:0'; return null; }
     const jog = line.startsWith('$J=');
     const words = (jog ? line.slice(3) : line).toUpperCase().match(/[A-Z][-+.\d]*/g) || [];
-    let rel = !this.abs, g92 = false;
+    let rel = !this.abs, g92 = false, feed = 0;
     const target = {};
     for (const w of words) {
       const k = w[0], v = parseFloat(w.slice(1));
@@ -103,7 +137,17 @@ export class FakeGrbl {
       if (k === 'G' && v === 90) { if (jog) rel = false; else { this.abs = true; rel = false; } }
       if (k === 'G' && v === 91) { if (jog) rel = true; else { this.abs = false; rel = true; } }
       if (k === 'G' && v === 92) g92 = true;
+      if (k === 'F') feed = v;
       if ('XYZ'.includes(k)) target['XYZ'.indexOf(k)] = v;
+    }
+    // with a switch to find, X jogs take real time so that a jog cancel can catch them
+    // (only X reaches the switch; platter and pen jogs stay instant as before)
+    if (jog && this.switchX !== null && feed > 0 && 0 in target) {
+      const to = this.pos.slice();
+      for (const [a, v] of Object.entries(target)) to[a] = rel ? this.pos[a] + v : v + this.wco[a];
+      const len = Math.hypot(...to.map((v, i) => v - this.pos[i]));
+      if (len > 0) { this.timed = { from: this.pos.slice(), to, t0: Date.now(), ms: len / feed * 60000 }; this.state = 'Jog'; }
+      return 'ok';
     }
     for (const [a, v] of Object.entries(target)) {
       if (g92) this.wco[a] = this.pos[a] - v;

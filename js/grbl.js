@@ -21,15 +21,17 @@ export const errorText = n => `error ${n}: ${ERRORS[n] || 'see GRBL error codes'
 export const alarmText = n => `alarm ${n}: ${ALARMS[n] || 'see GRBL alarm codes'}`;
 
 // "<Run|MPos:1.000,2.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>" -> fields. WCO only comes now and then.
+// `pins`: the input pins GRBL reads as on ("Pn:X" = the X limit switch is pressed), '' for none.
 export function parseStatus(line, lastWco = [0, 0, 0]) {
   const parts = line.slice(1, -1).split('|');
-  const out = { state: parts[0], wco: lastWco };
+  const out = { state: parts[0], wco: lastWco, pins: '' };
   const nums = s => s.split(',').map(Number);
   for (const p of parts.slice(1)) {
     const [k, v] = p.split(':');
     if (k === 'MPos') out.mpos = nums(v);
     else if (k === 'WPos') out.wpos = nums(v);
     else if (k === 'WCO') out.wco = nums(v);
+    else if (k === 'Pn') out.pins = v || '';
   }
   if (out.mpos && !out.wpos) out.wpos = out.mpos.map((m, i) => m - out.wco[i]);
   if (out.wpos && !out.mpos) out.mpos = out.wpos.map((w, i) => w + out.wco[i]);
