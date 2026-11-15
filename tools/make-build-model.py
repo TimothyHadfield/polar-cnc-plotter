@@ -99,7 +99,8 @@ def to_glb(stls, mats, out):
 
 
 # ---------- V2: prototype 2, the printed frame (cad/printed-frame.scad) ----------
-FRAME = os.path.join(ROOT, "cad", "printed-frame.scad")
+# V2 is FROZEN (Tim 11-15: "keep all the content our V2 has with V2"): read the snapshot, not the live file
+FRAME = os.path.join(ROOT, "cad", "printed-frame-v2.scad")
 PRINT_FRAME = ("#e07a35", 0.0, 0.5)     # frame prints in the CAD renders' colours (filament not chosen yet)
 PRINT_WHEEL = ("#2f8fb3", 0.0, 0.5)
 _SAME = ["rods", "blocks", "carriage_plate", "stage__frame", "stage__screw", "stage__rails", "stage__motor",

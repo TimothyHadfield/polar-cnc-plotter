@@ -5,8 +5,8 @@ import { PARTS as V1 } from './build-steps.js';
 
 const amazon = asin => `https://www.amazon.com/dp/${asin}`;
 const amazonSearch = q => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`;
-const stl = name => `build/stl/${name}.stl`;
-const SOURCE = 'https://github.com/TimothyHadfield/polar-cnc-plotter/blob/main/cad/printed-frame.scad';
+const stl = name => `build/v2/stl/${name}.stl`;   // V2 frozen 11-15 (V3 has the live files)
+const SOURCE = 'https://github.com/TimothyHadfield/polar-cnc-plotter/blob/main/cad/printed-frame-v2.scad';
 
 // every part once; steps refer to them by key
 export const PARTS = {

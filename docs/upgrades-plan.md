@@ -23,8 +23,14 @@ think about what orientation the X carraige motor is facing") -> BUILT as stands
 | - | Whiteboard loop | needs a bought whiteboard sheet/film ($): NOT built, Tim's call | - |
 | - | Showcase page | needs Tim's photos / time-lapse: NOT built | - |
 
-Integration after the wave (manager): GLB (`tools/make-build-model.py v2`), build guide steps, plates
-+ slicing, progress.md / Monday list.
+Integration after the wave (manager): plates + slicing, progress.md / Monday list, and a **V3 tab in
+the build guide**. Tim (11-15): "make a V3 on the cite that has the designs of everything our
+current plotter has. Make sure to keep all the content our V2 has with V2, and only add to the cite
+with V3. This feels good because we're changing almost every single component from V2."
+So: V2 is FROZEN as of 92ce783's parent state before stands 3 (snapshot the scad as
+`cad/printed-frame-v2.scad`, V2 STL/3MF links point at frozen copies under `build/v2/`, the V2 GLB
+is no longer rebuilt from the live file); V3 = `build/plotter-v3.glb` + `js/build-steps-v3.js` +
+a V3 tab, built from the live printed-frame.scad + cable-chain/carriage-2/extras.
 
 ## Shared world frame
 `cad/printed-frame.scad` assembly: base top z = 0, platter centre x = 0, +y toward the back. Rods at
