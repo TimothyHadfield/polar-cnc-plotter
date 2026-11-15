@@ -21,6 +21,7 @@
   <section class="stage" id="stage">
     <canvas id="view" aria-label="3D model of this step"></canvas>
     <div class="loading" id="loading">Loading model…</div>
+    <button class="btn sm replay" id="replay" type="button" style="visibility:hidden">Replay</button>
     <div class="card" id="card" hidden>
       <button class="icon" id="cardClose" type="button" aria-label="Close">×</button>
       <b id="cardName"></b>
@@ -35,7 +36,7 @@
       <a class="link" href="./">Plotter app</a>
     </header>
     <div class="vers">
-      <span class="seg" id="ver" role="tablist" aria-label="Version"><button type="button" data-v="1" class="on">V1</button><button type="button" data-v="2">V2</button></span>
+      <span class="seg" id="ver" role="tablist" aria-label="Version"><button type="button" data-v="1" class="on">V1</button><button type="button" data-v="2">V2</button></span><!-- buttons come from VERSIONS in js/build.js -->
       <a class="btn sm" id="simLink" href="sim.html?v=1">Simulate</a>
     </div>
     <nav class="steps" id="steps" aria-label="Steps"></nav>

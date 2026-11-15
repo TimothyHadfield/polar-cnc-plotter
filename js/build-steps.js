@@ -1,6 +1,15 @@
 // Build guide content: the steps, what each shows in 3D, and where to get every part.
 // `model` names are nodes in build/plotter.glb (cad/plotter-assembly.scad `show(...)` names;
 // a multi-colour part's pieces are "<name>__<piece>"). `about` is the card shown when a part is tapped.
+//
+// A step: { title, show: [node names] | 'all', view: [azimuth, elevation],
+//   do: [the instructions, in order], check: 'how to know the step is right',
+//   parts: [PARTS keys], use: { key: how many this step uses, when not the part's full qty },
+//   tools: ['…'], tips: ['…' (from the real build)], links: [[label, href]],
+//   fly: { node: direction | [direction, turns] } — the parts this step puts on, in order; each flies in
+//        from that side (up, down, front, back, left, right; left = idler side) and screws turn as they go in.
+//        'a,b': direction moves several nodes together. No `fly`: parts new to the guide drop in from above. }
+// A part may also carry `print: 'time · grams'` and `plate: [label, 3MF link]`.
 
 const amazon = asin => `https://www.amazon.com/dp/${asin}`;
 const amazonSearch = q => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`;
@@ -85,6 +94,9 @@ export const PARTS = {
   glue:      { name: 'Super glue', qty: 1, buy: ['Home Depot', homeDepot('super glue')] },
 };
 
+export const TOOLS = ['Drill + bits', 'Saw (board, square hole)', 'Pipe cutter', '3D printer', 'Screwdrivers',
+  'Hex keys', 'Small flat screwdriver', 'Multimeter', 'Flush cutters', 'Ruler', 'Sandpaper'];
+
 export const STEPS = [
   {
     title: 'Overview', show: 'all',
@@ -92,82 +104,146 @@ export const STEPS = [
       'A pen slides along the rail (radius) while the platter turns (angle).',
       'Tools: drill, saw, pipe cutter, 3D printer, multimeter.',
       'Based on Polar CNC Plotter V2, with fixes from building it.',
+      'Order: base, stands, rail, pen lift, belt, platter, drive, electronics, firmware.',
+      'Each step: parts fly into place in 3D. Tap a part for what it does; Replay plays it again.',
     ],
     parts: Object.keys(PARTS),
+    tools: TOOLS,
+    tips: [
+      'Print every part first (green PLA here): the rod supports, pulleys, plates, clip and knob.',
+      'Power off means 12 V AND USB unplugged. USB alone powers the drivers\' logic.',
+    ],
     links: [['Original guide', GUIDE], ['Build video', 'https://www.youtube.com/watch?v=GmB76t6MUKI'],
             ['Printed parts source (OpenSCAD)', 'https://github.com/TimothyHadfield/polar-cnc-plotter/tree/main/cad']],
   },
   {
     title: 'Base', show: ['board', 'bars', 'screw_holders'],
+    fly: { board: 'up', bars: 'down', screw_holders: 'up' },
     do: [
       'Cut the board 40 × 13 cm.',
       'Screw the two steel tubes underneath, the long way, as feet.',
       'Screw a PVC holder at each end, 300 mm apart, near the back edge.',
       'Cut a 46 mm square hole for the platter motor (see the Platter drive step).',
+      'Mark the hole after the rail is up: its centre goes under the pen\'s line, 68 mm from the spindle.',
+      'Use screws shorter than board + tube, so nothing pokes through.',
     ],
+    check: 'Holders 300 mm apart centre to centre, the board sits flat, nothing sticks out underneath.',
     parts: ['board', 'bars', 'holders', 'screws'],
+    tools: ['Saw', 'Drill + bits', 'Screwdriver', 'Ruler'],
+    tips: [
+      'The tubes are feet: they lift the bolt heads off the table and leave room for the sunk motor.',
+      'Measure the 300 mm twice. It sets where both rod ends land.',
+    ],
   },
   {
     title: 'Stands', show: ['stands', 'spools'],
+    fly: { stands: 'up', spools: 'up' },
     do: [
       'Each stand, bottom to top: coupling, pipe, tee, 30 mm pipe, elbow.',
       'Tee and elbow openings face inward, straight in line.',
       'Glue a rod support into each opening (no tape needed).',
       'Push the stands onto the base holders.',
+      'Dry-fit first: push a rod through both stands before the glue sets, to line the openings up.',
     ],
+    check: 'Sight along the openings: the tee and elbow of the two stands line up, one rod above the other.',
     parts: ['pvc', 'spools', 'glue'],
+    tools: ['Pipe cutter', 'Ruler'],
+    tips: [
+      'Double-sided tape round the rod supports failed on the first build (wrong thickness, stuck too early). Glue them.',
+      'The supports\' bore is 8.2 mm: 8.0 was just too small for the rods.',
+    ],
   },
   {
     title: 'Rail and carriage', show: ['rods', 'blocks', 'carriage_plate'],
+    fly: { rods: 'left', blocks: 'up', carriage_plate: 'front' },
     do: [
       'Slide two bearing blocks onto each rod.',
       'Bolt the four blocks to the back of the carriage plate.',
       'Push the rods into the rod supports, one above the other.',
       'The carriage should slide end to end without catching.',
+      'Slide the blocks on straight; don\'t tilt them or balls can fall out.',
+      'Tighten the block bolts only once both rods are in, so the blocks line up with the rods.',
     ],
+    check: 'Push the carriage end to end with one finger: smooth, no tight spots, no rattle.',
     parts: ['rods', 'blocks', 'carriage', 'screws'],
+    tools: ['Hex key or screwdriver for the block bolts'],
+    tips: ['A tight spot at one end means the stands lean: loosen, square them, glue again.'],
   },
   {
     title: 'Pen lift', show: ['stage', 'slider', 'pen_clip', 'knob', 'pen'],
+    fly: { stage: 'front', slider: 'front', pen_clip: 'front', knob: ['front', 3], pen: 'up' },
     do: [
       'Screw the linear stage to the front of the carriage plate, motor on top.',
+      'It sits in the plate\'s 1.5 mm pocket, so it goes on straight.',
       'Fix the pen clip to the stage slider.',
       'Pen in the clip, knob tightens it. Tip just touches paper at the bottom.',
+      'Knob: finger tight only. Cracking the clip is easy.',
     ],
+    check: 'Turn the stage\'s screw by hand: the pen goes up and down straight, the tip clears the paper at the top.',
     parts: ['stage', 'clip', 'knob', 'pen'],
+    tools: ['Small screwdriver'],
+    tips: ['Set the exact pen height later with Calibrate\'s Pen height step.'],
   },
   {
     title: 'Carriage belt', show: ['x_motor_plate', 'x_motor', 'x_pulley', 'idler_bracket', 'idler_pulley', 'idler_axle', 'x_belt', 'carriage_plate'],
     view: [-20, 15],
+    fly: { x_motor_plate: 'front', x_motor: 'front', x_pulley: 'front', idler_bracket: 'left', idler_pulley: 'up', idler_axle: ['front', 2], x_belt: 'up' },
     do: [
       'Bolt a NEMA 17 to the X motor plate; the round recess takes its collar.',
       'Screw the plate to the front of the right stand. Pulley behind it, in line with the rods.',
       'Idler pulley in its bracket on the left stand, same height.',
       'Belt around both pulleys, ends on the carriage pegs, pulled tight with zip ties.',
+      'Pulley: tighten its set screw onto the flat of the motor shaft.',
+      'Belt teeth face the pulleys. Cut it about 60 cm, then trim after tying.',
+      'Tight means it twangs when plucked, not so tight the carriage drags.',
     ],
+    check: 'Turn the motor shaft by hand: the carriage moves with no slip, and the belt runs level between the rods.',
     parts: ['nema', 'xplate', 'pulley16', 'bracket', 'idler', 'belt', 'ties', 'screws'],
+    use: { nema: 1 },
+    tools: ['Drill (pilot holes into the PVC)', 'Hex keys', 'Flush cutters'],
+    tips: [
+      'Keep the belt in the plane of the rods. Off the centre line it bows and drags near the idler.',
+      'The nail idler was loud and stiff. V2 uses a bought bearing idler.',
+    ],
   },
   {
     title: 'Platter', show: ['platter', 'steel_strip', 'cd', 'paper'], view: [20, -35],
+    fly: { platter: 'up', steel_strip: 'down', cd: 'down', paper: 'up' },
     do: [
       'Glue the steel strip across the centre of the disc, underneath.',
       'Glue the CD over it, exactly centred: its hole centres the platter.',
       'The spindle magnet holds the strip, so the platter lifts off.',
+      'Centre the CD by eye with a drawn circle, or by measuring to the rim at 4 points.',
     ],
+    check: 'Spin it on the spindle: the rim stays at the same height and doesn\'t wobble sideways.',
     parts: ['disc', 'strip', 'cd', 'paper', 'glue'],
+    tools: ['Ruler'],
+    tips: ['An off-centre CD makes every circle an egg. The app\'s Center gap can\'t fix that.'],
   },
   {
     title: 'Platter drive', show: ['rotary_plate', 'spacers', 'y_motor', 'y_pulley', 'spindle', 'big_pulley', 'y_belt'],
+    fly: { rotary_plate: 'up', spacers: 'down', y_motor: 'down', spindle: 'up', y_pulley: 'up', big_pulley: 'up', y_belt: 'up' },
     do: [
       'Spindle on top of the rotary plate, NEMA 17 underneath, 68 mm apart.',
       'Small pulley on the motor, big pulley glued on the spindle, closed belt around both.',
       'Plate on four spacers; motor through the hole in the base.',
       'The pen line must pass over the spindle centre. Any miss: app setting "Center gap".',
+      'Motor screws: 1 mm longer than before, for the plate\'s 1 mm pad.',
     ],
+    check: 'Turn the platter by hand: the belt stays on both pulleys and nothing rubs.',
     parts: ['rplate', 'spacers', 'spindle', 'nema', 'pulley20', 'pulley60', 'loop', 'screws'],
+    use: { nema: 1 },
+    tools: ['Saw (the square hole)', 'Screwdriver'],
+    tips: [
+      'The 60T pulley from the original guide isn\'t true GT2 and can slip. big_pulley_gt2.stl is.',
+      'The 220 mm closed belt sets the 68 mm between the shafts.',
+      'Tim\'s pen line missed the spindle by a few mm. Find center measures it.',
+    ],
+    links: [['True GT2 60T pulley (STL)', stl('big_pulley_gt2')]],
   },
   {
     title: 'Electronics', show: ['electronics', 'power_jack', 'wires'],
+    fly: { electronics: 'up', power_jack: 'right', wires: 'up' },
     do: [
       'Shield on the Uno. Jumpers MS1 + MS2 under X, Y and Z (1/16 steps).',
       'Drivers: EN pin to the shield\'s EN mark. Backwards burns them.',
@@ -175,19 +251,36 @@ export const STEPS = [
       'Carriage motor to X, platter to Y, pen stage to Z. 12 V to the screw terminal.',
       'Driver knob voltage: X and Y about 1.0 V, Z about 0.3 V.',
       'Never plug or unplug a motor with power on.',
+      'Vref: meter between the knob\'s metal and GND, 12 V on. Turn in small steps.',
     ],
+    check: 'Power on: no smell, no hot driver after a minute. Each motor holds stiff when GRBL enables it.',
     parts: ['uno', 'shield', 'drivers', 'wires', 'jack', 'supply', 'cable', 'wrap'],
+    tools: ['Multimeter', 'Small flat screwdriver', 'Flush cutters'],
+    tips: [
+      'A driver one pin row off died on the first build. Check every pin before power.',
+      'A screaming or jiggling motor was a half-seated plug three times. Power off, reseat it.',
+      'The 12 V 0.5 A supply was too weak. Use 2 A or more.',
+      'A4988 drivers ran loud and one ran hot. TMC2209s are quieter.',
+    ],
     links: [['TMC2209 pinout', 'https://learn.watterott.com/silentstepstick/pinconfig/tmc2209/']],
   },
   {
     title: 'Firmware', show: ['electronics'],
+    fly: {},
     do: [
       'Install the Arduino IDE (and the CH340 driver for clone boards).',
       'Flash GRBL 1.1 to the Uno.',
       'In the plotter app, connect and run Calibrate.',
       'Starting values: $100=100 (carriage), $101=26.667 (platter, degrees).',
+      'Flash with the shield on but 12 V off.',
     ],
+    check: 'The app connects and shows GRBL 1.1 in its log.',
     parts: ['uno', 'cable'],
+    tools: ['Computer with Chrome or Edge'],
+    tips: [
+      'An Uno R4 can\'t run GRBL. It needs the R3\'s ATmega328P.',
+      'The original guide\'s $100=47.62 and $101=17.13 are for other motors. Left in, they scramble every drawing.',
+    ],
     links: [['Arduino IDE', 'https://www.arduino.cc/en/software'], ['GRBL', 'https://github.com/gnea/grbl'],
             ['Flashing GRBL', 'https://github.com/gnea/grbl/wiki/Flashing-Grbl-to-an-Arduino'],
             ['CH340 driver', 'https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all'],
@@ -198,7 +291,9 @@ export const STEPS = [
     do: [
       'Open the plotter app in Chrome or Edge on a computer.',
       'Load a picture, connect, put the pen on the platter centre, Set center, Plot.',
+      'First time: Calibrate does Turn test, Turn direction, Pen height, Carriage test and Find center.',
     ],
+    check: 'A circle closes and a spoke is straight (tests/machine 1-circle and 2-spoke).',
     parts: [],
     links: [['Open the plotter app', './']],
   },
