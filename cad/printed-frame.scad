@@ -339,24 +339,34 @@ module collar_shape(z0, z1) hull() for (z = [z0, z1]) translate([0, 0, z]) rotat
 // Collar 2 (11-14, Tim: the M3x8 screws "aren't reaching", the D-flat alone "is perfect and turns
 // great", "I don't think we need the bolts"; and nothing stopped the platter sinking onto the cage:
 // "filled in the hole ... slightly above the motor holder"). No screws, no nut slot: the bore is
-// blind, and the shaft's TIP holds the collar up. The roof's underside is cap_drop below the old
-// collar top, so with the 23.5 shaft (product page, not measured) the wheel sits
-// wheel_gap + cap_drop = 2.5 above the cage; a shaft as short as 21.5 still clears it by 0.5.
-// The roof pokes cap_t - cap_drop = 0.8 over the old top, under the socket ceiling (2.1 of room).
-// The wheel's screw-head channel is now unused (left in: no wheel reprint). collar_gauge unused.
-cap_drop = 0.5;  cap_t = 1.3;
-col_top  = col_z1 - cap_drop + cap_t;   // 16.3, the socket ceiling is 17.6
+// blind, and the shaft's TIP holds the collar up (collar 2 had the wheel 2.5 over the cage).
+// collar_gauge unused. Superseded the same evening by collar 3:
+// Collar 3 (11-14, Tim: make the collar fill the socket exactly, and "make an extension of the
+// collar ... perfectly vertical instead of sloped ... quite short", so it is easy to pull out and
+// the platter sits farther from the motor): the taper now starts right at the socket's mouth
+// (wheel z 0, was 1 mm inside), and below it a straight hex grip_h tall sticks out under the wheel.
+// The roof sits roof_z up the collar, so the wheel is wheel_gap + raise = 4.5 above the cage with
+// the 23.5 shaft (product page, NOT measured) and the grip clears the cage by 1.5 (a shaft
+// 1.5 mm shorter would just touch).
+// Works in the old wheel too (same socket). Model note: wheel_z0 is NOT raised (it would move the
+// rods); the pen is set higher in its holder instead.
+grip_h = 3;  raise = 2.5;  cap_t = 3.3;
+roof_z  = col_z1 - raise;               // 13.0: the shaft tip's place (was 15.0 with collar 2)
+col_top = roof_z + cap_t;               // 16.3, the socket ceiling is 17.6
 module shaft_collar() difference() {     // built in wheel coordinates
-  hull() {
-    collar_shape(col_z0 + 0.6, col_top);
-    translate([0, 0, col_z0]) rotate(30) cylinder(d = (col_af(col_z0) - 1) * 2 / sqrt(3), h = 0.01, $fn = 6);
+  union() {
+    collar_shape(0, col_top);
+    hull() {
+      translate([0, 0, -grip_h + 0.6]) rotate(30) cylinder(d = col_af(0) * 2 / sqrt(3), h = grip_h - 0.6, $fn = 6);
+      translate([0, 0, -grip_h]) rotate(30) cylinder(d = (col_af(0) - 1) * 2 / sqrt(3), h = 0.01, $fn = 6);   // bed chamfer
+    }
   }
   fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
-  translate([0, 0, col_z0 - 1]) intersection() {
-    cylinder(d = shaft_d + bore_fit, h = col_z1 - cap_drop - col_z0 + 1);
-    translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, col_z1 - col_z0 + 2]);
+  translate([0, 0, -grip_h - 1]) intersection() {
+    cylinder(d = shaft_d + bore_fit, h = roof_z + grip_h + 1);
+    translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, roof_z + grip_h + 2]);
   }
-  translate([0, 0, col_z0 - 0.01]) cylinder(d1 = shaft_d + bore_fit + 1, d2 = shaft_d + bore_fit, h = 0.5);   // lead-in
+  translate([0, 0, -grip_h - 0.01]) cylinder(d1 = shaft_d + bore_fit + 1, d2 = shaft_d + bore_fit, h = 0.5);   // lead-in
 }
 // Tim 11-11: the disc was only held by friction. Default now: the platter face is PART OF THE
 // WHEEL (a solid top skin, printed face-down on the bed so it comes out flat). Paper is pinched
@@ -392,7 +402,8 @@ module platter_wheel() {
     // tightened in the open, then the wheel is pressed down onto it: the hex turns it, the taper
     // wedges tight, so there is no play and no tilt. Pull up to take the wheel off.
     translate([0, 0, -0.01]) collar_shape(0, sock_top + 0.01);
-    translate([0, -chan_w / 2, -0.01]) cube([chan_x, chan_w, chan_z + 0.01]);   // screw-head channel
+    // (Wheel 2, 11-14: the screw-head channel is gone. It took away most of one of the six faces
+    // the collar wedges on, so the collar only bore on five; Tim saw it rock.)
     // room for a shaft tip up to 0.8 above the socket ceiling (0.6 of skin stays, printed on the bed)
     if (platter != "disc") translate([0, 0, sock_top - 0.01]) cylinder(d = shaft_d + 0.8, h = w_h + disc_t - 0.6 - sock_top + 0.01);
   }
@@ -528,7 +539,7 @@ if (part == "print_wheel")       print_wheel();
 if (part == "key")               key_demo();
 if (part == "fit_test")          fit_test();
 if (part == "collar")            shaft_collar();
-if (part == "print_collar")      translate([0, 0, -col_z0]) shaft_collar();
+if (part == "print_collar")      translate([0, 0, grip_h]) shaft_collar();
 if (part == "idler_spacers")     for (x = [0, 8]) translate([x, 0, 0]) idler_spacer();
 if (part == "collar_gauge")      collar_gauge();
 if (part == "motor_washers")     motor_washers();

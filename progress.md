@@ -51,6 +51,15 @@ idler width (spacers), and whether he still wants 5.
 Ring 2 (same evening): with a rubber band added, 3 hooks went on tight, the 4th broke; Tim asked
 for hooks "a tiny tiny bit longer". `band_t` 0.5 (hooks 10.7 -> 11.2). plate5 (+ABS, both now with
 collar 2) sliced 32 min / 18 g. Band thickness NOT measured.
+Collar 3 + wheel 2 (same evening, Tim: socket "isn't sloped inwards, like the collar" so the collar
+touches a small area and wobbles; make the indent the collar's exact size; add a short vertical
+extension). MEASURED from plate4_wheel.3mf: the socket WAS tapered (5°/side, 1.3 mm a side, hard to
+see); the real loss was the screw-head channel, which cut away most of one of the six faces. Built:
+wheel 2 = no channel (plate4, 2 h 53 / 133 g); collar 3 = taper from the socket mouth (was 1 mm
+inside) + 3 mm straight hex grip under the wheel, roof lower so the wheel is 4.5 over the cage
+(grip 1.5 over; carriage clash re-run with the platter +2.5: clear). plate7_collar_3 (9 min / 2.8 g,
+collar_2 file removed); plate5 + ABS carry collar 3. Collar 3 fits the old wheel too. Pen must
+sit ~2 mm higher in its holder; redo Pen height.
 
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you
