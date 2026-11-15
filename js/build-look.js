@@ -134,7 +134,8 @@ export function dress(mesh) {
   else if (/__label$/.test(name)) { decalUV(mesh.geometry, name.startsWith('y_')); m.map = tex.label; m.color.set(0xffffff); }
   else if (name === 'paper__sheet') { decalUV(mesh.geometry); m.map = tex.drawing; m.color.set(0xffffff); }
   else if ((m.color.g > 0.3 && m.color.r < 0.1 && m.color.b < 0.1)   // printed PLA green
-    || /^(frame_base|stand_right|stand_left|wheel|collar|clamp_ring|idler_spacers)$/.test(name)) {   // V2's printed frame
+    || /^(frame_base|stand_right|stand_left|wheel|collar|clamp_ring|idler_spacers)$/.test(name)   // V2's printed frame
+    || /^(carriage2_plate|carriage2_frame|pen_head|pen_collet|pen_sleeve|tray_left|tray_right|chain_links|chain_fixed|chain_moving|switch_mount|board_cover)$/.test(name)) {   // V3's new prints
     boxUV(mesh.geometry, 6); m.bumpMap = tex.layers; m.bumpScale = 0.4;
   }
   if (name === 'stands') return physical(m, { clearcoat: 0.5, clearcoatRoughness: 0.35 });
@@ -224,6 +225,34 @@ export function extrasV2() {
     [176, 70, 170], [181, 62, 90], [181, 50, 12], [152, 77, 8], [100, 67, 10], [66, 52, 40], [57.2, 44, 38], [57.2, 42.2, 32.8]],
     [0x6b4226, 0xd0302a, 0xf08a24, 0xf2c418], 0.45));
   // 12 V from behind the base into the shield's screw terminal (its wire openings face the back)
+  wires.add(ribbon('wires__power', [[51, 105, 2.5], [51, 90, 3], [51, 81, 12], [51, 76.5, 19.6]], [0xd0302a, 0x1b1c1f], 0.7));
+  return [wires];
+}
+
+// V3 (docs/upgrades-plan.md I3/I4): X motor plug DOWN, its cable straight down to the front foot
+// channel; the pen-lift (Z) leads ride inside the cable chain (not drawn there), leave the tray's
+// gutter at x 156, y 69.5, run down the right column's back-face clips and the back foot channel;
+// the homing switch's two leads join them. Carriage drawn at c = -40 (tools/make-build-model.py V3_C).
+export function extrasV3() {
+  const wires = new THREE.Group();
+  wires.name = 'wires';
+  const Z = [0x6b4226, 0xd0302a, 0xf08a24, 0xf2c418];
+  wires.add(ribbon('wires__x', [[128, -1.5, 108], [128, -1.5, 60], [128, -1.5, 12], [122, -1.5, 6.5], [103, -1.5, 6.5],
+    [97, 12, 9], [89, 24, 30], [82.9, 40, 36], [82.9, 42.2, 32.8]]));
+  wires.add(ribbon('wires__y', [[0, 30, 22], [0, 41, 19], [12, 49, 9], [30, 47, 8], [46, 36, 38], [70, 22, 40],
+    [82.9, 19, 38], [82.9, 17.7, 32.8]]));
+  // carriage end: stage motor -> slot beside the socket -> up the moving end's post -> into the chain
+  wires.add(ribbon('wires__z', [[-41, 30, 181.5], [-47.5, 35, 184], [-47.5, 38.5, 196], [-46.5, 38.5, 214], [-42, 46, 222.5],
+    [-34, 54.5, 223]], Z, 0.45));
+  // fixed end -> notch -> gutter -> wire drop -> column clips -> back foot channel -> Z header
+  const backRun = [[156, 69.5, 182], [156, 69.5, 150], [156, 69.5, 90], [156, 69.5, 35], [155, 69.5, 9], [149, 69.5, 6.5],
+    [104, 69.5, 6.5], [93, 69, 11]];
+  wires.add(ribbon('wires__z2', [[-14, 54.5, 189], [-21, 59, 190], [-23.5, 66, 190], [-14, 69.5, 188], [148, 69.5, 188],
+    ...backRun, [70, 58, 36], [57.2, 45, 38], [57.2, 42.2, 32.8]], Z, 0.45));
+  // homing switch: C and NO -> the mount's groove -> the top column clip -> down with the Z leads -> X limit pins
+  wires.add(ribbon('wires__switch', [[100, 74, 168.5], [110, 77.7, 167], [124, 77.7, 167], [146, 72, 158],
+    ...backRun.slice(1).map(([x, y, z]) => [x - 0.5, y + 1.6, z]), [76, 40, 32], [56, 15, 28], [52, 10.4, 23]],
+    [0x1b1c1f, 0xd0302a], 0.45));
   wires.add(ribbon('wires__power', [[51, 105, 2.5], [51, 90, 3], [51, 81, 12], [51, 76.5, 19.6]], [0xd0302a, 0x1b1c1f], 0.7));
   return [wires];
 }
