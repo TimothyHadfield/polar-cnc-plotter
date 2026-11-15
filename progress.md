@@ -98,6 +98,14 @@ Goes into the same snap-on slider cap as ATTACHMENTS (b), riding on the spring f
 diameters of every pen he wants (where the holder grips, ~10-20 mm above the tip) + the slider
 measurements already on the Monday list.
 
+**HOMING SWITCH (11-14, talk only, NOTHING BUILT).** Tim liked the cable chain (tray over the stand
+tops, artifact v3). Claude's homing pitch: one lever microswitch on the X (carriage) axis only, on
+a printed clip that slides on the top rod near the motor side; wired to the shield's X limit pins
+(signal + GND). App-side homing, NO firmware change: keep `$21`=0, `$22`=0, jog slowly toward the
+switch, watch `Pn:X` in the `?` reports, jog-cancel, back off, re-touch slower, then `G92` X = the
+switch-to-center distance learned once by Find center (REASONED: stock GRBL `$H` homes Z first and
+would alarm without a Z switch). Platter angle needs no home. Money: switch ~$1-5 (his call).
+
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you
 recalibarte something you need to go through something that confirms you want to change the
