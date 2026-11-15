@@ -4,7 +4,7 @@
 //
 // Homing switch: with `switchX` (a carriage position, mm as the plotter was built) the X limit
 // switch is pressed whenever the carriage is at or beyond it on the X- side, and status reports
-// then carry `Pn:X` like GRBL 1.1. So that a jog can be caught at the switch, jogs then take real
+// then carry `Pn:X` like GRBL 1.1. So that a jog can be caught at the switch, X jogs then take real
 // time (distance / F, `jogSpeed` times faster) and a jog cancel (0x85) stops them where they are.
 
 export class FakeGrbl {
@@ -140,8 +140,9 @@ export class FakeGrbl {
       if (k === 'F') feed = v;
       if ('XYZ'.includes(k)) target['XYZ'.indexOf(k)] = v;
     }
-    // with a switch to find, jogs take real time so that a jog cancel can catch them
-    if (jog && this.switchX !== null && feed > 0 && Object.keys(target).length) {
+    // with a switch to find, X jogs take real time so that a jog cancel can catch them
+    // (only X reaches the switch; platter and pen jogs stay instant as before)
+    if (jog && this.switchX !== null && feed > 0 && 0 in target) {
       const to = this.pos.slice();
       for (const [a, v] of Object.entries(target)) to[a] = rel ? this.pos[a] + v : v + this.wco[a];
       const len = Math.hypot(...to.map((v, i) => v - this.pos[i]));
