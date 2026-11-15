@@ -7,6 +7,8 @@ import { badAxes, trouble, jogFeed } from './safe.js';
 import { setDirection, uprightPen, saveSetting } from './calibrate.js';
 import { loadDefaults, saveDefaults, capture, plotterOff, describe } from './defaults.js';
 import { home } from './home.js';
+import { plannedTimes, estimate, minutesText } from './progress.js';
+import { jobKey, loadResume, saveResume, makeRecord, rebase, restoreRefs, share } from './resume.js';
 
 const $ = id => document.getElementById(id);
 
@@ -34,9 +36,22 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   $('consoleBox').hidden = false;
 
   let grbl = null, link = null, poll = 0, step = 1, running = false, paused = false;
-  // active: the plot being streamed ({ gcode, lines, from, head, pens }); its line i is line
-  // from + (i - head) of the whole drawing. resume: where a plot that ended early can pick up.
-  let active = null, resume = null, handledPause = -1, lastDone = null, lastPen = '';
+  // active: the plot being streamed ({ gcode, lines, from, head, pens, key, cum }); its line i is
+  // line from + (i - head) of the whole drawing. resume: where a plot that ended early can pick up
+  // (js/resume.js), kept in this browser so it outlasts a reload or a power cut.
+  let active = null, resume = loadResume(), handledPause = -1, lastDone = null, lastPen = '';
+  let rebaseNext = false;  // the plotter restarted: the next position read is where its counts begin again
+  let keyOf = { gcode: null, key: '' };   // jobKey() of the drawing on screen, worked out once
+  const keyFor = g => { if (keyOf.gcode !== g) keyOf = { gcode: g, key: jobKey(g) }; return keyOf.key; };
+  const resumable = () => { const j = getJob(); return resume && j && resume.key === keyFor(j.gcode) ? resume : null; };
+  // time the plot has run, pen changes and Pause left out
+  let t0 = 0, pausedAt = 0, pausedMs = 0, saved = 0;
+  const setPaused = v => {
+    if (v && !pausedAt) pausedAt = Date.now();
+    if (!v && pausedAt) { pausedMs += Date.now() - pausedAt; pausedAt = 0; }
+    paused = v;
+  };
+  const elapsed = () => Date.now() - t0 - pausedMs - (pausedAt ? Date.now() - pausedAt : 0);
   // The plotter's own settings ($$), read on connect and after every change. While its steps per
   // unit cannot be right (js/safe.js), jogging that axis and plotting are switched off.
   let vals = null;
@@ -82,11 +97,14 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       hb.disabled = homing ? homing.stopped : busy || bad.includes('X');
     }
     const job = getJob();
-    if (resume && !running && job?.gcode !== resume.gcode) resume = null;   // a different drawing
+    // Resume: an unfinished plot of this drawing (a different drawing keeps its record for later)
+    const rec = running ? null : resumable();
     const rb = $('resumePlot');
-    rb.hidden = !resume || !grbl?.center;
+    rb.hidden = !rec;
     rb.disabled = busy || bad.length > 0;
-    if (resume) rb.textContent = `Resume ${Math.floor(resume.from / resume.total * 100)}%`;
+    if (rec) rb.textContent = `Resume ${share(rec)}%`;
+    if ($('resumeQ')) $('resumeQ').hidden = !rec;
+    if (!rec && $('resumeHelp')) $('resumeHelp').hidden = true;
     const plot = $('plot');
     plot.disabled = busy || !grbl?.center || !job || bad.length > 0;
     plot.textContent = bad.length ? 'Calibrate first' : !job ? 'Plot' : grbl && !grbl.center ? 'Set center first' : 'Plot';
@@ -105,9 +123,21 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       const i = grbl.programPause();
       if (i >= 0 && i !== handledPause) {
         handledPause = i;
-        paused = true;
+        setPaused(true);
         showPenChange(active.pens.get(toDrawing(i)));
         refresh();
+      }
+    }
+    // after a restart the counts begin again here: an unfinished plot's record follows them
+    if (rebaseNext && s.mpos) { rebaseNext = false; if (resume) { resume = rebase(resume, s.mpos); saveResume(resume); } }
+    if (running && active) {
+      showProgress();
+      // where to pick up if this plot is cut short, saved about once a second
+      const d = doneLine();
+      if (d > 0 && s.mpos && Date.now() - saved > 1000) {
+        saved = Date.now();
+        resume = makeRecord(active.key, resumePoint(active.lines, d), active.lines.length, s);
+        saveResume(resume);
       }
     }
     const p = grbl?.center ? s.wpos : null;
@@ -139,8 +169,18 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   // A plot ended early: remember where to pick up (a few lines of overlap; redrawing them is harmless).
   function remember(drawnInRun) {
     if (!active) return;
-    const drawn = toDrawing(drawnInRun);
-    resume = drawn > 0 ? { gcode: active.gcode, from: resumePoint(active.lines, drawn), total: active.lines.length } : null;
+    const drawn = toDrawing(drawnInRun), s = grbl?.status;
+    if (drawn > 0 && s?.mpos) resume = makeRecord(active.key, resumePoint(active.lines, drawn), active.lines.length, s);
+    else if (drawn > 0 && resume?.key === active.key) resume = { ...resume, from: resumePoint(active.lines, drawn) };
+    else if (!(drawn > 0) && active.from === 0 && resume?.key === active.key) resume = null;
+    saveResume(resume);
+  }
+  // Progress bar and time left: by the G-code's planned time, at the pace the plot has really had.
+  function showProgress() {
+    if (!active) return;
+    const { share: sh, left } = estimate(active.cum, active.from, doneLine() ?? active.from, elapsed());
+    $('bar').style.width = (sh * 100).toFixed(1) + '%';
+    $('runText').textContent = `${Math.floor(sh * 100)}% · ${left < 1 ? 'under a minute' : '~' + minutesText(left)} left`;
   }
 
   // ---------- connect ----------
@@ -161,19 +201,24 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
         onStatus: showStatus,
         onLog: log,
         onEvent: (e, msg) => {
+          if (e === 'reset' && !grbl?.expectReset) rebaseNext = true;
           if (e === 'reset' && !running && !grbl?.expectReset) { say('The plotter restarted. Set center again.'); refresh(); }
           if (e === 'alarm') say(`Alarm: ${msg.replace(/^alarm \d+: /, '')}. Unlock with $X in the Settings console.`, true);
-          if (e === 'jobError') { paused = true; say(msg, true); refresh(); }
+          if (e === 'jobError') { setPaused(true); say(msg, true); refresh(); }
         },
       });
       await grbl.ready();
       askPort = false;
+      rebaseNext = false;
+      if (resume && grbl.status?.mpos) { resume = rebase(resume, grbl.status.mpos); saveResume(resume); }   // connecting restarted it
       await check();
       poll = setInterval(() => grbl?.realtime('?'), 250);
       if (sim?.atCenter?.()) {   // the simulator starts with the pen over the centre: no need to set it by hand
         await grbl.setCenter();
         say(warn() ? '' : 'Center set. Pick a drawing, text or pattern, then Plot.');
       } else say(warn() ? '' : 'Move the pen over the platter center, then Set center.');
+      const rec = resumable();
+      if (rec && !warn()) say(`Unfinished plot at ${share(rec)}%. ${getSettings().homing ? 'Press Resume.' : 'Set center, then Resume.'}`);
       refresh();
     } catch (e) {
       if (picked?.auto) askPort = true;        // the remembered port did not work out
@@ -260,11 +305,15 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
 
   // Home: touch the homing switch twice, then the center is set from where the switch is (homeX,
   // measured once in Calibrate). Pressing it again stops it where it is (jog cancel).
-  $('home')?.addEventListener('click', async () => {
+  $('home')?.addEventListener('click', () => {
     if (homing) { homing.stopped = true; grbl?.realtime('\x85'); refresh(); return; }
-    if (!grbl) return;
+    doHome();
+  });
+  // Resolves true when the center was set from the switch.
+  async function doHome() {
+    if (!grbl || homing) return false;
     const g = grbl, s = getSettings();
-    if (!Number.isFinite(s.homeX)) { say('Measure the switch first: Calibrate, Find center.', true); return; }
+    if (!Number.isFinite(s.homeX)) { say('Measure the switch first: Calibrate, Find center.', true); return false; }
     const me = homing = { stopped: false };
     say('Homing…');
     refresh();
@@ -273,15 +322,18 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       if (grbl !== g) throw new Error('Not connected.');
       return true;
     };
+    let ok = false;
     try {
       await home(g, s.homeX, { spu: vals?.[100], accel: vals?.[120], penUp: s.penUp, live });
-      if (grbl === g) say('Home. Center set.');
+      ok = grbl === g;
+      if (ok) say('Home. Center set.');
     } catch (e) {
       if (grbl === g) say(me.stopped ? 'Stopped.' : e.message, !me.stopped);
     }
     homing = null;
     refresh();
-  });
+    return ok;
+  }
 
   // Put the plotter's steps and directions back to the defaults (the center stays where it was).
   $('restoreDefaults')?.addEventListener('click', () => run((async () => {
@@ -300,36 +352,46 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     if (!job || !grbl?.center || badAxes(vals).length) return;
     const all = gcodeLines(job.gcode);
     const lines = from ? resumeLines(all, from, getSettings().penUp) : all;
-    active = { gcode: job.gcode, lines: all, from, head: from ? RESUME_HEADER : 0, pens: penChanges(job.gcode) };
-    running = true; paused = false; handledPause = -1; lastDone = null;
+    const key = keyFor(job.gcode);
+    active = { gcode: job.gcode, lines: all, from, head: from ? RESUME_HEADER : 0, pens: penChanges(job.gcode), key, cum: plannedTimes(all, vals) };
+    running = true; handledPause = -1; lastDone = null;
+    t0 = Date.now(); pausedAt = 0; pausedMs = 0; saved = 0; setPaused(false);
     say('');
     refresh();
     grbl.lastJob = null;
-    const t0 = Date.now();
-    const progress = f => {
-      const whole = (from + f * (all.length - from)) / all.length;   // share of the whole drawing
-      $('bar').style.width = (whole * 100).toFixed(1) + '%';
-      const left = f > 0.02 ? (Date.now() - t0) * (1 - f) / f / 60000 : job.minutes * (1 - whole);
-      $('runText').textContent = `${Math.floor(whole * 100)}% · ~${Math.max(1, Math.round(left))} min left`;
-    };
-    progress(0);
+    showProgress();
     try {
-      const res = await grbl.stream(lines, progress);
-      resume = null;
-      say(res.errors.length ? `Done, ${res.errors.length} line(s) skipped.` : `Done in ${Math.max(1, Math.round((Date.now() - t0) / 60000))} min.`);
+      const res = await grbl.stream(lines, () => showProgress());
+      if (resume?.key === key) { resume = null; saveResume(null); }
+      say(res.errors.length ? `Done, ${res.errors.length} line(s) skipped.` : `Done in ${minutesText((Date.now() - t0) / 60000)}.`);
     } catch (e) {
       if (grbl?.lastJob) remember(grbl.lastJob.drawn);
       if (e.message !== 'Stopped.') say(e.message, true);
     }
     if (!active) return;   // unplugged: drop() already tidied up
-    running = false; paused = false; active = null;
+    running = false; setPaused(false); active = null;
     refresh();
     api?.draw();
   }
   $('plot').addEventListener('click', () => plot(0));
-  $('resumePlot').addEventListener('click', () => resume && plot(resume.from));
+  // Resume: find the carriage again (Home, or the center set by hand), put the platter's zero and
+  // the pen's zero back from the record (js/resume.js), then the rest from the interrupted stroke.
+  let resuming = false;
+  $('resumePlot').addEventListener('click', async () => {
+    const rec = resumable();
+    if (!rec || !grbl || resuming) return;
+    const s = getSettings();
+    resuming = true;
+    try {
+      if (s.homing && Number.isFinite(s.homeX)) { if (!await doHome()) return; }
+      else if (!grbl.center) { say('Put the pen over the center and press Set center, then Resume.'); return; }
+      await restoreRefs(grbl, rec);
+      plot(rec.from);
+    } catch (e) { say(e.message, true); }
+    finally { resuming = false; }
+  });
   $('pause').addEventListener('click', () => {
-    if (paused) { grbl.resume(); paused = false; say(''); } else { grbl.pause(); paused = true; }
+    if (paused) { grbl.resume(); setPaused(false); say(''); } else { grbl.pause(); setPaused(true); }
     refresh();
   });
   $('stop').addEventListener('click', async () => {
@@ -340,7 +402,7 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
       say(kept ? 'Stopped. Pen lifted.' : 'Stopped. Position was lost: set center again.');
     } catch (e) { say(e.message, true); }
     $('stop').disabled = false;
-    running = false; paused = false;
+    running = false; setPaused(false);
     refresh();
   });
 

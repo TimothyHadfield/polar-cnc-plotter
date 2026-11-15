@@ -9,6 +9,9 @@ import { wrap180 } from './polar.js';
 import { plausible, badAxes, refusal, jogFeed } from './safe.js';
 import { loadDefaults, saveDefaults, differs, apply, describe } from './defaults.js';
 import { learnHome } from './home.js';
+import { SPEED, speedTest, tuned, trial } from './speed.js';
+import { TAPS, fitPhoto, corrections } from './photocal.js';
+import { createPhotoView } from './photoview.js';
 export { parseSettings } from './grbl.js';
 
 // ---------- math ----------
@@ -200,16 +203,22 @@ export async function centerBetween(grbl, a, b, penUp, alive) {
 // is more negative.
 export async function penHeights(grbl, down, press = 0) {
   await grbl.setPenZero();
-  return { penUp: 0, penDown: r2(down - grbl.penZero - (press > 0 ? press : 0)) };
+  return { penUp: 0, penDown: r2(down - grbl.penZero - springPress(press)) };
 }
+// The carriage-2 pen head's spring has 3.5 mm of travel to a hard stop: press at most PRESS_MAX
+// past the touch (about 1–1.5 is right), and lift SPRING_LIFT mm above the touch for travel.
+export const PRESS_MAX = 3;
+export const SPRING_LIFT = 2;
+export const springPress = p => (p > 0 ? Math.min(p, PRESS_MAX) : 0);
 
 // The tip touches the paper right now: that is pen down. Lift it LIFT motor steps (about 2 mm on
 // a DVD-drive stage at 250 steps per unit; in steps because $102 is never calibrated) and call
-// that pen up. Returns the settings to save.
+// that pen up. With a spring head (Pen press set) it lifts SPRING_LIFT mm instead. Returns the
+// settings to save.
 export const LIFT = 100;
-export async function touchLift(grbl, spu, alive, press = 0) {
+export async function touchLift(grbl, spu, alive = () => true, press = 0) {
   const down = (await waitIdle(grbl, alive)).mpos[2];
-  await grbl.send(nudgeJog('Z', LIFT / spu, 200, spu));
+  await grbl.send(nudgeJog('Z', springPress(press) > 0 ? SPRING_LIFT : LIFT / spu, 200, spu));
   await waitIdle(grbl, alive);
   return penHeights(grbl, down, press);
 }
@@ -217,9 +226,10 @@ export async function touchLift(grbl, spu, alive, press = 0) {
 // ---------- the panel ----------
 // Each step: Start (Redo once started) begins it, Done saves it. A pill by the title and a dot
 // per step at the bottom say where it stands: not started, in progress, done. The button to press
-// next is filled in. The quick check (Check, in the header) is shown like a sixth step.
-const STEPS = 5;
-const CHECK = 6;
+// next is filled in. The quick check (Check, in the header) is shown like an extra step.
+const STEPS = 7;
+const CHECK = 8;
+const PHOTO_RMS = 1.5;      // mm: taps that miss the fitted drawing by more than this are not trusted
 const PILL = { idle: 'Not started', on: 'In progress', done: '✓ Done', bad: '✗ Problems' };
 
 // Carriage Left / Right with its own step sizes; `n` tells two rows in one step apart. `on` =
@@ -287,6 +297,20 @@ const PIC = {
     <circle class="mark ghost" cx="90" cy="40" r="4"/><circle class="mark" cx="150" cy="60" r="4"/>
     <path class="arrow" d="M154 58 A31.6 31.6 0 0 0 154 44"/><path class="tip" d="M154 41 l-4 6 h8z"/>
     <circle class="tipring" cx="150" cy="40" r="7"/><text x="60" y="66">mark after the half turn →</text>
+  </svg>`,
+  // side view: the pen block runs out and back along the rail, quicker each time
+  speed: `<svg class="calpic" viewBox="0 0 240 100" aria-hidden="true">
+    <line class="path" x1="30" y1="70" x2="210" y2="70"/>
+    <g><animateTransform attributeName="transform" type="translate" dur="6s" ${loop}
+      values="0 0;120 0;0 0;120 0;0 0;120 0;0 0;0 0" keyTimes="0;.25;.5;.62;.74;.8;.86;1"/>
+      <rect class="pen" x="43" y="18" width="14" height="44" rx="3"/><path class="tip" d="M43 62 h14 l-7 8z" opacity=".35"/></g>
+    <text x="120" y="92" text-anchor="middle">faster each run · pen up</text>
+  </svg>`,
+  // the Test pattern; the dot shows where to tap next (moved by refresh())
+  photo: `<svg class="calpic" viewBox="0 0 240 100" aria-hidden="true">
+    <circle class="plate" cx="120" cy="50" r="45"/>
+    <g class="testpic"><circle cx="120" cy="50" r="38.25"/><rect x="97.5" y="27.5" width="45" height="45"/><path d="M97.5 50h45M120 27.5v45"/><circle cx="129.9" cy="40.1" r="8.1"/></g>
+    <circle class="mark" id="calTapDot" cx="120" cy="5" r="4" hidden/>
   </svg>`,
 };
 
@@ -365,6 +389,29 @@ const HTML = `
 </div>
 
 <div class="calstep" data-n="6" hidden>
+  ${head('Speed test', 'calSpeedHelp', 'The carriage, then the platter, runs out and back with the pen up, a little faster each run. Skipped = grinding, buzzing, or a run that fell short. Done saves 80 % of the fastest smooth run as the top speed ($110, $111), with a matching acceleration ($120, $121). A skipped carriage run loses its place: set the center again afterwards.')}
+  ${PIC.speed}
+  <p class="calsay">1. Press Start. The carriage runs first.</p>
+  <button class="btn" data-act="start">Start</button>
+  <p class="calsay">2. After each run: smooth, or skipped?</p>
+  <div class="calres"><span id="calRun">–</span></div>
+  <div class="row"><button class="btn wide" data-act="smooth">Smooth</button><button class="btn wide" data-act="skipped">Skipped</button></div>
+  <div class="calres"><span>Carriage <b id="calTopX">–</b></span><span>Platter <b id="calTopY">–</b></span><button class="btn sm end" data-act="done" data-on>Done</button></div>
+</div>
+
+<div class="calstep" data-n="7" hidden>
+  ${head('Photo check', 'calPhotoHelp', 'Plot the Test pattern on a round 200 mm sheet first, with the settings you have now. Photograph it from straight above, the whole sheet in view. The sheet\'s edge sets the scale, so no ruler is needed. Press and slide to aim; a magnifier shows the spot. Done saves the carriage steps ($100), the platter steps ($101) and the center gap.')}
+  ${PIC.photo}
+  <p class="calsay">1. Photograph the Test drawing from above.</p>
+  <button class="btn" data-act="photo">Load photo</button>
+  <input type="file" accept="image/*" id="calPhotoFile" hidden>
+  <p class="calsay">2. Tap each point it asks for.</p>
+  <div class="calres"><span id="calTapSay">–</span><span class="unit" id="calTapN"></span><button class="btn sm end" data-act="undo" data-on>Undo</button></div>
+  <div class="calres"><span>$100 <b id="calP100">–</b></span><span>$101 <b id="calP101">–</b></span><span>Gap <b id="calPGap">–</b></span></div>
+  <button class="btn" data-act="done" data-on>Done</button>
+</div>
+
+<div class="calstep" data-n="8" hidden>
   <h3>Quick check <span class="pill"></span></h3>
   <p class="calsay">The plotter moves by itself. Answer each question.</p>
   <ol class="calchecks" id="calChecks"></ol>
@@ -416,6 +463,13 @@ export function initCalibrate(api) {
   let halved = false; // Half turn ran since Start
   let asking = null;  // { resolve, reject } while the check waits for Yes / No
   let answers = [];   // the check's answers so far: true / false
+  let speedAsk = null;  // { resolve, reject, axis, i, feed } while the speed test waits for Smooth / Skipped
+  let speedRes = null;  // { X, Y }: index of the fastest smooth run per axis (-1: none), once the test ran
+  let speedOld = null;  // the rates the speed test changes, to put back if it is stopped
+  let photo = null;     // the loaded photo (an Image)
+  let taps = [];        // photo pixels tapped so far, one per TAPS entry
+  let photoFix = null;  // { 100?, 101?, offset? } from the fit, once every point is tapped
+  const photoView = document.getElementById('stage') ? createPhotoView(document.getElementById('stage'), p => onTap(p)) : null;
   const msg = t => { $('calMsg').textContent = t; };
   const err = t => { $('calErr').textContent = t; };
   const alive = () => grbl && m.getGrbl() === grbl;
@@ -530,8 +584,31 @@ export function initCalibrate(api) {
     $('calAsk').textContent = asking ? CHECKS[answers.length].ask : '';
     const redo = [...new Set(CHECKS.filter((c, i) => answers[i] === false).map(c => c.redo))];
     $('calRedo').innerHTML = !asking && job?.act !== 'checkGo' ? redo.map(n => `<button class="btn sm" data-go="${n}">Redo step ${n}</button>`).join('') : '';
+    // speed test
+    const unit = a => a === 'X' ? 'mm/min' : '°/min';
+    $('calRun').textContent = speedAsk ? `${speedAsk.axis === 'X' ? 'Carriage' : 'Platter'} run ${speedAsk.i + 1} of ${SPEED[speedAsk.axis].sps.length} · ${Math.round(speedAsk.feed)} ${unit(speedAsk.axis)}`
+      : job?.act === 'start' && step === 6 ? 'Running…' : '–';
+    for (const a of ['X', 'Y']) {
+      const t = speedRes && speedRes[a] !== undefined && vals[100 + 'XYZ'.indexOf(a)] > 0 ? tuned(a, speedRes[a], vals[100 + 'XYZ'.indexOf(a)]) : null;
+      $('calTop' + a).textContent = !t ? '–' : t.length ? `${t[0].to} ${unit(a)}` : 'none smooth';
+    }
+    // photo check
+    const next = photo && taps.length < TAPS.length ? TAPS[taps.length] : null;
+    $('calTapSay').textContent = next ? next.say : photo ? (photoFix ? 'All tapped' : 'Measuring…') : '–';
+    $('calTapN').textContent = photo ? `${taps.length} / ${TAPS.length}` : '';
+    const dot = $('calTapDot');
+    dot.toggleAttribute('hidden', !next);
+    if (next) { dot.setAttribute('cx', (120 + next.at[0] * 0.45).toFixed(1)); dot.setAttribute('cy', (50 - next.at[1] * 0.45).toFixed(1)); }
+    const pv = (k, v) => photoFix ? (photoFix[k] ?? v) : '–';
+    $('calP100').textContent = pv(100, vals[100]);
+    $('calP101').textContent = pv(101, vals[101]);
+    $('calPGap').textContent = photoFix ? `${pv('offset', s.offset || 0)} mm` : '–';
+    if (photoView) {
+      if (step === 7 && photo && tool && !root.hidden) { if (!photoView.shown) photoView.show(photo); }
+      else if (photoView.shown) photoView.hide();
+    }
     // enabled?
-    const can = { 1: Number.isFinite(n101), 3: true, 4: Number.isFinite(n100), 5: !!mark && halved };
+    const can = { 1: Number.isFinite(n101), 3: true, 4: Number.isFinite(n100), 5: !!mark && halved, 6: !!speedRes && !job, 7: !!photoFix };
     const need = { turnTest: plausible(101, vals[101]) || Number.isFinite(pending101()) ? 1 : NaN };
     root.querySelectorAll('[data-act]').forEach(b => {
       const act = b.dataset.act, n = +(b.closest('.calstep')?.dataset.n ?? 0);
@@ -540,13 +617,15 @@ export function initCalibrate(api) {
         || act === 'homeLearn' && !grbl?.center;
       b.disabled = act === 'back' ? !!slow || !!job || step === 1 : act === 'next' ? !!slow || !!job || step === CHECK
         : act === 'yes' || act === 'no' ? !asking
+        : act === 'smooth' || act === 'skipped' ? !speedAsk
         : act === 'change' || act === 'keep' ? !confirming
         : stop ? slow.stopping : job?.act === act && (act !== 'done' || n === step) ? !!job.stopped
         : busy || !!slow || !alive() || off;
       if (SLOWS[act]) b.textContent = stop ? 'Stop' : SLOWS[act].label;
-      if (act === 'start') b.textContent = st[n] === 'idle' ? 'Start' : 'Redo';
+      if (act === 'start') b.textContent = job?.act === 'start' ? 'Stop' : st[n] === 'idle' ? 'Start' : 'Redo';
+      if (act === 'photo') b.textContent = photo ? 'New photo' : 'Load photo';
       // the button to press next is filled in
-      b.classList.toggle('go', act === 'start' ? st[n] === 'idle' : act === 'done' ? st[n] === 'on' && !!can[n]
+      b.classList.toggle('go', act === 'start' || act === 'photo' ? st[n] === 'idle' : act === 'done' ? st[n] === 'on' && !!can[n]
         : act === 'next' ? st[step] === 'done' : act === 'checkGo' ? st[CHECK] !== 'on' && !job : act === 'change');
     });
     root.querySelectorAll('[data-act=tYes], [data-act=tNo]').forEach(b => { b.disabled = busy || !!slow || !tested; });
@@ -581,8 +660,9 @@ export function initCalibrate(api) {
   function stopRun() {
     if (!job || job.stopped) return;
     asking?.reject(new Error('Stopped.'));
+    speedAsk?.reject(new Error('Stopped.'));
     confirming?.resolve(false);
-    asking = null;
+    asking = speedAsk = null;
     job.stopped = stopMove(grbl, api.getSettings().penUp).then(() => msg('Stopped.'), e => err(e.message));
     refresh();
   }
@@ -701,7 +781,69 @@ export function initCalibrate(api) {
       halved = false;
       begin(5);
     }, 'Now press Half turn.'),
+    // the runs, then Smooth / Skipped after each; Start turns into Stop meanwhile
+    6: async () => {
+      await run(async (g, live) => {
+        if (badAxes(vals).length) throw new Error('Do the turn test and the carriage test first.');
+        if (!g.center) throw new Error('Set the center first: step 5.');
+        speedRes = null; begin(6); refresh();
+        speedOld = { 110: vals[110], 111: vals[111], 120: vals[120], 121: vals[121] };
+        const best = await speedTest(g, vals, {
+          penUp: api.getSettings().penUp, idle: () => waitIdle(g, live),
+          ask: (axis, i, t) => new Promise((resolve, reject) => { speedAsk = { resolve, reject, axis, i, feed: t.feed }; msg(''); refresh(); })
+            .finally(() => { speedAsk = null; refresh(); }),
+        });
+        speedOld = null;
+        speedRes = best;
+        const lost = best.X < SPEED.X.sps.length - 1;    // a carriage run skipped: its count may be off
+        if (lost) g.center = null;
+        msg(`${lost ? 'Set the center again (step 5 or Home). ' : ''}Press Done to save.`);
+      }, '', 'start');
+      if (speedOld) await restoreRates(grbl);
+    },
   };
+  // The speed test was stopped part way: put its rates back.
+  async function restoreRates(g) {
+    if (!g) return;
+    const old = speedOld;
+    speedOld = null;
+    if (!old) return;
+    for (const [k, v] of Object.entries(old)) if (Number.isFinite(v)) await g.send(`$${k}=${v}`).catch(() => {});
+  }
+  // ---------- the photo check ----------
+  function onTap(p) {
+    if (!photo || taps.length >= TAPS.length) return;
+    taps = [...taps, p];
+    photoView?.setTaps(taps);
+    err('');
+    if (taps.length < TAPS.length) { refresh(); return; }
+    msg('Measuring…'); refresh();
+    setTimeout(() => {                                   // let "Measuring…" show first
+      const s = api.getSettings(), f = fitPhoto(taps, s);
+      if (f.error) err(f.error);
+      else if (!(f.rms <= PHOTO_RMS)) err(`The taps miss the drawing by ${f.rms.toFixed(1)} mm. Undo and tap again.`);
+      else {
+        photoFix = corrections(f, vals, s);
+        const off = Math.abs(f.e) >= 0.5 ? ` The center was ${Math.abs(f.e).toFixed(1)} mm off: redo step 5.` : '';
+        msg(`${Object.keys(photoFix).length ? 'Press Done to save.' : 'Nothing to change.'}${off}`);
+      }
+      if (!photoFix) msg('');
+      refresh();
+    }, 30);
+  }
+  $('calPhotoFile').addEventListener('change', async e => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    const img = new Image();
+    img.src = URL.createObjectURL(f);
+    try { await img.decode(); } catch { err('Could not open that photo.'); return; }
+    photo = img; taps = []; photoFix = null; begin(7);
+    photoView?.setTaps(taps);
+    photoView?.hide();                                   // refresh() shows the new photo
+    err(''); msg('Tap each point on the photo.');
+    refresh();
+  });
   const DONE_STEP = {
     1: () => {
       const n = turnSteps(vals[101], Math.abs(turn.at - turn.from), turn.tested);
@@ -746,6 +888,33 @@ export function initCalibrate(api) {
       m.refresh();
       msg(`Center set. The pen is over it now. Center gap ${gap} mm.`);
     }, '', 'done'),
+    // the speed test's top speeds and accelerations: asked like any default, and defaults from then on
+    6: () => run(async g => {
+      const ch = [...tuned('X', speedRes.X ?? -1, vals[100]), ...tuned('Y', speedRes.Y ?? -1, vals[101])];
+      if (!ch.length) throw new Error('No run was smooth. Nothing saved.');
+      st[6] = 'done';
+      if (!await guard(ch)) { msg('Kept the defaults.'); return; }
+      for (const c of ch) { await g.send(`$${c.n}=${c.to}`); vals[c.n] = c.to; }
+      const d = loadDefaults();
+      if (d) saveDefaults(apply(d, ch));
+      await m.check();
+      msg(`Saved ${ch.map(c => `$${c.n}=${c.to}`).join(', ')}.`);
+    }),
+    7: () => {
+      const fix = photoFix, ch = [];
+      for (const n of [100, 101]) if (fix[n] !== undefined) ch.push({ n, to: fix[n] });
+      if (fix.offset !== undefined) ch.push({ key: 'offset', to: fix.offset });
+      if (!ch.length) { st[7] = 'done'; msg('Nothing to change.'); refresh(); return; }
+      run(async g => {
+        st[7] = 'done';
+        if (!await guard(ch)) { msg('Kept the defaults.'); return; }
+        for (const c of ch) if (c.n) await store(g, c.n, c.to);
+        if (fix.offset !== undefined) api.setSettings({ offset: fix.offset });
+        photo = null; taps = []; photoFix = null;        // the photo shows the old settings now
+        m.refresh();
+        msg(`Saved ${ch.map(c => c.n ? `$${c.n}=${c.to}` : `center gap ${c.to} mm`).join(', ')}. Plot Test again to check.`);
+      });
+    },
   };
 
   // ---------- the quick check ----------
@@ -808,6 +977,9 @@ export function initCalibrate(api) {
       msg(`Switch at ${x.toFixed(1)} mm. Home sets the center from now on.`);
     }, '', 'homeLearn'),
     yes: () => asking?.resolve(true), no: () => asking?.resolve(false),
+    smooth: () => speedAsk?.resolve(true), skipped: () => speedAsk?.resolve(false),
+    photo: () => $('calPhotoFile').click(),
+    undo: () => { if (!taps.length) return; taps = taps.slice(0, -1); photoFix = null; photoView?.setTaps(taps); msg(''); err(''); refresh(); },
     change: () => confirming?.resolve(true), keep: () => confirming?.resolve(false),
     back: () => go(step === CHECK ? back : step - 1),
     next: () => { if (step === STEPS) tool?.closeTool(); else go(step + 1); },
@@ -858,14 +1030,17 @@ export function initCalibrate(api) {
     tool = await import('./tool.js');                 // tool.js needs a page; the tests import this file without one
     grbl = m.getGrbl();
     if (!grbl) return;
-    step = 1; vals = {}; turn = tested = line = mark = slow = job = asking = null; halved = false; answers = [];
-    st = { 1: 'idle', 2: 'idle', 3: 'idle', 4: 'idle', 5: 'idle', [CHECK]: 'idle' };
+    step = 1; vals = {}; turn = tested = line = mark = slow = job = asking = speedAsk = speedRes = null; halved = false; answers = [];
+    photo = photoFix = null; taps = [];
+    st = { 1: 'idle', 2: 'idle', 3: 'idle', 4: 'idle', 5: 'idle', 6: 'idle', 7: 'idle', [CHECK]: 'idle' };
     msg(''); err('');
     tool.openTool('calTool', () => {
       clearInterval(zTimer);
       if (slow) grbl?.realtime('\x85');                // never leave a slow move running
       confirming?.resolve(false);                      // a question left open keeps the defaults
-      stopRun();                                       // …or the move to the center, or the check
+      const g = grbl, stopped = job ? (stopRun(), job.stopped) : null;   // …or the move to the center, the check, the speed test
+      if (speedOld) Promise.resolve(stopped).then(() => restoreRates(g));
+      photoView?.hide();
       slow = null; grbl = null;
     });
     refresh();

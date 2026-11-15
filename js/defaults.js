@@ -9,8 +9,11 @@ export const KEY = 'polar-plotter-defaults';
 // homeX: where the homing switch is, mm from the center (js/home.js); null until measured
 export const APP = ['offset', 'flip', 'penUp', 'penDown', 'zFlip', 'homeX'];
 export const GRBL = [100, 101, 3];
+// top speeds and accelerations: defaults once the speed test (Calibrate) has saved them, never taken by capture()
+export const RATES = [110, 111, 120, 121];
 export const LABEL = {
   100: 'Carriage steps ($100)', 101: 'Platter steps ($101)', 3: 'Motor directions ($3)',
+  110: 'Carriage speed ($110)', 111: 'Platter speed ($111)', 120: 'Carriage accel ($120)', 121: 'Platter accel ($121)',
   offset: 'Center gap', flip: 'Turn direction', penUp: 'Pen up', penDown: 'Pen down', zFlip: 'Pen direction',
   homeX: 'Switch distance',
 };
@@ -59,7 +62,7 @@ export function apply(d, changes) {
 // The plotter's settings that are not its defaults: [{ n, from: plotter, to: default }].
 export function plotterOff(d, vals) {
   if (!d || !vals) return [];
-  return GRBL.filter(n => Number.isFinite(d.grbl?.[n]) && Number.isFinite(vals[n]) && !same(d.grbl[n], vals[n]))
+  return [...GRBL, ...RATES].filter(n => Number.isFinite(d.grbl?.[n]) && Number.isFinite(vals[n]) && !same(d.grbl[n], vals[n]))
     .map(n => ({ n, from: vals[n], to: d.grbl[n], label: LABEL[n] }));
 }
 // "Platter steps ($101) 4.444 → 4.5"
