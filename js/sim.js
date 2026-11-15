@@ -59,6 +59,7 @@ function newPaper() {
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, INK_PX, INK_PX);
   inkTex.needsUpdate = true;
+  view?.invalidate();
 }
 newPaper();
 let inkDirty = false, inkShown = 0;
@@ -152,14 +153,22 @@ function draw(r, a, b) {
   inkDirty = true;
 }
 
+// The view draws only when this returns true (js/build-view.js): when the machine moved or new ink shows.
+let posed = null;
 view.onFrame(t => {
   if (link?.alive) {
     const pts = link.trail.splice(0).concat([link.real()]).map(p => p.map((v, i) => v + offset[i]));
     if (rigged) for (const p of pts) { draw(rigged, phys, p); phys = p; }
     else phys = pts.at(-1);
   }
-  if (rigged) pose(rigged, phys);
-  if (inkDirty && t - inkShown > 80) { inkTex.needsUpdate = true; inkDirty = false; inkShown = t; }
+  let moved = false;
+  if (rigged && (rigged !== posed?.r || phys.some((v, i) => v !== posed.at[i]))) {
+    pose(rigged, phys);
+    posed = { r: rigged, at: phys.slice() };
+    moved = true;
+  }
+  if (inkDirty && t - inkShown > 80) { inkTex.needsUpdate = true; inkDirty = false; inkShown = t; moved = true; }
+  return moved;
 });
 
 // ---------- version tabs ----------
