@@ -34,8 +34,10 @@ const wz = () => sim('plotterSim.grbl.pos[2] - plotterSim.grbl.wco[2]');
 
 try {
   await page.goto(base + 'sim.html?v=2', { waitUntil: 'load' });
-  await page.waitForSelector('#connect', { state: 'visible', timeout: 60000 });
   await page.waitForFunction(() => !!window.plotterSim, null, { timeout: 60000 });
+  await page.waitForFunction(() => !!document.querySelector('.panel')?.dataset.tab, null, { timeout: 60000 });   // js/layout.js ran
+  if (await vis('#tabbar [data-tab=plot]')) await page.click('#tabbar [data-tab=plot]');   // phone: the plotter controls are the Plot tab
+  await page.waitForSelector('#connect', { state: 'visible', timeout: 60000 });
   await page.click('#connect');
   await page.waitForSelector('#live', { state: 'visible' });
   await page.waitForTimeout(800);
