@@ -284,4 +284,8 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   checks (chain↔carriage socket only intended snap contact; switch lever pressed 1.2–2.3 mm).
   Slice recipe: `bambu-studio.exe --slice 0 --load-settings "machine.json;process.json"
   --load-filaments filament.json --outputdir o --export-3mf out.3mf in.3mf` from scratchpad/slice.
-- **Open:** layout redesign builder (`up-look`) running; nothing printed; Monday list in progress.md.
+- **Layout redesign (ee40a77):** phone bottom tabs Load/Adjust/Plot (text, accent + 2 px top line),
+  fixed 352 px panel, preview 179→307 px; laptop panel = width−height (320–440 px) with sections;
+  Settings Drawing/Machine, 2 columns on laptop, styles 3×2; Calibrate/Disconnect as small buttons;
+  Calibrate pictures 76 px on phone. Verified 181/181, check-calibrate 60/60 both widths, connect 5/5.
+- **Open:** phone auto-switch to Adjust after loading? (kept no); nothing printed; Monday list in progress.md.

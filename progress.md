@@ -12,10 +12,11 @@ this. Catch-up authorizes nothing: only "Authorized next steps" below is approve
    formulas: `docs/components.md`.
 
 ## Goal right now
-**2026-11-15: V3 hardware + the software wave are built and live; the app layout redesign builder
-(`up-look`, worktree `.../wt/polar-cnc-plotter-look`) is running.** When it reports: merge, run
-tests + sim.html ?v=1/?v=2 + check-calibrate/connect, push, tell Tim with screenshots and the list
-of visual choices (his call). Then give Tim the Monday list when he's back at the plotter (Mon 11-16).
+**2026-11-15: everything Tim asked for is built and live (ee40a77), incl. the layout redesign
+(phone: bottom tabs Load/Adjust/Plot over a fixed 352 px panel, preview 179→307 px; laptop: panel
+"width − height" clamped 320–440 px with Load/Adjust/Plot sections; Settings in Drawing/Machine
+groups). Open with Tim: should loading a drawing switch the phone to the Adjust tab? (kept: no,
+nothing changes without a tap). Next: give Tim the Monday list when he's back (Mon 11-16).**
 
 **TIM'S MONDAY LIST** (Tim 11-14: "I'm not gonna see my plotter until monday so keep track of all
 the things I need to do when I'm back there as well as prints that need to be printed"). Tick as he
@@ -40,7 +41,7 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
 | Area | State | Notes |
 |---|---|---|
 | Plotter app | live d81d66e+ | Test drawing, Fine test, Stipple/Lines, Swing + Shuffle, Home, live progress, Resume, Calibrate 7 steps (6 Speed, 7 Photo check), spring pen press |
-| App layout redesign | building (`up-look`) | Tim: "make the app's layout and design much more improved" |
+| App layout redesign | live ee40a77 | Tim: "make the app's layout and design much more improved"; `js/layout.js` = tab switching only; visual choices listed in chat.md 11-15 |
 | Build guide | live | V1/V2 exact steps + fly-in animations + faster 3D (V2 23→12 ms/frame phone); **V3 tab** 19 steps, `build/plotter-v3.glb` |
 | V3 hardware (cad) | designed, merged, NOT printed | stands 3 (wire clips, tray pockets), cable chain + tray, carriage 2 (snap, no screws), spring pen head + collets, switch mount, board cover |
 | V2 | frozen | `cad/printed-frame-v2.scad`, `build/v2/stl/` |
