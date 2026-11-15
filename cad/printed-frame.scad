@@ -295,7 +295,49 @@ module idler_fork() difference() {
   hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y + idler_gap / 2 + cheek_t + fork_pad - 2.5, belt_z]) rotate([-90, 0, 0]) cylinder(d = 6.6, h = 3, $fn = 6);
   hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y - idler_gap / 2 - cheek_t - fork_pad - 1, belt_z]) rotate([-90, 0, 0]) cylinder(d = 6.8, h = fork_pad + 1, $fn = 32);   // head pocket
 }
-module stand_right() difference() { union() { stand_body(); motor_flange(); } stand_holes(); }
+// Wire clips (stands 3, 11-15, Tim: "add little hooks or whatnot on the stands, new tray, or base
+// plate for the wires to easily and cleanly route back to the arduino in a specific way. Make sure
+// that you think about what orientation the X carraige motor is facing"). Right stand only.
+// - X motor: mounted with its plug pointing DOWN (assembly below). Its cable drops straight down in
+//   front of the column (x 128, outside the carriage's reach, which ends at the flange) onto the
+//   foot, where two clips turn it inward toward the Uno.
+// - Pen motor (via the cable chain and the top tray) and anything later (homing switch): down the
+//   column's BACK face in three snap-in clips, then two clips on the foot behind the column.
+// Every clip is an open C (hole wire_d, slot wire_slot): push the cable in, no tools.
+// Printing (the stand lies on its outer face, so +x here is DOWN on the printer): the foot channels
+// run along the print's vertical and end in a 45 degree slope; the column clips have a 45 degree
+// buttress on their +x side. No supports (first try had flat undersides: Bambu "floating regions").
+wire_d = 7;  wire_slot = 4;  clip_w = 2;
+clip_r = wire_d / 2 + clip_w;                     // 5.5
+wire_x_y = col_y0 - motor_len + 4;                // under the X motor's plug (-1.5)
+wire_b_y = col_y1 + clip_r;                       // the back run's line (69.5)
+module clip_ring(buttress = false, slot_a = 0) difference() {
+  if (buttress) hull() { circle(r = clip_r); translate([-clip_r, -clip_r - 1]) square([3 * clip_r + 3, 1]); }   // reaches x 170 = the column's outer face
+  else circle(r = clip_r);
+  circle(d = wire_d);
+  rotate(slot_a) translate([-wire_slot / 2, 0]) square([wire_slot, wire_d]);
+}
+// a channel along x on the foot top, slot up, from x0 to x1 at the foot (shorter by its height on top)
+module foot_channel(y, x0, x1) {
+  h = 2 * clip_r + 0.5;
+  intersection() {
+    translate([x0, y, tongue_top - 0.5 + clip_r + 0.5]) rotate([90, 0, 90]) linear_extrude(x1 - x0) {
+      clip_ring();
+      translate([-clip_r, -clip_r - 0.5]) square([2 * clip_r, clip_w + 0.5]);
+    }
+    translate([x1, 0, tongue_top - 0.5]) rotate([0, -45, 0]) translate([-200, -200, -200]) cube([200, 400, 400]);
+  }
+}
+module wire_clips() {
+  foot_channel(wire_x_y, 102, 136);               // X motor cable: drops at x 128, turns inward
+  foot_channel(wire_b_y, 102, 152);               // back run: comes down the column at x 156
+  // slot opens toward the centre (-x = UP on the printer, so neither jaw starts in mid-air)
+  for (z = [35, 90, 145]) translate([156, wire_b_y, z]) linear_extrude(6) {
+    clip_ring(true, 90);
+    translate([-clip_r, -clip_r - 1]) square([2 * clip_r, clip_w + 1]);   // 1 mm into the column
+  }
+}
+module stand_right() difference() { union() { stand_body(); motor_flange(); wire_clips(); } stand_holes(); }
 module stand_left() mirror([1, 0, 0]) difference() { union() { stand_body(); idler_fork(); } stand_holes(); }
 
 // ---------- platter wheel ----------
@@ -443,7 +485,7 @@ module assembly() {
     color("#1f5f7a") translate([0, pen_y, pz + paper_t + 0.1]) clamp_ring();
   }
   color(c_dark) translate([0, pen_y, face_z]) nema17();
-  color(c_dark) translate([mx, col_y0, belt_z]) rotate([-90, 0, 0]) rotate([0, 0, 180]) nema17();
+  color(c_dark) translate([mx, col_y0, belt_z]) rotate([-90, 0, 0]) nema17();   // plug DOWN (wire clips, 11-15)
   color(c_metal) for (z = [rod_lo, rod_hi]) translate([-rod_len / 2, rod_y, z]) rotate([0, 90, 0]) cylinder(d = 8, h = rod_len);
   color(c_wheel) translate([-ix, rod_y - 5.075, belt_z]) rotate([-90, 0, 0]) pulley_m3();
   translate([0, 0, lift]) {
