@@ -240,7 +240,24 @@ module stand_body() {
   tri_round(160, 10, [[col_y0 + 4, tongue_top - 0.01], [-40, tongue_top - 0.01], [col_y0 + 4, 94 + 4 * 90 / (col_y0 + 40)]], 3);
   tri_round(164, 6, [[col_y1 - 4, tongue_top - 0.01], [base_y1, tongue_top - 0.01], [col_y1 - 4, 50 + 4 * 46 / (base_y1 - col_y1)]], 3);
 }
+// Tray sockets (stands 3 tops, 11-15, for the cable chain's tray, cad/cable-chain.scad): two
+// diamond pockets in each column top take the tray's two diamond pegs. Toolless: the tray lifts
+// straight off. A diamond (a square turned 45 degrees) because the stand prints lying on its outer
+// face, where world -x is UP on the printer: the pocket's ceiling is then a 45 degree roof, no
+// supports. The pockets stay clear of the upper rod's hole (it ends at x 152) and the wire clips.
+stand_top   = rod_hi + arm_h / 2;      // 172.5
+tray_peg_x  = (col_x0 + col_x1) / 2;   // 159
+tray_peg_y  = [48, 58];
+tray_peg_s  = 5;                       // the tray's peg: a 5 x 5 square turned 45 degrees
+tray_peg_fit = 0.2;                    // clearance per face
+tray_sock_d = 8;                       // pocket depth (the peg is 7.5 long)
+module tray_sockets() for (y = tray_peg_y) translate([tray_peg_x, y, 0]) rotate(45) {
+  s = tray_peg_s + 2 * tray_peg_fit;
+  translate([-s / 2, -s / 2, stand_top - tray_sock_d]) cube([s, s, tray_sock_d + 1]);
+  translate([0, 0, stand_top - 0.6]) linear_extrude(1, scale = (s + 2.6) / s) square(s, center = true);   // lead-in
+}
 module stand_holes() {
+  tray_sockets();
   for (z = [rod_lo, rod_hi]) translate([arm_x0 - 0.01, rod_y, z]) rotate([0, 90, 0]) {
     cylinder(d = rod_hole, h = rod_len / 2 - arm_x0 + 2, $fn = 96);    // 2 mm spare: rods up to 304 fit
     cylinder(d1 = rod_hole + 1.2, d2 = rod_hole, h = 0.6, $fn = 96);

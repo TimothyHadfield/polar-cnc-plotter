@@ -165,7 +165,8 @@ function ribbon(name, pts, colors = WIRE, r = 0.65) {
   colors.forEach((c, k) => {
     const off = (k - (colors.length - 1) / 2) * r * 2.1;
     const strand = new THREE.CatmullRomCurve3(samples.map((p, i) => p.clone().addScaledVector(side[i], off)));
-    const mesh = new THREE.Mesh(new THREE.TubeGeometry(strand, n * 2, r, 8),
+    // 160 x 6 faces a strand (was 320 x 8): the wires were more triangles than the whole model
+    const mesh = new THREE.Mesh(new THREE.TubeGeometry(strand, n, r, 6),
       new THREE.MeshStandardMaterial({ color: c, roughness: 0.45 }));
     mesh.name = `${name}_${k}`;
     g.add(mesh);
@@ -198,7 +199,7 @@ export function extras(pen_y = 3, platter_z = 40) {
   clip.name = 'paper__clip';
   for (const [z, flip] of [[platter_z + 1.9, 1], [platter_z - 0.6, -1]]) {
     const pts = loop.map(([u, v]) => { const r = 78 + u, w = (v - 4.25) * flip; return P(r * ca - w * sa, pen_y + r * sa + w * ca, z); });
-    const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.2), 200, 0.5, 8),
+    const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.2), 120, 0.5, 6),
       new THREE.MeshStandardMaterial({ color: 0xd4d8dc, metalness: 1, roughness: 0.25 }));
     mesh.name = 'paper__clip_part';
     clip.add(mesh);

@@ -1,19 +1,24 @@
 // Build guide content for V2, prototype 2 (cad/printed-frame.scad, 2026-11-11/13): the printed frame.
 // Same shape as build-steps.js. `model` names are nodes in build/plotter-v2.glb
 // (tools/make-build-model.py v2); parts shared with V1 keep V1's names and pieces.
+// V2 is frozen (11-15): cad/printed-frame-v2.scad and build/v2/stl = base 2, stands 2, wheel 2,
+// collar 3, clamp ring 2. Print times/grams are Bambu Studio slices (X1C, 0.20 mm, PLA) from progress.md.
 import { PARTS as V1 } from './build-steps.js';
 
 const amazon = asin => `https://www.amazon.com/dp/${asin}`;
 const amazonSearch = q => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`;
 const stl = name => `build/v2/stl/${name}.stl`;   // V2 frozen 11-15 (V3 has the live files)
+const plate = name => ['3MF', `build/print/${name}.3mf`];
 const SOURCE = 'https://github.com/TimothyHadfield/polar-cnc-plotter/blob/main/cad/printed-frame-v2.scad';
 
 // every part once; steps refer to them by key
 export const PARTS = {
   fittest:   { name: 'Fit test (printed, about 50 min)', qty: 1, buy: ['STL', stl('frame_fit_test')] },
   base:      { name: 'Base (printed)', qty: 1, model: ['frame_base'], buy: ['STL', stl('frame_base')],
+               print: '3 h 2 min · 150 g', plate: plate('plate2_base_only'),
                about: 'One print instead of the board and feet. Rails at both ends, motor cage in the middle, Uno pocket at the back.' },
   standR:    { name: 'Right stand (printed)', qty: 1, model: ['stand_right'], buy: ['STL', stl('frame_stand_right')],
+               print: 'both stands 4 h 4 min · 198 g',
                about: 'Holds the rod ends and the X motor. Slides onto the base rail from the back until it stops.' },
   standL:    { name: 'Left stand (printed)', qty: 1, model: ['stand_left'], buy: ['STL', stl('frame_stand_left')],
                about: 'Holds the other rod ends and the idler fork. The bolt sits in a slot that tensions the belt.' },
@@ -21,7 +26,7 @@ export const PARTS = {
   blocks:    V1.blocks,
   carriage:  V1.carriage,
   stage:     V1.stage,
-  clip:      V1.clip,
+  clip:      { ...V1.clip, print: 'on plate 2 with knob + spacers' },
   knob:      V1.knob,
   pen:       V1.pen,
   nema:      { ...V1.nema, about: 'Moves in exact 1.8° steps. One pulls the carriage (radius), one turns the platter directly (angle).' },
@@ -29,17 +34,20 @@ export const PARTS = {
   idler:     { name: 'GT2 20T bearing idler, 3 mm bore', qty: 1, model: ['idler'], buy: ['Amazon', amazon('B08J9W4PJT')],
                about: 'Turns the belt round at the far end. Ball bearings inside: quiet and low friction.' },
   spacers:   { name: 'Idler spacer (printed)', qty: 2, model: ['idler_spacers'], buy: ['STL', stl('frame_idler_spacers')],
+               print: '+7 min · 2 g with clip + knob', plate: plate('plate2_base_and_small_parts'),
                about: 'One each side of the idler. They press only its inner ring, so the bolt can be tight while it spins.' },
   idlerBolt: { name: 'M3 × 25 bolt + nut', qty: 1, model: ['idler_bolt'],
                about: 'The idler\'s axle. The nut sits in a slot pocket, so it slides with the bolt but can\'t turn.' },
   belt:      V1.belt,
   ties:      V1.ties,
   wheel:     { name: 'Platter wheel (printed)', qty: 1, model: ['wheel'], buy: ['STL', stl('frame_wheel')],
+               print: '2 h 53 min · 133 g', plate: plate('plate4_wheel'),
                about: 'Six spokes and a rim. Its solid top is the drawing face, printed on the bed so it comes out flat.' },
-  collar:    { name: 'Shaft collar (printed) + 2 M3 × 8 screws + 2 nuts', qty: 1, model: ['collar'], buy: ['STL', stl('frame_collar')],
-               about: 'Clamps the motor shaft. The wheel presses onto its hex taper: it turns the wheel with no play, and lifts off.' },
+  collar:    { name: 'Shaft collar (printed)', qty: 1, model: ['collar'], buy: ['STL', stl('frame_collar')],
+               print: '9 min · 2.8 g alone, or on plate 5', plate: plate('plate7_collar_3'),
+               about: 'Sits on the motor shaft. The wheel presses onto its hex taper: it turns the wheel with no play, and lifts off. Collar 3 (this file) has a blind bore and no screws; the first collar used 2 M3 × 8 screws + 2 nuts.' },
   gauge:     { name: 'Collar gauge (printed)', qty: 1, buy: ['STL', stl('frame_collar_gauge')],
-               about: 'Sets how high the collar sits on the shaft. It comes out once the collar is tight.' },
+               about: 'Sets how high the collar sits on the shaft. It comes out once the collar is tight. Only for the first, screwed collar: collar 3 stops on the shaft tip.' },
   washers:   { name: 'Motor screw washer (printed)', qty: 4, buy: ['STL', stl('frame_motor_washers')],
                about: 'One under each platter-motor screw head, so an M3 × 8 does not bottom out inside the motor. Not needed with M3 × 6.' },
   pad:       { name: 'Soft pad ~1 mm (vinyl or rubber)', qty: 1, model: ['pad'], buy: ['Amazon', amazonSearch('1mm rubber sheet')],
@@ -47,6 +55,7 @@ export const PARTS = {
   paper:     { name: 'Paper circle 196 mm', qty: 1, model: ['paper'],
                about: 'The drawing. The clamp ring holds its edge, so draw inside about 180 mm.' },
   ring:      { name: 'Clamp ring (printed)', qty: 1, model: ['clamp_ring'], buy: ['STL', stl('frame_clamp_ring')],
+               print: 'plate 5 with collar, gauge, washers: about 32 min · 18 g', plate: plate('plate5_clamp_ring_and_small_parts'),
                about: 'Snaps over the rim and pins pad and paper down. Its hooks sit between key ribs, so it can\'t turn.' },
   uno:       V1.uno,
   shield:    V1.shield,
@@ -56,8 +65,14 @@ export const PARTS = {
   supply:    V1.supply,
   cable:     V1.cable,
   wrap:      V1.wrap,
-  screws:    { name: 'M3 screws: 6 × 8, 4 × 6, 1 × 25, 3 nuts', qty: 1, buy: V1.screws.buy },
+  screws:    { name: 'M3 screws: 6 × 8, 4 × 6, 1 × 25, 3 nuts', qty: 1, buy: V1.screws.buy,
+               about: 'With collar 3: 4 × M3 × 8 (X motor), 4 × M3 × 6 (platter motor), 1 × M3 × 25 + 1 nut (idler). The first collar added 2 × M3 × 8 + 2 nuts.' },
+  circles:   { name: 'Paper + pad cutting circles (PDF)', qty: 1, buy: ['PDF', 'build/print/paper_and_pad_circles.pdf'],
+               about: 'Page 1: the 196 mm paper circle. Page 2: the 200 mm pad. Print at 100 % and check the 100 mm scale line.' },
 };
+
+export const TOOLS = ['3D printer (PLA)', 'Hex keys', 'Screwdriver for your M3 heads', 'Small flat screwdriver',
+  'Pliers', 'Multimeter', 'Flush cutters', 'Scissors', 'Calipers (to measure)'];
 
 export const STEPS = [
   {
@@ -66,63 +81,119 @@ export const STEPS = [
       'A pen slides along the rail (radius) while the platter turns (angle).',
       'V2: printed frame, no wood, PVC or glue. The motor turns the platter directly.',
       'Tools: 3D printer, hex keys, small screwdriver, multimeter.',
+      'Prints: about 10 h 40 min and 500 g of PLA in all.',
+      'Each step: parts fly into place in 3D. Tap a part for what it does; Replay plays it again.',
     ],
     parts: Object.keys(PARTS),
+    tools: TOOLS,
+    tips: [
+      'Order: print, stands, rail on the base, belt, pen, electronics, platter motor, platter, firmware.',
+      'Power off means 12 V AND USB unplugged. USB alone powers the drivers\' logic.',
+    ],
     links: [['Printed frame source (OpenSCAD)', SOURCE],
             ['Printed parts source (OpenSCAD)', 'https://github.com/TimothyHadfield/polar-cnc-plotter/tree/main/cad']],
   },
   {
     title: 'Prints', show: ['frame_base', 'stand_right', 'stand_left', 'wheel', 'collar', 'clamp_ring', 'idler_spacers'],
+    fly: {},
     do: [
       'Optional fit test: the groove slides on the rail, a rod goes in snug.',
       'Base flat, supports on. Leave "On build plate only" unticked: the motor cage roof needs them.',
       'Stands on their outer face, wheel and clamp ring top face down.',
       'Everything else needs no supports.',
+      'Settings used: Bambu X1C, 0.20 mm Standard, PLA. The 3MF plates are laid out already.',
+      'Pull every support out of the motor cage before the motor goes in.',
     ],
+    check: 'Rails and grooves are smooth, rod holes are round, the cage roof is flat inside.',
     parts: ['fittest', 'base', 'standR', 'standL', 'wheel', 'collar', 'gauge', 'washers', 'ring', 'spacers'],
+    tools: ['3D printer', 'Flush cutters', 'Pliers'],
+    tips: [
+      'PLA, not ABS: a 250 mm flat ABS print warps without an enclosure.',
+      'Out of PLA for plate 5? Its ABS file has the ring 0.4 % larger, on Textured PEI.',
+      'One rail printed rough on the first base. Feel both and sand any ridge before sliding.',
+    ],
+    links: [['Plate 5, ABS version (3MF)', 'build/print/plate5_clamp_ring_and_small_parts_ABS.3mf']],
   },
   {
     title: 'Stands', show: ['stand_right', 'stand_left', 'x_motor', 'x_pulley', 'idler', 'idler_spacers', 'idler_bolt'],
     view: [-20, 15],
+    fly: { x_motor: 'front', x_pulley: 'front', idler_spacers: 'front', idler: 'up', idler_bolt: ['front', 4] },
     do: [
       'Bolt a NEMA 17 to the right stand\'s front face, 4 × M3 × 8 from behind.',
       'Pulley on its shaft, in line with the rods.',
       'Left fork: spacer, idler, spacer on the M3 × 25 bolt, nut in its pocket.',
       'Leave the bolt loose for now: its slot tensions the belt.',
+      'Motor plug up (as drawn), the shaft pointing back through the stand.',
+      'Pulley set screw onto the shaft\'s flat, teeth lined up with the idler.',
     ],
+    check: 'The idler spins freely on the loose bolt; the pulley and idler sit at the same height and depth.',
     parts: ['standR', 'standL', 'nema', 'pulley16', 'idler', 'spacers', 'idlerBolt', 'screws'],
+    use: { nema: 1 },
+    tools: ['Hex keys', 'Screwdriver', 'Pliers'],
+    tips: [
+      'The first fork\'s cheeks bent when the bolt was tightened. Stands 2 are thicker, with bridges.',
+      'Cheeks still bending? A gap in the stack: measure the idler width (8.5 mm assumed).',
+    ],
   },
   {
     title: 'Rail and base', show: ['frame_base', 'stand_right', 'stand_left', 'rods', 'blocks', 'x_motor', 'x_pulley', 'idler', 'idler_spacers', 'idler_bolt'],
+    fly: { 'stand_right,stand_left,rods,blocks,x_motor,x_pulley,idler,idler_spacers,idler_bolt': 'back' },
     do: [
       'Slide two bearing blocks onto each rod.',
       'Push the rods into both stands, one above the other.',
       'Slide stands and rods onto the base rails from the back, pushing forward, together, until they stop.',
+      'The grooves are closed at the back: that stop puts the rods exactly over the platter.',
+      'Push both stands evenly. If one binds, back it out; don\'t force it.',
     ],
+    check: 'Both stands stop at the same point, stand upright, and the carriage blocks slide end to end.',
     parts: ['rods', 'blocks', 'base'],
+    tools: ['Sandpaper (only if a rail binds)'],
+    tips: [
+      'They go on from the BACK. An early guide said front: that was wrong.',
+      'A 135 mm dovetail binds easily. A ridge on the rail is the usual cause.',
+    ],
   },
   {
     title: 'Carriage belt', show: ['carriage_plate', 'blocks', 'rods', 'x_belt', 'x_pulley', 'x_motor', 'idler', 'idler_spacers', 'idler_bolt'],
     view: [-20, 15],
+    fly: { carriage_plate: 'front', x_belt: 'up' },
     do: [
       'Fix the carriage plate to the four blocks: strong double-sided tape, or M4 bolts.',
       'Belt over both pulleys, ends round the carriage pegs, zip-tied.',
       'Pull the idler outward in its slot until the belt is tight, then tighten the bolt.',
       'The carriage should slide end to end without catching.',
+      'Belt teeth face the pulleys; the lower run\'s two ends go to the pegs.',
+      'Tighten the idler bolt to a hard stop. The spacers carry the force, not the bearing.',
     ],
+    check: 'Turn the X motor by hand: the carriage follows with no slip, and the idler still spins.',
     parts: ['carriage', 'belt', 'ties', 'screws'],
+    tools: ['Hex key (M3 × 25)', 'Pliers', 'Flush cutters'],
+    tips: [
+      'Tim taped the blocks with double-sided tape. It holds, but check it before every long plot.',
+      'The slot takes up 8 mm of belt. Tie the belt nearly tight, then let the slot finish it.',
+    ],
   },
   {
     title: 'Pen lift', show: ['stage', 'slider', 'pen_clip', 'knob', 'pen'],
+    fly: { stage: 'front', slider: 'front', pen_clip: 'front', knob: ['front', 3], pen: 'up' },
     do: [
       'Screw the linear stage to the front of the carriage plate, motor on top.',
       'Fix the pen clip to the stage slider.',
       'Pen in the clip, knob tightens it. Tip just touches paper at the bottom.',
+      'The stage drops into the plate\'s pocket (0.3 mm play a side), so it sits straight.',
+      'Clamp the pen about 2 mm higher than touching: collar 3 raised the platter.',
     ],
+    check: 'Turn the stage\'s screw by hand: the pen goes up and down straight, the tip clears the paper at the top.',
     parts: ['stage', 'clip', 'knob', 'pen'],
+    tools: ['Small screwdriver'],
+    tips: [
+      'The knob needs an M4 screw with its head cut off. Messy, but it works.',
+      'A Sharpie didn\'t fit the round holder. Check your pen first.',
+    ],
   },
   {
     title: 'Electronics', show: ['frame_base', 'electronics', 'wires'],
+    fly: { electronics: 'back', wires: 'up' },
     do: [
       'Shield on the Uno. Jumpers MS1 + MS2 under X, Y and Z (1/16 steps).',
       'Drivers: EN pin to the shield\'s EN mark. Backwards burns them.',
@@ -131,33 +202,62 @@ export const STEPS = [
       'Driver knob voltage: X and Y about 1.0 V, Z about 0.4 V. Set it now: the wheel covers the board.',
       'Tie the wires down flat. The wheel spins just above them.',
       'Never plug or unplug a motor with power on.',
+      'Vref: meter between the knob\'s metal and GND, 12 V on. Turn in small steps.',
     ],
+    check: 'Power on: no smell, no hot driver after a minute. Each motor holds stiff when GRBL enables it.',
     parts: ['uno', 'shield', 'drivers', 'wires', 'jack', 'supply', 'cable', 'wrap'],
+    tools: ['Multimeter', 'Small flat screwdriver', 'Flush cutters'],
+    tips: [
+      'All three plugs had their middle wires swapped on the first build. Meter the pairs: NEMA ~2.3 Ω, pen stage ~20 Ω (wires 1-3 and 2-4).',
+      'A screaming or jiggling motor was a half-seated plug three times. Power off, reseat it.',
+      'A driver one pin row off died. Check every pin before power.',
+      'Tim runs 1.3 V on X and Y. 1.0 V keeps the motor cooler in its PLA cage.',
+      'The base 2 pocket has no pads: the Uno rests on its own pins.',
+    ],
     links: [['TMC2209 pinout', 'https://learn.watterott.com/silentstepstick/pinconfig/tmc2209/']],
   },
   {
     title: 'Platter motor', show: ['frame_base', 'y_motor'], view: [-10, 30],
+    fly: { y_motor: 'front' },
     do: [
       'Slide the motor into its cage from the front, shaft up, plug to the back.',
       'Start 4 screws from the top, loose: M3 × 6, or M3 × 8 with a printed washer under each head.',
       'Carriage over the motor. Slide the motor forward or back until its shaft is under the pen tip.',
       'Tighten the 4 screws.',
+      'Lower the pen with the stage\'s screw to see the tip right over the shaft.',
     ],
+    check: 'Looking down, the pen tip sits over the shaft centre; the motor doesn\'t move when pushed.',
     parts: ['nema', 'base', 'washers', 'screws'],
+    use: { nema: 1 },
+    tools: ['Screwdriver for your M3 heads'],
+    tips: [
+      'A bare M3 × 8 goes 5.5 mm into ~4.5 mm of thread and can jam. Washer or M3 × 6.',
+      'On the first base the motor sat an inch in front of the pen. Base 2 slides ±15 mm to fix that.',
+    ],
   },
   {
     title: 'Platter', show: ['y_motor', 'collar', 'wheel', 'pad', 'paper', 'clamp_ring'], view: [20, 30],
+    fly: { collar: 'up', wheel: 'up', pad: 'up', paper: 'up', clamp_ring: 'up' },
     do: [
-      'Nuts into the collar\'s slot, and start its 2 M3 × 8 screws.',
-      'Lay the gauge on the cage top, around the shaft. Push the collar down onto it.',
-      'Tighten the screws onto the shaft\'s flat: snug, not hard. Pull the gauge out.',
-      'Press the wheel down onto the collar\'s hex taper, screw heads in its channel. Pull up to take it off.',
+      'Line the collar\'s flat up with the shaft\'s flat.',
+      'Push the collar straight down the shaft until the shaft\'s tip meets its roof. No screws.',
+      'Press the wheel down onto the collar\'s hex taper. Pull up to take it off.',
       'Pad, then paper, then snap the clamp ring over the rim, hooks between the key ribs.',
+      'Cut pad and paper with the circles PDF: 200 mm pad, 196 mm paper.',
     ],
-    parts: ['collar', 'gauge', 'wheel', 'pad', 'paper', 'ring'],
+    check: 'Spin the wheel by hand: no wobble, no rubbing on the cage, and it doesn\'t turn on the collar.',
+    parts: ['collar', 'gauge', 'wheel', 'pad', 'paper', 'ring', 'circles'],
+    tools: ['Scissors'],
+    tips: [
+      'First collar only: nuts in its slot, 2 M3 × 8 screws, gauge on the cage top, snug onto the flat, gauge out.',
+      'Snap the ring\'s hooks on in opposite pairs, gently: a forced fourth hook broke on ring 1.',
+      'Ring 2\'s hooks are 0.5 mm longer, with room for a rubber band round the rim.',
+      'Draw inside about 180 mm: the ring covers the paper\'s edge.',
+    ],
   },
   {
     title: 'Firmware', show: ['electronics'],
+    fly: {},
     do: [
       'Install the Arduino IDE (and the CH340 driver for clone boards).',
       'Flash GRBL 1.1 to the Uno.',
@@ -165,7 +265,13 @@ export const STEPS = [
       'Starting values: $100=100 (carriage), $101=8.889 (platter, degrees, direct drive).',
       'Speeds to start with: $110=6000, $111=7200, $120=500, $121=300. The platter is heavy: keep $121 low.',
     ],
+    check: 'The app connects, and a jog moves each axis the way its button says.',
     parts: ['uno', 'cable'],
+    tools: ['Computer with Chrome or Edge'],
+    tips: [
+      'Calibrate gives $101 about 4.444? The drivers run 1/8 steps (no jumpers). That works too.',
+      'An Uno R4 can\'t run GRBL. It needs the R3\'s ATmega328P.',
+    ],
     links: [['Arduino IDE', 'https://www.arduino.cc/en/software'], ['GRBL', 'https://github.com/gnea/grbl'],
             ['Flashing GRBL', 'https://github.com/gnea/grbl/wiki/Flashing-Grbl-to-an-Arduino'],
             ['CH340 driver', 'https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all'],
@@ -176,8 +282,11 @@ export const STEPS = [
     do: [
       'Open the plotter app in Chrome or Edge on a computer.',
       'Load a picture, connect, put the pen on the platter centre, Set center, Plot.',
+      'First time: Calibrate does Turn test, Turn direction, Pen height, Carriage test and Find center.',
     ],
+    check: 'A circle closes and a spoke is straight (tests/machine 1-circle and 2-spoke).',
     parts: [],
+    tips: ['The pen draws on the idler side only (up to about 95 mm out). That covers the 90 mm drawing.'],
     links: [['Open the plotter app', './'], ['Try it in the simulator', 'sim.html?v=2']],
   },
 ];
