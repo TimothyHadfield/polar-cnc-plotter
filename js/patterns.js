@@ -126,6 +126,35 @@ export function patternStrokes(type, params = {}) {
   return out;
 }
 
+// ---------- test drawing ----------
+// Shapes that each come out wrong in their own way when one calibration step is off (polar
+// distortions: a wrong $100 scales every radius, a wrong $101 every angle, a wrong center shifts
+// every radius, a wrong center gap pushes lines through the center sideways).
+//   big circle round the center: does not close            -> platter steps (Turn test)
+//   square, TEST_SIDE wide: wrong size                       -> carriage steps (Carriage test)
+//   cross through the center: halves miss each other         -> center / center gap (Find center)
+//   small circle passing near the center: egg-shaped         -> center (Find center)
+//   circle top right, spiral bottom left: swapped (mirrored) -> Turn direction
+// Units are mm at Size 100 % and Drawing width 180: strokes.radius 90 reaches the drawing circle.
+export const TEST_SIDE = 100;
+export const TEST_RADIUS = 90;
+export function testStrokes() {
+  const ring = (cx, cy, r) => sampleCurve(t => [cx + r * Math.cos(t), cy + r * Math.sin(t)], 0, TAU, 64);
+  const h = TEST_SIDE / 2;
+  const turns = 3, R = 18;
+  const out = [
+    ring(0, 0, 85),
+    [[-h, -h], [h, -h], [h, h], [-h, h], [-h, -h]],
+    [[-h, 0], [h, 0]],
+    [[0, -h], [0, h]],
+    ring(22, 22, 18),
+    sampleCurve(t => { const r = R * t / (TAU * turns); return [-22 + r * Math.cos(t), -22 + r * Math.sin(t)]; }, 0, TAU * turns, 48),
+  ].map(yDown);
+  out.center = [0, 0];
+  out.radius = TEST_RADIUS;
+  return out;
+}
+
 // ---------- tool panel ----------
 export function initPatterns(api) {
   const $ = id => document.getElementById(id);
@@ -162,4 +191,12 @@ export function initPatterns(api) {
   });
   sliders();
   $('openPattern').addEventListener('click', async () => { (await tool).openTool('patternTool'); update(0); });
+
+  // Test drawing (beside the sample links); its ? says how wide the square should come out
+  const side = () => {
+    const s = api.getSettings(), el = $('testSide');
+    if (el) el.textContent = String(Math.round(TEST_SIDE * (s.diameter / 2) * (s.size / 100) / TEST_RADIUS));
+  };
+  $('testDraw')?.addEventListener('click', () => { api.setDrawing(testStrokes(), 'Test drawing'); side(); });
+  document.querySelector('[data-q="testDrawHelp"]')?.addEventListener('click', side);
 }

@@ -15,8 +15,9 @@ export const PLANNER_BLOCKS = 15;
 const now = () => performance.now();
 
 export class SimGrbl extends FakeGrbl {
-  constructor({ speed = 1, pos = [0, 0, 0], tickMs = 8, bootMs = 30 } = {}) {
-    super({ lineMs: tickMs, moveTicks: 0, bootMs });
+  // switchX: where the homing switch is, in real mm of this GRBL's own X (see FakeGrbl), or null
+  constructor({ speed = 1, pos = [0, 0, 0], tickMs = 8, bootMs = 30, switchX = null } = {}) {
+    super({ lineMs: tickMs, moveTicks: 0, bootMs, switchX });
     this.speed = speed;
     this.pos = pos.slice();
     this.end = pos.slice();        // where the planner's last block ends
@@ -35,6 +36,7 @@ export class SimGrbl extends FakeGrbl {
   // where the machine really is (mm, degrees, mm) for a position GRBL reports
   real(p = this.pos) { return p.map((v, i) => v * +this.settings[100 + i] / this.true[i]); }
   rescale(axis, k) { this.pos[axis] *= k; this.end[axis] *= k; }
+  physX() { return this.real()[0]; }
 
   // replies arrive as soon as possible (a microtask), so the sender can keep the planner full
   emit(line) { if (this.alive) Promise.resolve().then(() => this.alive && this.onLine?.(line)); }

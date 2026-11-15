@@ -8,6 +8,7 @@
 import { wrap180 } from './polar.js';
 import { plausible, badAxes, refusal, jogFeed } from './safe.js';
 import { loadDefaults, saveDefaults, differs, apply, describe } from './defaults.js';
+import { learnHome } from './home.js';
 export { parseSettings } from './grbl.js';
 
 // ---------- math ----------
@@ -194,20 +195,23 @@ export async function centerBetween(grbl, a, b, penUp, alive) {
 
 // The pen is at its up height now and touched the paper at machine Z `down`. Work Z0 = here, so
 // the heights still fit next time as long as the pen is left up. Returns the settings to save.
-export async function penHeights(grbl, down) {
+// `press` (mm, setting Pen press): a pen in a spring holder goes that much further down than the
+// touch point, so it keeps pressing on the paper. Z+ lifts the pen (machine.js sets $3), so deeper
+// is more negative.
+export async function penHeights(grbl, down, press = 0) {
   await grbl.setPenZero();
-  return { penUp: 0, penDown: r2(down - grbl.penZero) };
+  return { penUp: 0, penDown: r2(down - grbl.penZero - (press > 0 ? press : 0)) };
 }
 
 // The tip touches the paper right now: that is pen down. Lift it LIFT motor steps (about 2 mm on
 // a DVD-drive stage at 250 steps per unit; in steps because $102 is never calibrated) and call
 // that pen up. Returns the settings to save.
 export const LIFT = 100;
-export async function touchLift(grbl, spu, alive) {
+export async function touchLift(grbl, spu, alive, press = 0) {
   const down = (await waitIdle(grbl, alive)).mpos[2];
   await grbl.send(nudgeJog('Z', LIFT / spu, 200, spu));
   await waitIdle(grbl, alive);
-  return penHeights(grbl, down);
+  return penHeights(grbl, down, press);
 }
 
 // ---------- the panel ----------
@@ -354,6 +358,10 @@ const HTML = `
     <span class="seg dstep"><button data-step="0.2" class="on">0.2°</button><button data-step="1">1°</button></span></div>
   <p class="calsay">5. Press Done. The pen moves to the center.</p>
   <button class="btn" data-act="done" data-on>Done</button>
+  <div id="calHome" hidden>
+    <p class="calsay">6. Homing switch: press Measure once. The carriage goes to the switch.</p>
+    <div class="calres"><button class="btn sm" data-act="homeLearn">Measure</button><span class="end">Switch at <b id="calHomeX">–</b> mm</span></div>
+  </div>
 </div>
 
 <div class="calstep" data-n="6" hidden>
@@ -511,6 +519,9 @@ export function initCalibrate(api) {
     $('calZFlipRow').hidden = $('calXFlipRow').hidden = !Number.isFinite(vals[3]);   // the pretend plotters have no $3
     $('calZFlip').checked = s.zFlip !== false;
     $('calXFlip').checked = !!(vals[3] & 1);
+    // homing switch (Settings): measured once, after the center is set
+    $('calHome').hidden = !s.homing;
+    $('calHomeX').textContent = Number.isFinite(s.homeX) ? s.homeX.toFixed(1) : '–';
     // the quick check
     $('calChecks').innerHTML = CHECKS.map((c, i) => `<li data-st="${answers[i] === true ? 'done' : answers[i] === false ? 'bad' : asking && answers.length === i ? 'on' : 'idle'}">${c.name}</li>`).join('');
     $('calAnswer').hidden = !asking;
@@ -525,7 +536,8 @@ export function initCalibrate(api) {
     root.querySelectorAll('[data-act]').forEach(b => {
       const act = b.dataset.act, n = +(b.closest('.calstep')?.dataset.n ?? 0);
       const stop = slow?.act === act;
-      const off = b.hasAttribute('data-on') && st[n] !== 'on' || act === 'done' && !can[n] || act in need && !Number.isFinite(need[act]);
+      const off = b.hasAttribute('data-on') && st[n] !== 'on' || act === 'done' && !can[n] || act in need && !Number.isFinite(need[act])
+        || act === 'homeLearn' && !grbl?.center;
       b.disabled = act === 'back' ? !!slow || !!job || step === 1 : act === 'next' ? !!slow || !!job || step === CHECK
         : act === 'yes' || act === 'no' ? !asking
         : act === 'change' || act === 'keep' ? !confirming
@@ -543,6 +555,7 @@ export function initCalibrate(api) {
     root.querySelectorAll('.switch input').forEach(i => { i.disabled = busy || !!slow; });
     const db = root.querySelector('.calstep[data-n="5"] [data-act=done]');
     db.textContent = job?.act === 'done' ? 'Stop' : 'Done';
+    root.querySelector('[data-act=homeLearn]').textContent = job?.act === 'homeLearn' ? 'Stop' : 'Measure';
     $('calCheckOpen').disabled = !!slow || !!job || busy;
     root.querySelector('[data-act=checkGo]').textContent = job?.act === 'checkGo' ? 'Stop' : st[CHECK] === 'idle' ? 'Start check' : 'Check again';
   }
@@ -598,7 +611,11 @@ export function initCalibrate(api) {
     await saveSetting(g, n, v, old);
     vals[n] = r3(v);
     if (n === 101) { turn = null; mark = null; halved = false; }
-    if (n === 100) { line = null; if (mark) mark.x *= old / vals[n]; $('calRuler').value = ''; }
+    if (n === 100) {
+      line = null; if (mark) mark.x *= old / vals[n]; $('calRuler').value = '';
+      const hx = api.getSettings().homeX;                // the switch has not moved: same steps, new mm
+      if (Number.isFinite(hx) && old > 0) api.setSettings({ homeX: r2(hx * old / vals[n]) });
+    }
     await m.check();
   }
   // the step size picked in the step on screen
@@ -699,7 +716,7 @@ export function initCalibrate(api) {
     3: () => run(async (g, live) => {
       const reset = await fit(g, 'Z');
       if (reset) throw new Error(`${reset} Try again.`);
-      const h = await touchLift(g, vals[102], live);
+      const h = await touchLift(g, vals[102], live, api.getSettings().penPress);   // spring holder: press past the touch
       st[3] = 'done';
       if (!await guard(Object.entries(h).map(([key, v]) => ({ key, to: v })))) { msg('Kept the defaults. The pen is up.'); return; }
       api.setSettings(h);
@@ -778,6 +795,18 @@ export function initCalibrate(api) {
     xLeft2: () => xNudge(1, '2'), xRight2: () => xNudge(-1, '2'),
     yCcw: () => yNudge(1), yCw: () => yNudge(-1),
     checkGo: () => quickCheck(),
+    // the homing switch: how far from the center it is, once (js/home.js); Home uses it from then on
+    homeLearn: () => run(async (g, live) => {
+      if (!g.center) throw new Error('Set the center first: Done above.');
+      if (badAxes(vals).includes('X')) throw new Error('Do the carriage test first.');
+      const x = await learnHome(g, { spu: vals[100], accel: vals[120], penUp: api.getSettings().penUp,
+        live: () => { if (!live()) throw new Error('Not connected.'); return true; } });
+      const d = loadDefaults();
+      if (!await guard([{ key: 'homeX', to: x }])) { msg('Kept the defaults.'); return; }
+      if (d && d.app?.homeX === undefined) saveDefaults(apply(d, [{ key: 'homeX', to: x }]));   // first measure: it becomes a default
+      api.setSettings({ homeX: x });
+      msg(`Switch at ${x.toFixed(1)} mm. Home sets the center from now on.`);
+    }, '', 'homeLearn'),
     yes: () => asking?.resolve(true), no: () => asking?.resolve(false),
     change: () => confirming?.resolve(true), keep: () => confirming?.resolve(false),
     back: () => go(step === CHECK ? back : step - 1),

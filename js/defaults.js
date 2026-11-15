@@ -6,11 +6,13 @@
 // changes one, and a plotter that differs is offered its defaults back (machine.js).
 
 export const KEY = 'polar-plotter-defaults';
-export const APP = ['offset', 'flip', 'penUp', 'penDown', 'zFlip'];
+// homeX: where the homing switch is, mm from the center (js/home.js); null until measured
+export const APP = ['offset', 'flip', 'penUp', 'penDown', 'zFlip', 'homeX'];
 export const GRBL = [100, 101, 3];
 export const LABEL = {
   100: 'Carriage steps ($100)', 101: 'Platter steps ($101)', 3: 'Motor directions ($3)',
   offset: 'Center gap', flip: 'Turn direction', penUp: 'Pen up', penDown: 'Pen down', zFlip: 'Pen direction',
+  homeX: 'Switch distance',
 };
 
 // The pretend plotters (simulator, ?demo) share this browser's storage with the real one, so they
@@ -32,7 +34,7 @@ export function saveDefaults(d, store = globalThis.localStorage) {
 // The defaults as they are right now: the app settings `s` and the plotter's `vals` ($$).
 export function capture(vals, s, at = new Date().toISOString().slice(0, 10)) {
   const app = {}, grbl = {};
-  for (const k of APP) if (s[k] !== undefined) app[k] = s[k];
+  for (const k of APP) if (s[k] !== undefined && s[k] !== null) app[k] = s[k];
   for (const n of GRBL) if (Number.isFinite(vals?.[n])) grbl[n] = vals[n];
   return { app, grbl, at };
 }

@@ -16,10 +16,12 @@ const PAPER = 200;  // mm, the round sheet on the platter
 
 // ---------- settings (kept in this browser) ----------
 const KEY = 'polar-plotter-settings';
-const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset', 'gap'];
+const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset', 'gap', 'penPress', 'homeX'];
 const STYLES = ['outline', 'center', 'spiral', 'hatch'];   // picture style
 // zFlip: the pen motor is mounted so that GRBL's Z direction has to be reversed (js/machine.js)
-let settings = { ...DEFAULTS, showTravel: false, gap: 1.2, zFlip: true };
+// penPress: mm a spring pen holder presses past the touch point (Calibrate's Pen height)
+// homing / homeX: the homing switch is fitted / where it is, mm from the center (js/home.js)
+let settings = { ...DEFAULTS, showTravel: false, gap: 1.2, zFlip: true, penPress: 0, homing: false, homeX: null };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
 if (!STYLES.includes(settings.style)) settings.style = settings.center ? 'center' : 'outline';   // old Centerlines switch
 delete settings.center;
@@ -293,7 +295,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') sheet.hidden
 
 for (const f of FIELDS) {
   const el = $(f);
-  el.value = settings[f];
+  if (!el) continue;
+  el.value = settings[f] ?? '';
   el.addEventListener('change', () => {
     let v = parseFloat(el.value);
     // keep to the input's own min/max (a 0 speed or a 500 mm drawing makes G-code the plotter can't run)
@@ -303,11 +306,15 @@ for (const f of FIELDS) {
     if (Number.isFinite(v)) { settings[f] = v; save(); rebuild(); } else el.value = settings[f];
   });
 }
-for (const f of ['flip', 'showTravel']) {
+// the homing switch's controls show only while it is switched on
+const showHoming = () => { document.querySelectorAll('[data-homing]').forEach(e => { e.hidden = !settings.homing; }); machine?.refresh(); };
+for (const f of ['flip', 'showTravel', 'homing']) {
   const el = $(f);
+  if (!el) continue;
   el.checked = !!settings[f];
   el.addEventListener('change', () => {
     settings[f] = el.checked; save();
+    if (f === 'homing') return showHoming();
     if (f === 'showTravel') return draw();
     rebuild();
   });
@@ -338,7 +345,7 @@ const api = {
   setSettings: patch => {
     Object.assign(settings, patch); save(); rebuild();
     for (const [k, v] of Object.entries(patch)) {      // keep the Settings sheet's inputs in step
-      if (FIELDS.includes(k)) $(k).value = v; else if (k === 'flip' || k === 'showTravel') $(k).checked = !!v;
+      if (FIELDS.includes(k)) { if ($(k)) $(k).value = v ?? ''; } else if (k === 'flip' || k === 'showTravel') $(k).checked = !!v;
     }
   },
   getResult: () => result,
@@ -365,5 +372,6 @@ initCalibrate(api);
 initText(api);
 initPatterns(api);
 initSketch(api);
+showHoming();
 takeHandoff();
 rebuild();

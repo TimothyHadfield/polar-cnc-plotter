@@ -6,6 +6,7 @@ import { FakeGrbl } from './fakegrbl.js';
 import { badAxes, trouble, jogFeed } from './safe.js';
 import { setDirection, uprightPen, saveSetting } from './calibrate.js';
 import { loadDefaults, saveDefaults, capture, plotterOff, describe } from './defaults.js';
+import { home } from './home.js';
 
 const $ = id => document.getElementById(id);
 
@@ -39,6 +40,7 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
   // The plotter's own settings ($$), read on connect and after every change. While its steps per
   // unit cannot be right (js/safe.js), jogging that axis and plotting are switched off.
   let vals = null;
+  let homing = null;     // { stopped } while Home runs (js/home.js)
   // A plotter whose steps or directions are not the defaults (js/defaults.js) is offered them back.
   const off = () => grbl ? plotterOff(loadDefaults(), vals) : [];
   const warn = () => {
@@ -69,9 +71,16 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     panel.classList.toggle('connected', on);
     $('run').hidden = !running;
     $('plotRow').hidden = running;
-    const busy = running || !on;
+    const busy = running || !on || !!homing;
     const bad = on ? badAxes(vals) : [];
     document.querySelectorAll('[data-jog],[data-pen],#setCenter').forEach(b => { b.disabled = busy || bad.includes(b.dataset.jog?.[0]); });
+    // Home (the homing switch, Settings): the same button stops it
+    const hb = $('home');
+    if (hb) {
+      hb.hidden = !getSettings().homing;
+      hb.textContent = homing ? 'Stop' : 'Home';
+      hb.disabled = homing ? homing.stopped : busy || bad.includes('X');
+    }
     const job = getJob();
     if (resume && !running && job?.gcode !== resume.gcode) resume = null;   // a different drawing
     const rb = $('resumePlot');
@@ -143,7 +152,7 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     try {
       say('Connecting…');
       if (sim) link = sim.connect();
-      else if (demo) link = new FakeGrbl({ lineMs: 16, moveTicks: 1 });
+      else if (demo) link = new FakeGrbl({ lineMs: 16, moveTicks: 1, switchX: -74 });   // a homing switch 74 mm right of where the pen starts
       else {
         picked = await pickPort(navigator.serial, !askPort);
         link = await openSerial(picked.port, () => lost());
@@ -248,6 +257,31 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     say(back ? 'Pen moved to the centre. Center set.' : 'Center set.');
     refresh();
   })()));
+
+  // Home: touch the homing switch twice, then the center is set from where the switch is (homeX,
+  // measured once in Calibrate). Pressing it again stops it where it is (jog cancel).
+  $('home')?.addEventListener('click', async () => {
+    if (homing) { homing.stopped = true; grbl?.realtime('\x85'); refresh(); return; }
+    if (!grbl) return;
+    const g = grbl, s = getSettings();
+    if (!Number.isFinite(s.homeX)) { say('Measure the switch first: Calibrate, Find center.', true); return; }
+    const me = homing = { stopped: false };
+    say('Homing…');
+    refresh();
+    const live = () => {
+      if (me.stopped) throw new Error('Stopped.');
+      if (grbl !== g) throw new Error('Not connected.');
+      return true;
+    };
+    try {
+      await home(g, s.homeX, { spu: vals?.[100], accel: vals?.[120], penUp: s.penUp, live });
+      if (grbl === g) say('Home. Center set.');
+    } catch (e) {
+      if (grbl === g) say(me.stopped ? 'Stopped.' : e.message, !me.stopped);
+    }
+    homing = null;
+    refresh();
+  });
 
   // Put the plotter's steps and directions back to the defaults (the center stays where it was).
   $('restoreDefaults')?.addEventListener('click', () => run((async () => {
