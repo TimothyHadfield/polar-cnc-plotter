@@ -92,6 +92,35 @@ function waves({ rings, wobble, bumps }) {
   return out.map(yDown);
 }
 
+// Small seeded random numbers (mulberry32): a shape number always gives the same drawing.
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Harmonograph: two swinging pendulums per axis, slowly dying down. The shape number picks their
+// speeds (near whole-number ratios, a little off so the figure drifts) and starting swings; Fade is
+// how far the swing dies down by the end (100 % = to 5 % of its start).
+const SWINGS = 24;   // turns of the slowest pendulum
+function harmonograph({ shape, fade }) {
+  const r = rng(shape * 7919);
+  const pend = () => ({ f: 1 + Math.floor(r() * 4) + (r() - 0.5) * 0.04, p: r() * TAU, a: 0.4 + 0.6 * r() });
+  const px = [pend(), pend()], py = [pend(), pend()];
+  const T = TAU * SWINGS, d = -Math.log(1 - 0.95 * fade / 100) / T;
+  const at = (ps, t) => ps.reduce((s, q) => s + q.a * Math.sin(q.f * t + q.p), 0) * Math.exp(-d * t);
+  // reach first (coarse), so the fine sampling's tolerance is in the final ~100 units
+  let R = 0;
+  for (let i = 0; i <= 8192; i++) { const t = T * i / 8192; R = Math.max(R, Math.hypot(at(px, t), at(py, t))); }
+  const k = 100 / (R || 1);
+  const s = sampleCurve(t => [k * at(px, t), k * at(py, t)], 0, T, 64 * SWINGS);
+  const R2 = Math.max(...s.map(p => Math.hypot(p[0], p[1])));
+  return [yDown(R2 > 100 ? s.map(([x, y]) => [100 * x / R2, 100 * y / R2]) : s)];
+}
+
 export const PATTERNS = {
   spiral: { label: 'Spiral', make: spiral, sliders: [
     { key: 'turns', label: 'Turns', min: 2, max: 30, value: 12 },
@@ -111,7 +140,19 @@ export const PATTERNS = {
     { key: 'wobble', label: 'Wobble', min: 0, max: 100, value: 60, unit: '%' },
     { key: 'bumps', label: 'Bumps', min: 2, max: 24, value: 8 },
   ] },
+  harmonograph: { label: 'Swing', make: harmonograph, sliders: [
+    { key: 'shape', label: 'Shape', min: 1, max: 999, value: 1 },
+    { key: 'fade', label: 'Fade', min: 10, max: 100, value: 80, unit: '%' },
+  ] },
 };
+
+// Shuffle: a random pattern from the families that make something new for every setting.
+export const GENERATIVE = ['rose', 'spirograph', 'harmonograph'];
+export function shuffle(rand = Math.random) {
+  const type = GENERATIVE[Math.min(GENERATIVE.length - 1, Math.floor(rand() * GENERATIVE.length))];
+  const values = Object.fromEntries(PATTERNS[type].sliders.map(s => [s.key, Math.min(s.max, s.min + Math.floor(rand() * (s.max - s.min + 1)))]));
+  return { type, values };
+}
 
 export function defaults(type) {
   return Object.fromEntries(PATTERNS[type].sliders.map(s => [s.key, s.value]));
@@ -181,13 +222,20 @@ export function initPatterns(api) {
       return label;
     }));
   }
-  $('patternType').addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    type = b.dataset.v;
-    for (const x of $('patternType').children) x.classList.toggle('on', x === b);
+  const pick = v => {
+    type = v;
+    for (const x of $('patternType').children) x.classList.toggle('on', x.dataset.v === v);
     sliders();
     update(0);
+  };
+  $('patternType').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) pick(b.dataset.v);
+  });
+  $('patternShuffle')?.addEventListener('click', () => {
+    const s = shuffle();
+    values[s.type] = s.values;
+    pick(s.type);
   });
   sliders();
   $('openPattern').addEventListener('click', async () => { (await tool).openTool('patternTool'); update(0); });
