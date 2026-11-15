@@ -11,6 +11,7 @@ import { initText } from './text.js';
 import { initPatterns } from './patterns.js';
 import { initSketch } from './sketch.js';
 import { HANDOFF, pack, unpack } from './handoff.js';
+import { initLayout } from './layout.js';
 
 const $ = id => document.getElementById(id);
 const PAPER = 200;  // mm, the round sheet on the platter
@@ -376,5 +377,6 @@ initPatterns(api);
 initFine(api);
 initSketch(api);
 showHoming();
+initLayout();
 takeHandoff();
 rebuild();

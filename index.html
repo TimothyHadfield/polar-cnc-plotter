@@ -29,47 +29,53 @@
       </button>
     </header>
 
-    <div class="row">
-      <label class="btn" for="file">Open picture</label>
-      <input type="file" id="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
-      <button class="btn" id="openText">Text</button>
-      <button class="btn" id="openPattern">Pattern</button>
-      <button class="btn" id="openDraw">Draw</button>
-      <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button> · <button class="link" id="testDraw">Test drawing</button> <button class="q" type="button" data-q="testDrawHelp" aria-label="How to read it">?</button> · <button class="link" id="fineDraw">Fine test</button> <button class="q" type="button" data-q="fineHelp" aria-label="How to read it">?</button></span>
-    </div>
+    <div class="body" id="panelBody">
+    <section class="group" data-group="load">
+      <h3 class="gh">Load</h3>
+      <div class="loadbtns">
+        <label class="btn" for="file">Open picture</label>
+        <input type="file" id="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
+        <button class="btn" id="openText">Text</button>
+        <button class="btn" id="openPattern">Pattern</button>
+        <button class="btn" id="openDraw">Draw</button>
+      </div>
+      <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button></span>
+      <span class="samples"><button class="link" id="testDraw">Test drawing</button> <button class="q" type="button" data-q="testDrawHelp" aria-label="How to read it">?</button> · <button class="link" id="fineDraw">Fine test</button> <button class="q" type="button" data-q="fineHelp" aria-label="How to read it">?</button></span>
 
-    <p class="help" id="testDrawHelp" hidden>Plot it, then look:<br>Big circle doesn't close: Turn test.<br>Square not <b id="testSide">100</b> mm wide: Carriage test.<br>Cross misses in the middle, or small circle egg-shaped: Find center.<br>Small circle and spiral on swapped sides: Turn direction.<br>Gaps in the lines: Pen height.</p>
-    <p class="help" id="fineHelp" hidden>Combs blurry only on the outer rings: the platter is the limit. <button class="q" type="button" data-q="fineWhy" aria-label="Why?">?</button><br>Platter step, mm: <span id="fineSteps"></span><br>Carriage step: <span id="fineCarriage"></span> mm (<span id="fineFrom"></span>)</p>
-    <p class="help" id="fineWhy" hidden>One platter step moves the pen r·π/180 ÷ $101 mm, so it grows with distance from the center; a carriage step is 1 ÷ $100 mm everywhere. Combs are 2, 1, 0.5 and 0.25 mm apart. Fix: 1/16 microsteps first (doubles $101), then a gear reduction. Plot at Size 100% so the rings are true mm.</p>
+      <p class="help" id="testDrawHelp" hidden>Plot it, then look:<br>Big circle doesn't close: Turn test.<br>Square not <b id="testSide">100</b> mm wide: Carriage test.<br>Cross misses in the middle, or small circle egg-shaped: Find center.<br>Small circle and spiral on swapped sides: Turn direction.<br>Gaps in the lines: Pen height.</p>
+      <p class="help" id="fineHelp" hidden>Combs blurry only on the outer rings: the platter is the limit. <button class="q" type="button" data-q="fineWhy" aria-label="Why?">?</button><br>Platter step, mm: <span id="fineSteps"></span><br>Carriage step: <span id="fineCarriage"></span> mm (<span id="fineFrom"></span>)</p>
+      <p class="help" id="fineWhy" hidden>One platter step moves the pen r·π/180 ÷ $101 mm, so it grows with distance from the center; a carriage step is 1 ÷ $100 mm everywhere. Combs are 2, 1, 0.5 and 0.25 mm apart. Fix: 1/16 microsteps first (doubles $101), then a gear reduction. Plot at Size 100% so the rings are true mm.</p>
+    </section>
 
-    <div class="file" id="fileName">No drawing yet <span class="hint">· or paste one (Ctrl+V)</span></div>
+    <section class="group" data-group="adjust">
+      <h3 class="gh">Adjust</h3>
+      <div class="file" id="fileName">No drawing yet <span class="hint">· or paste one (Ctrl+V)</span></div>
+      <div class="sliders">
+        <label class="slider">
+          <span>Size <b id="sizeOut">100%</b></span>
+          <input type="range" id="size" min="10" max="100" step="1" value="100">
+        </label>
+        <label class="slider">
+          <span>Turn <b id="turnOut">0°</b></span>
+          <input type="range" id="turn" min="-180" max="180" step="1" value="0">
+        </label>
+        <label class="slider" id="darkRow" style="visibility:hidden">
+          <span>Darkness <button class="q" type="button" data-q="darkHelp" aria-label="What is this?">?</button> <b id="darkOut"></b></span>
+          <input type="range" id="dark" min="1" max="254" step="1" value="128">
+        </label>
+      </div>
+      <p class="help" id="darkHelp" hidden>How dark a pixel must be to count as ink. Starts at the best split for this picture.</p>
 
-    <div class="pair">
-      <label class="slider">
-        <span>Size <b id="sizeOut">100%</b></span>
-        <input type="range" id="size" min="10" max="100" step="1" value="100">
-      </label>
-      <label class="slider">
-        <span>Turn <b id="turnOut">0°</b></span>
-        <input type="range" id="turn" min="-180" max="180" step="1" value="0">
-      </label>
-    </div>
+      <div class="stats" id="stats"></div>
 
-    <label class="slider" id="darkRow" style="visibility:hidden">
-      <span>Darkness <button class="q" type="button" data-q="darkHelp" aria-label="What is this?">?</button> <b id="darkOut"></b></span>
-      <input type="range" id="dark" min="1" max="254" step="1" value="128">
-    </label>
-    <p class="help" id="darkHelp" hidden>How dark a pixel must be to count as ink. Starts at the best split for this picture.</p>
+      <div class="row actions">
+        <button class="btn primary" id="download" disabled>Download G-code</button>
+        <a class="btn" id="simulate" href="sim.html?v=2">Simulate</a>
+      </div>
+    </section>
 
-    <div class="stats" id="stats"></div>
-
-    <div class="row actions">
-      <button class="btn primary" id="download" disabled>Download G-code</button>
-      <a class="btn" id="simulate" href="sim.html?v=2">Simulate</a>
-    </div>
-    <p class="err" id="err" role="alert"></p>
-
-    <section class="machine" id="machine" hidden>
+    <section class="machine group" id="machine" data-group="plot" hidden>
+      <h3 class="gh">Plot</h3>
       <div class="row" id="offline">
         <button class="btn wide" id="connect">Connect plotter</button>
         <button class="q" type="button" data-q="connectHelp" aria-label="What is this?">?</button>
@@ -104,6 +110,14 @@
         <button class="btn sm" id="restoreDefaults" hidden>Restore defaults</button>
       </div>
     </section>
+    </div>
+
+    <p class="err" id="err" role="alert"></p>
+    <nav class="tabbar" id="tabbar" aria-label="Sections">
+      <button type="button" data-tab="load" class="on">Load</button>
+      <button type="button" data-tab="adjust">Adjust</button>
+      <button type="button" data-tab="plot" hidden>Plot</button>
+    </nav>
 
     <section class="tool" id="textTool" hidden>
       <header class="top"><h2>Text</h2><button class="btn" data-close-tool>Done</button></header>
@@ -137,41 +151,51 @@
       <button class="icon" id="closeSettings" aria-label="Close">✕</button>
     </header>
 
-    <div class="grid">
-      <label><span class="lbl">Drawing width <span class="unit">mm</span></span><input type="number" id="diameter" min="20" max="200" step="1"></label>
-      <label><span class="lbl">Pen speed <span class="unit">mm/min</span></span><input type="number" id="speed" min="50" max="3000" step="10"></label>
-      <label><span class="lbl">Pen up <span class="unit">Z</span></span><input type="number" id="penUp" step="0.1"></label>
-      <label><span class="lbl">Pen down <span class="unit">Z</span></span><input type="number" id="penDown" step="0.1"></label>
-      <label><span class="lbl">Center gap <span class="unit">mm</span> <button class="q" type="button" data-q="gapHelp" aria-label="What is this?">?</button></span><input type="number" id="offset" step="0.1"></label>
-      <label><span class="lbl">Line gap <span class="unit">mm</span> <button class="q" type="button" data-q="lineGapHelp" aria-label="What is this?">?</button></span><input type="number" id="gap" min="0.4" max="5" step="0.1"></label>
-      <label><span class="lbl">Pen press <span class="unit">mm</span> <button class="q" type="button" data-q="pressHelp" aria-label="What is this?">?</button></span><input type="number" id="penPress" min="0" max="3" step="0.1"></label>
-      <label data-homing hidden><span class="lbl">Switch at <span class="unit">mm</span></span><input type="number" id="homeX" step="0.1"></label>
+    <div class="setcols">
+    <div class="setcol">
+      <h3>Drawing</h3>
+      <div class="grid">
+        <label><span class="lbl">Drawing width <span class="unit">mm</span></span><input type="number" id="diameter" min="20" max="200" step="1"></label>
+        <label><span class="lbl">Line gap <span class="unit">mm</span> <button class="q" type="button" data-q="lineGapHelp" aria-label="What is this?">?</button></span><input type="number" id="gap" min="0.4" max="5" step="0.1"></label>
+      </div>
+      <p class="help" id="lineGapHelp" hidden>Space between spiral rings, hatch lines, dots or wave lines.</p>
+      <div class="pick"><span class="lbl">Picture style <button class="q" type="button" data-q="styleHelp" aria-label="What is this?">?</button></span>
+        <span class="seg" id="pictureStyle"><button type="button" data-style="outline">Outlines</button><button type="button" data-style="center">Centerlines</button><button type="button" data-style="spiral">Spiral</button><button type="button" data-style="hatch">Hatch</button><button type="button" data-style="stipple">Stipple</button><button type="button" data-style="lines">Lines</button></span></div>
+      <p class="help" id="styleHelp" hidden>Outlines: the pen goes around each dark shape.<br>Centerlines: for line drawings, each line drawn once.<br>Spiral: one line from the center, wiggling where dark.<br>Hatch: crossed lines shade photos; darker gets more.<br>Stipple: dots, more where darker.<br>Lines: level lines that wave where dark.</p>
+      <label class="switch"><input type="checkbox" id="showTravel"><span></span>Show pen-up moves</label>
+
+      <h3>Machine</h3>
+      <div class="grid">
+        <label><span class="lbl">Pen speed <span class="unit">mm/min</span></span><input type="number" id="speed" min="50" max="3000" step="10"></label>
+        <label><span class="lbl">Center gap <span class="unit">mm</span> <button class="q" type="button" data-q="gapHelp" aria-label="What is this?">?</button></span><input type="number" id="offset" step="0.1"></label>
+        <label><span class="lbl">Pen up <span class="unit">Z</span></span><input type="number" id="penUp" step="0.1"></label>
+        <label><span class="lbl">Pen down <span class="unit">Z</span></span><input type="number" id="penDown" step="0.1"></label>
+        <label><span class="lbl">Pen press <span class="unit">mm</span> <button class="q" type="button" data-q="pressHelp" aria-label="What is this?">?</button></span><input type="number" id="penPress" min="0" max="3" step="0.1"></label>
+        <label data-homing hidden><span class="lbl">Switch at <span class="unit">mm</span></span><input type="number" id="homeX" step="0.1"></label>
+      </div>
+      <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
+      <p class="help" id="pressHelp" hidden>For a spring pen holder: how far pen down presses past the touch point (at most 3 mm). Calibrate's Pen height uses it, and puts pen up 2 mm above the touch.</p>
+      <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
+      <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>
+      <label class="switch"><input type="checkbox" id="homing"><span></span>Homing switch <button class="q" type="button" data-q="homingHelp" aria-label="What is this?">?</button></label>
+      <p class="help" id="homingHelp" hidden>A switch on the carriage's motor side, wired to X limit and GND. Home finds it and sets the center. Measure it once in Calibrate, Find center.</p>
     </div>
-    <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
-    <p class="help" id="lineGapHelp" hidden>Space between spiral rings, hatch lines, dots or wave lines.</p>
-    <p class="help" id="pressHelp" hidden>For a spring pen holder: how far pen down presses past the touch point (at most 3 mm). Calibrate's Pen height uses it, and puts pen up 2 mm above the touch.</p>
 
-    <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
-    <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>
-    <label class="switch"><input type="checkbox" id="showTravel"><span></span>Show pen-up moves</label>
-    <label class="switch"><input type="checkbox" id="homing"><span></span>Homing switch <button class="q" type="button" data-q="homingHelp" aria-label="What is this?">?</button></label>
-    <p class="help" id="homingHelp" hidden>A switch on the carriage's motor side, wired to X limit and GND. Home finds it and sets the center. Measure it once in Calibrate, Find center.</p>
-    <div class="pick"><span class="lbl">Picture style <button class="q" type="button" data-q="styleHelp" aria-label="What is this?">?</button></span>
-      <span class="seg" id="pictureStyle"><button type="button" data-style="outline">Outlines</button><button type="button" data-style="center">Centerlines</button><button type="button" data-style="spiral">Spiral</button><button type="button" data-style="hatch">Hatch</button><button type="button" data-style="stipple">Stipple</button><button type="button" data-style="lines">Lines</button></span></div>
-    <p class="help" id="styleHelp" hidden>Outlines: the pen goes around each dark shape.<br>Centerlines: for line drawings, each line drawn once.<br>Spiral: one line from the center, wiggling where dark.<br>Hatch: crossed lines shade photos; darker gets more.<br>Stipple: dots, more where darker.<br>Lines: level lines that wave where dark.</p>
+    <div class="setcol">
+      <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
+      <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>
+      <div class="row">
+        <button class="btn" data-test="circle">Circle</button>
+        <button class="btn" data-test="spoke">Spoke</button>
+      </div>
 
-    <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
-    <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>
-    <div class="row">
-      <button class="btn" data-test="circle">Circle</button>
-      <button class="btn" data-test="spoke">Spoke</button>
+      <div id="consoleBox" hidden>
+        <h3>Plotter console <button class="q" type="button" data-q="consoleHelp" aria-label="What is this?">?</button></h3>
+        <p class="help" id="consoleHelp" hidden>For GRBL settings like $$ or $101=29.6. Connect first.</p>
+        <form class="row" id="cmdForm"><input id="cmd" placeholder="$$" autocomplete="off" spellcheck="false" aria-label="Plotter command"><button class="btn" id="cmdSend">Send</button></form>
+        <pre class="log" id="log"></pre>
+      </div>
     </div>
-
-    <div id="consoleBox" hidden>
-      <h3>Plotter console <button class="q" type="button" data-q="consoleHelp" aria-label="What is this?">?</button></h3>
-      <p class="help" id="consoleHelp" hidden>For GRBL settings like $$ or $101=29.6. Connect first.</p>
-      <form class="row" id="cmdForm"><input id="cmd" placeholder="$$" autocomplete="off" spellcheck="false" aria-label="Plotter command"><button class="btn" id="cmdSend">Send</button></form>
-      <pre class="log" id="log"></pre>
     </div>
   </div>
 </div>

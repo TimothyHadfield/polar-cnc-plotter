@@ -35,7 +35,8 @@ button, input { font: inherit; color: inherit; }
 .app {
   height: 100dvh;
   display: grid;
-  grid-template-columns: 1fr 320px;
+  /* laptop: the preview is a circle as tall as the window; the panel takes the width it leaves over */
+  grid-template-columns: minmax(0, 1fr) clamp(320px, calc(100vw - 100dvh), 440px);
 }
 .stage { position: relative; min-width: 0; min-height: 0; }
 #preview { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -55,12 +56,22 @@ button, input { font: inherit; color: inherit; }
 .placebar .btn.sm { padding: 6px 12px; }
 .placebar .btn[hidden] { display: none; }
 .placebar .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
 .panel {
   background: var(--panel); border-left: 1px solid var(--line);
-  padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; min-height: 0;
 }
+/* the panel's groups: Load, Adjust, Plot (on a phone they are tabs, see the end of this file) */
+.panel > .body { display: flex; flex-direction: column; gap: 16px; }
+.panel > .body, .panel > .tool { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.body > * { flex-shrink: 0; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.group[hidden] { display: none; }
+.group + .group { border-top: 1px solid var(--line); padding-top: 14px; }
+.group > .gh { margin: 0; }
+.loadbtns { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 8px; }
+.loadbtns .btn { padding: 9px 10px; }
+.sliders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.tabbar { display: none; }
 .top { display: flex; align-items: center; justify-content: space-between; }
 .build-link { margin-left: auto; margin-right: 6px; font-size: 14px; }
 h1 { font-size: 18px; margin: 0; }
@@ -82,7 +93,7 @@ h3 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); font-weight: 600;
 .icon { background: none; border: 0; padding: 6px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; }
 .icon:hover { color: var(--ink); background: var(--bg); }
 
-.panel > * { flex-shrink: 0; }   /* the panel scrolls instead of squashing its rows */
+.panel > * { flex-shrink: 0; }   /* the body scrolls instead of squashing its rows */
 .file { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hint { color: var(--muted); font-weight: 400; font-size: 13px; }
 .slider .q { margin-right: auto; margin-left: 6px; }
@@ -99,6 +110,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tool { display: flex; flex-direction: column; gap: 12px; }
 .tool[hidden] { display: none; }
 .tool .top .btn { padding: 6px 14px; }
+/* a long tool scrolls under its own header, which stays in view */
+.tool > .top { position: sticky; top: 0; z-index: 2; background: var(--panel); gap: 8px; }
+.tool > .top h2 { margin-right: auto; }   /* header buttons sit together on the right */
 
 /* text + pattern tools */
 #textInput {
@@ -113,7 +127,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pattern-sliders { display: flex; flex-direction: column; gap: 12px; min-height: 166px; }  /* room for 3 sliders, so switching type doesn't resize the panel */
 
 /* plotter controls */
-.machine { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.machine { display: flex; flex-direction: column; gap: 10px; }
 .machine[hidden], .machine [hidden] { display: none; }
 .btn.wide { flex: 1; }
 .btn.sm { padding: 6px 0; font-size: 14px; }
@@ -127,6 +141,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .dot[data-state=Alarm] { background: var(--err); }
 .pad { display: grid; grid-template-columns: 44px repeat(4, 1fr); gap: 6px; align-items: center; }
 .pad .lbl { color: var(--muted); font-size: 14px; }
+.pad .btn.sm { padding: 8px 0; }
+.pad .seg button { padding: 8px 0; }
 .pad .span2 { grid-column: span 2; }
 .pad #home { grid-column: 4 / span 2; }   /* under Set center */
 .seg { grid-column: span 2; display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
@@ -230,7 +246,13 @@ a.btn { text-decoration: none; color: inherit; }
 /* Photo check: the photo over the preview, to tap on */
 .photoview { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; touch-action: none; }
 .photoview[hidden] { display: none; }
-.mstatus .link { font-size: 14px; }
+/* Calibrate and Disconnect: small buttons, like the rest of the plotter controls */
+.mstatus .link {
+  font-size: 13px; font-weight: 600; text-decoration: none; color: var(--ink);
+  padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; flex: none;
+}
+.mstatus .link:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.calnav { position: sticky; bottom: 0; background: var(--panel); padding-top: 8px; }
 
 /* settings sheet */
 .sheet {
@@ -239,9 +261,24 @@ a.btn { text-decoration: none; color: inherit; }
 }
 .sheet[hidden] { display: none; }
 .sheet-card {
-  background: var(--panel); border-radius: 14px; padding: 16px; width: min(440px, 100%);
+  background: var(--panel); border-radius: 14px; padding: 16px 20px; width: min(760px, 100%);
   max-height: 100%; overflow-y: auto; animation: rise .18s ease-out;
 }
+/* the sheet's title and close button stay in view while it scrolls */
+.sheet-card > .top {
+  position: sticky; top: -16px; z-index: 2; background: var(--panel);
+  margin: -16px -20px 0; padding: 16px 20px 6px;
+}
+/* laptop: drawing + machine settings on the left, test files + console on the right */
+.setcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+.setcol { min-width: 0; }
+.setcol > h3:first-child { margin-top: 6px; }
+.setcol .grid { margin-top: 0; }
+#pictureStyle { display: grid; grid-template-columns: repeat(3, 1fr); }
+#pictureStyle button { padding: 7px 4px; }
+#pictureStyle button:nth-child(3n+1) { border-left: 0; }
+#pictureStyle button:nth-child(n+4) { border-top: 1px solid var(--line); }
+#consoleBox .log { height: 200px; }
 @keyframes rise { from { transform: translateY(16px); opacity: 0; } }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .grid label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
@@ -273,10 +310,46 @@ a.btn { text-decoration: none; color: inherit; }
 .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* phone: preview on top, controls below, no page scroll */
+/* phone: preview on top, one group at a time above a tab bar (js/layout.js). The panel has one
+   fixed height for every tab and tool, so the preview never jumps; a long group scrolls inside. */
 @media (max-width: 760px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
-  .panel { border-left: 0; border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); gap: 10px; overflow: visible; }
-  /* plotter controls or a tool panel: the panel scrolls inside so the preview keeps its space */
-  .panel.connected, .panel.tooling { max-height: 58dvh; overflow-y: auto; }
+  .app, main.app.sim { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .panel, .sim .panel, .sim .panel.connected {
+    border-left: 0; border-top: 1px solid var(--line); gap: 8px; overflow: hidden;
+    height: calc(352px + env(safe-area-inset-bottom)); max-height: 62dvh;
+    padding: 8px 16px 0;
+  }
+  .panel > .top h1 { font-size: 17px; }
+  .panel > .top .icon { padding: 3px 6px; }
+  .panel > .body { padding-bottom: 8px; }
+  .group > .gh { display: none; }
+  .group + .group { border-top: 0; padding-top: 0; }
+  .panel[data-tab=load] .group:not([data-group=load]),
+  .panel[data-tab=adjust] .group:not([data-group=adjust]),
+  .panel[data-tab=plot] .group:not([data-group=plot]) { display: none; }
+  .sliders { grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  .sliders #darkRow { grid-column: span 2; }
+  .err { min-height: 0; }
+  .err:empty { display: none; }
+  .calnav { padding-bottom: 8px; }
+  .calpic { height: 76px; }
+  .group, .live { gap: 8px; }
+  .sheet { padding: 10px; }
+  .sheet-card .grid { gap: 8px 10px; }
+  .sheet-card .grid input { padding: 6px 10px; }
+  .tabbar {
+    display: flex; margin: 0 -16px; border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabbar button {
+    flex: 1; height: 48px; border: 0; background: none; cursor: pointer;
+    font-size: 14px; font-weight: 600; color: var(--muted); transition: color .15s, box-shadow .15s;
+  }
+  .tabbar button.on { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+  .tabbar button:active { background: var(--bg); }
+  .tabbar button[hidden] { display: none; }
   .stats, .err { font-size: 13px; }
+  .pad .btn.sm, .pad .seg button { padding: 7px 0; }
+  .setcols { grid-template-columns: 1fr; gap: 0; }
+  #consoleBox .log { height: 120px; }
 }
