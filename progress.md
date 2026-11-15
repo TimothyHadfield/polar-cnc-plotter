@@ -37,7 +37,17 @@ them").** NOTHING IS BUILT. Tim's five, with what Claude told him:
    to the other side. Claude: not needed, the app draws only on the idler side (s >= 0, reaches
    ~99 mm, needs 90); swapping sides just moves the stop. If wanted, the real fix is motor outboard
    of the column (longer arms; bed-size check).
-Plan when Tim says go: one batch = collar (1+3) + both stands (2+4); 5 only if he still wants it.
+**BUILT 11-14 (Tim: "make print files with the changes that you're confident should be made and
+then tell me specifically what you need for the other changes"):** collar 2 (blind bore, roof
+`cap_drop` 0.5 under the old top, wheel 2.5 over the cage with the 23.5 shaft; no screws/nut slot;
+`build/print/plate7_collar_2.3mf`, 7 min / 2.3 g sliced) and stands 2 (`round_r` 2.5 rounded
+column/arms, foot corners r5, gusset tips r3, flange corners r3; left fork: cheeks +2 mm outside
+from arm_x0 out, bridges at +-10.5..13.5, head pocket 2 deep; plate3 sliced 4 h 04 / 198 g, same
+as before). plate5 (+ABS) rebuilt with collar 2. Checks: idler d19 at both slot ends clear of the
+fork; carriage at -96 touches the front cheek's round tip in the OLD file too (left reach is ~95,
+not 99: pre-existing, still >= 90); right side unchanged (78). Wheel NOT changed (its screw channel
+is just unused); the model's wheel is drawn 0.5 low (wheel_z0 ignores cap_drop). Waiting on Tim:
+idler width (spacers), and whether he still wants 5.
 
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you

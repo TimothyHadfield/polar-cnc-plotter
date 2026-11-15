@@ -18,9 +18,8 @@
 // from the front, 4 screws from the top started loose (M3x6, or M3x8 with a printed washer under
 // each head) -> carriage over the motor, motor slid front to back until its shaft is under the pen
 // tip, screws tightened (base 2, 11-13: the motor is adjustable, see cage_y) ->
-// setting gauge on the cage top, shaft collar pushed down onto it, 2 M3x8 pan-head screws on the
-// flat, gauge out -> wheel pressed down onto the collar's hex taper (the screw heads slide up its
-// channel) ->
+// shaft collar pushed down the shaft until the shaft's tip meets its roof (collar 2, 11-14: no
+// screws, no gauge) -> wheel pressed down onto the collar's hex taper ->
 // pad, paper, clamp ring snapped over (hooks between the key ribs).
 //
 // Prints: (fit_test is optional, ~50 min on Tim's Bambu; Tim skipped it 11-12.) frame_base (flat; supports are needed in ONE place, under
@@ -215,15 +214,31 @@ module m3_nut_pocket(depth) cylinder(d = 6.4, h = depth, $fn = 6);
 // touching, so any print error there ate the rail's 0.25 clearance. They now stand foot_gap clear;
 // the rail alone places the stand.
 foot_gap = 0.3;
+// Stands 2 (11-14, Tim: "smoothed out the sharp corners of the build so that the stands ... weren't
+// dangerous"): the column and arms are boxes with every edge rounded (round_r), the foot's four
+// outer corners are rounded in plan (foot_r), the gussets' corners in profile. Faces that fit
+// something (groove, rod holes, the foot's underside and its faces at the base) are unchanged.
+// The parts that join the column now reach round_r + 0.5 into it, so its rounded edges leave no gap.
+round_r = 2.5;  foot_r = 5;
+module rbox(p0, p1, r) hull() for (x = [p0[0] + r, p1[0] - r], y = [p0[1] + r, p1[1] - r], z = [p0[2] + r, p1[2] - r])
+  translate([x, y, z]) sphere(r = r, $fn = 24);
+module tri_round(x0, w, pts, r) translate([x0, 0, 0]) rotate([90, 0, 90]) linear_extrude(w) offset(r = r) offset(delta = -r) polygon(pts);
 module stand_body() {
-  translate([lap_x + foot_gap, base_y0, -lap_low]) cube([base_x - lap_x + 0.01, base_y1 - base_y0, lap_low + tongue_top]);
-  translate([base_x + foot_gap, base_y0, -base_t]) cube([col_x1 - base_x - foot_gap, base_y1 - base_y0, base_t + tongue_top]);
-  translate([col_x0, col_y0, 0]) cube([col_x1 - col_x0, col_y1 - col_y0, rod_hi + arm_h / 2]);
-  for (z = [rod_lo, rod_hi]) translate([arm_x0, col_y0, z - arm_h / 2]) cube([col_x0 - arm_x0 + 0.01, col_y1 - col_y0, arm_h]);
+  intersection() {
+    union() {
+      translate([lap_x + foot_gap, base_y0, -lap_low]) cube([base_x - lap_x + 0.01, base_y1 - base_y0, lap_low + tongue_top]);
+      translate([base_x + foot_gap, base_y0, -base_t]) cube([col_x1 - base_x - foot_gap, base_y1 - base_y0, base_t + tongue_top]);
+    }
+    hull() for (x = [lap_x + foot_gap + foot_r, col_x1 - foot_r], y = [base_y0 + foot_r, base_y1 - foot_r])
+      translate([x, y, -base_t - 1]) cylinder(r = foot_r, h = base_t + tongue_top + 2, $fn = 48);
+  }
+  rbox([col_x0, col_y0, -round_r - 1], [col_x1, col_y1, rod_hi + arm_h / 2], round_r);
+  for (z = [rod_lo, rod_hi]) rbox([arm_x0, col_y0, z - arm_h / 2], [col_x0 + round_r + 0.5, col_y1, z + arm_h / 2], round_r);
   // front gusset: one 10 mm web on the outer side (x 160..170 = on the bed when the stand prints). An inner one at
   // x 148..154 printed as a 6 mm slab hanging over air (pre-print check 11-11), so it went.
-  tri_x(160, 10, [[col_y0 + 0.01, tongue_top - 0.01], [-40, tongue_top - 0.01], [col_y0 + 0.01, 94]]);
-  tri_x(164, 6, [[col_y1 - 0.01, tongue_top - 0.01], [base_y1, tongue_top - 0.01], [col_y1 - 0.01, 50]]);
+  // The corners that touch the column sit 4 mm inside it, so only the free tips show the rounding.
+  tri_round(160, 10, [[col_y0 + 4, tongue_top - 0.01], [-40, tongue_top - 0.01], [col_y0 + 4, 94 + 4 * 90 / (col_y0 + 40)]], 3);
+  tri_round(164, 6, [[col_y1 - 4, tongue_top - 0.01], [base_y1, tongue_top - 0.01], [col_y1 - 4, 50 + 4 * 46 / (base_y1 - col_y1)]], 3);
 }
 module stand_holes() {
   for (z = [rod_lo, rod_hi]) translate([arm_x0 - 0.01, rod_y, z]) rotate([0, 90, 0]) {
@@ -235,23 +250,50 @@ module stand_holes() {
   hull() { along_y(base_y0 - 1, base_y0 - 0.9) dt_groove(dt_fit + 0.8); along_y(base_y0 + 5, base_y0 + 5.1) dt_groove(); }
 }
 module motor_flange() difference() {
-  translate([mx - motor_w / 2, col_y0, belt_z - motor_w / 2]) cube([col_x0 - (mx - motor_w / 2) + 0.01, 4, motor_w]);
+  hull() {   // stands 2: the free corners rounded (r 3, clear of the screw holes 5.65 in from the edge)
+    for (s = [-1, 1]) translate([mx - motor_w / 2 + 3, col_y0, belt_z + s * (motor_w / 2 - 3)]) rotate([-90, 0, 0]) cylinder(r = 3, h = 4, $fn = 32);
+    translate([col_x0 + round_r + 0.5 - 1, col_y0, belt_z - motor_w / 2]) cube([1, 4, motor_w]);
+  }
   translate([mx, col_y0 - 1, belt_z]) rotate([-90, 0, 0]) {
     cylinder(d = 10, h = 6);
     translate([0, 0, 0.99]) cylinder(d = 23.5, h = 2.2);
     for (sx = [-1, 1], sz = [-1, 1]) translate([sx * 15.5, sz * 15.5, 0]) cylinder(d = 3.4, h = 6, $fn = 24);
   }
 }
+// Fork 2 (11-14, Tim: "I accidentally over-tightened it and bent the holder until it was close to
+// breaking ... making it a little thicker ... maybe some horizontal connection between these
+// holders ... Be careful to not interfere with the bearing"):
+// - fork_pad: each cheek 2 mm thicker on its outside (4 -> 6), only from arm_x0 outward, where the
+//   carriage can never reach (the arm stops it first; the front cheek's face is in the carriage
+//   plate's plane). The gap stays 14, so the old spacers still fit.
+// - two bridges tie the cheeks together, one above the idler and one below (z +-10.5..13.5 from the
+//   bolt), from the bolt line out to the column: a box around the idler, open toward the centre
+//   for the belt. The idler (flanges ~18 across, NOT measured) and the belt (+-7.3) stay inside.
+// - with 6 mm cheeks an M3x25 would only just reach its nut, so the head sinks 2 mm into the front
+//   pad (head pocket) and the nut stays 2.5 deep in the back pad: grip 21.5 + nut 2.4 = 23.9 < 25.
+// The real cause of the bending is most likely a gap in the stack (idler_w is assumed): see spacers.
+fork_pad = 2;  bridge_z = 10.5;  bridge_t = 3;
+fork_h = bridge_z + bridge_t;            // cheeks' half height from the bolt line out to the column
+module fork_cheek(y, t) hull() {
+  translate([ix, y, belt_z]) rotate([-90, 0, 0]) cylinder(r = 11, h = t);
+  translate([ix, y, belt_z - fork_h]) cube([col_x0 + round_r + 0.5 - ix, t, 2 * fork_h]);
+}
 module idler_fork() difference() {
-  for (y = [rod_y - idler_gap / 2 - cheek_t, rod_y + idler_gap / 2]) hull() {
-    translate([ix, y, belt_z]) rotate([-90, 0, 0]) cylinder(r = 11, h = cheek_t);
-    translate([col_x0, y, belt_z - 11]) cube([0.01, cheek_t, 22]);
+  union() {
+    for (y = [rod_y - idler_gap / 2 - cheek_t, rod_y + idler_gap / 2]) fork_cheek(y, cheek_t);
+    intersection() {
+      for (y = [rod_y - idler_gap / 2 - cheek_t - fork_pad, rod_y + idler_gap / 2 + cheek_t]) fork_cheek(y, fork_pad);
+      translate([arm_x0, 0, 0]) cube([100, 200, 400]);
+    }
+    for (s = [-1, 1]) translate([ix, rod_y - idler_gap / 2 - 0.01, belt_z + (s > 0 ? bridge_z : -fork_h)])
+      cube([col_x0 + round_r + 0.5 - ix, idler_gap + 0.02, bridge_t]);
   }
   // Belt tensioner (Tim 11-12, "how should we attach the bearing"): the bolt sits in a slot that
   // runs idler_slot mm outward, so pulling the idler outward before tightening takes up 2 x that
   // much belt. The nut's pocket is a slot too: it slides with the bolt but can't turn.
   hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y - 20, belt_z]) rotate([-90, 0, 0]) cylinder(d = 3.4, h = 40, $fn = 24);
-  hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y + idler_gap / 2 + cheek_t - 2.5, belt_z]) rotate([-90, 0, 0]) cylinder(d = 6.6, h = 3, $fn = 6);
+  hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y + idler_gap / 2 + cheek_t + fork_pad - 2.5, belt_z]) rotate([-90, 0, 0]) cylinder(d = 6.6, h = 3, $fn = 6);
+  hull() for (dx = [0, idler_slot]) translate([ix + dx, rod_y - idler_gap / 2 - cheek_t - fork_pad - 1, belt_z]) rotate([-90, 0, 0]) cylinder(d = 6.8, h = fork_pad + 1, $fn = 32);   // head pocket
 }
 module stand_right() difference() { union() { stand_body(); motor_flange(); } stand_holes(); }
 module stand_left() mirror([1, 0, 0]) difference() { union() { stand_body(); idler_fork(); } stand_holes(); }
@@ -294,19 +336,27 @@ hub_d   = 2 * (chan_x + 3);                          // 3 mm of wall outside the
 function col_af(z) = col_af0 + (col_af1 - col_af0) * (z - col_z0) / (col_z1 - col_z0);
 module collar_shape(z0, z1) hull() for (z = [z0, z1]) translate([0, 0, z]) rotate(30)
   cylinder(d = col_af(z) * 2 / sqrt(3), h = 0.01, $fn = 6);     // flats face +-x
+// Collar 2 (11-14, Tim: the M3x8 screws "aren't reaching", the D-flat alone "is perfect and turns
+// great", "I don't think we need the bolts"; and nothing stopped the platter sinking onto the cage:
+// "filled in the hole ... slightly above the motor holder"). No screws, no nut slot: the bore is
+// blind, and the shaft's TIP holds the collar up. The roof's underside is cap_drop below the old
+// collar top, so with the 23.5 shaft (product page, not measured) the wheel sits
+// wheel_gap + cap_drop = 2.5 above the cage; a shaft as short as 21.5 still clears it by 0.5.
+// The roof pokes cap_t - cap_drop = 0.8 over the old top, under the socket ceiling (2.1 of room).
+// The wheel's screw-head channel is now unused (left in: no wheel reprint). collar_gauge unused.
+cap_drop = 0.5;  cap_t = 1.3;
+col_top  = col_z1 - cap_drop + cap_t;   // 16.3, the socket ceiling is 17.6
 module shaft_collar() difference() {     // built in wheel coordinates
   hull() {
-    collar_shape(col_z0 + 0.6, col_z1);
+    collar_shape(col_z0 + 0.6, col_top);
     translate([0, 0, col_z0]) rotate(30) cylinder(d = (col_af(col_z0) - 1) * 2 / sqrt(3), h = 0.01, $fn = 6);
   }
   fx = shaft_flat + bore_fit - (shaft_d + bore_fit) / 2;
   translate([0, 0, col_z0 - 1]) intersection() {
-    cylinder(d = shaft_d + bore_fit, h = col_z1 - col_z0 + 2);
+    cylinder(d = shaft_d + bore_fit, h = col_z1 - cap_drop - col_z0 + 1);
     translate([-shaft_d, -shaft_d, 0]) cube([shaft_d + fx, 2 * shaft_d, col_z1 - col_z0 + 2]);
   }
-  for (z = set_z) translate([0, 0, z]) rotate([0, 90, 0]) cylinder(d = 3.4, h = 20, $fn = 24);
-  // one nut slot from the collar's underside up past the top screw: top nut first, then the bottom
-  translate([nut_x, -nut_w / 2, col_z0 - 1]) cube([nut_t, nut_w, set_z[1] + 3 - col_z0 + 1]);
+  translate([0, 0, col_z0 - 0.01]) cylinder(d1 = shaft_d + bore_fit + 1, d2 = shaft_d + bore_fit, h = 0.5);   // lead-in
 }
 // Tim 11-11: the disc was only held by friction. Default now: the platter face is PART OF THE
 // WHEEL (a solid top skin, printed face-down on the bed so it comes out flat). Paper is pinched
