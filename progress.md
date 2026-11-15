@@ -60,6 +60,15 @@ inside) + 3 mm straight hex grip under the wheel, roof lower so the wheel is 4.5
 (grip 1.5 over; carriage clash re-run with the platter +2.5: clear). plate7_collar_3 (9 min / 2.8 g,
 collar_2 file removed); plate5 + ABS carry collar 3. Collar 3 fits the old wheel too. Pen must
 sit ~2 mm higher in its holder; redo Pen height.
+**ATTACHMENTS (11-14, talk only, NOTHING BUILT).** Tim: how to attach pen holder -> stage slider and
+stage -> carriage plate, "everything is able to easily come apart", "I don't really want to get any
+more bolts/screws"; he taped the SC8UU blocks to the plate and doubts it. Claude proposed, all
+printed, no hardware: (a) stage -> plate: end clips (hooks over the stage's two 4 mm end caps, past
+the slider's travel) + pegs into the stage's back holes for location; (b) pen holder merged into a
+snap-on cap that grips the slider's exposed top/bottom faces; (c) blocks -> plate: snap pockets in a
+new carriage plate instead of tape. Needs from Tim: photos + calipers of the stage back (holes),
+the slider (what sticks out, any holes), the stage ends, and the SC8UU block (size, whether its
+sides are flat).
 
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you
