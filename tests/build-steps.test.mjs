@@ -23,9 +23,18 @@ function glbNodes(path) {
   return names;
 }
 
-test('there is a steps file for V1 and V2', () => {
+test('there is a steps file for V1, V2 and V3', () => {
   assert.ok(versions.some(v => v.file === 'build-steps.js'));
   assert.ok(versions.some(v => v.file === 'build-steps-v2.js'));
+  assert.ok(versions.some(v => v.file === 'build-steps-v3.js'));
+});
+
+test('V3 reuses V2 steps without changing them', async () => {
+  const v2 = await import(pathToFileURL(join(root, 'js', 'build-steps-v2.js')).href);
+  const before = JSON.stringify(v2.STEPS);
+  await import(pathToFileURL(join(root, 'js', 'build-steps-v3.js')).href);
+  assert.equal(JSON.stringify(v2.STEPS), before);
+  assert.equal(v2.STEPS.length, 11);
 });
 
 for (const v of versions) {

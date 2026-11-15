@@ -2,7 +2,8 @@
 
     python tools/make-build-model.py        V1 (as before): build/plotter.glb + build/stl/*.stl
     python tools/make-build-model.py v2     V2 only: build/plotter-v2.glb (no STLs are touched)
-    python tools/make-build-model.py all    both
+    python tools/make-build-model.py v3     V3 only: build/plotter-v3.glb (no STLs are touched)
+    python tools/make-build-model.py all    all three
 
 Needs OpenSCAD and Python with trimesh + numpy. Writes:
   build/plotter.glb     every assembly part as a named node with a PBR material (read by js/build.js).
@@ -10,6 +11,9 @@ Needs OpenSCAD and Python with trimesh + numpy. Writes:
   build/stl/<part>.stl  Tim's printed parts, one file each, ready to slice
   build/plotter-v2.glb  prototype 2 (cad/printed-frame.scad assembly()), same node naming. Its
                         printed frame STLs (build/stl/frame_*.stl) are exported from printed-frame.scad.
+  build/plotter-v3.glb  the current machine: live printed-frame.scad + carriage-2 + cable-chain + extras,
+                        carriage at c = -40. View-only: pen head/sleeve threads are coarse and the chain
+                        parts are vertex-clustered to keep the 3D view fast (the printable STLs are not).
 """
 import os, re, subprocess, sys, tempfile
 from concurrent.futures import ThreadPoolExecutor
@@ -82,11 +86,31 @@ def scad(src, name, out, key="part"):
     return out
 
 
-def to_glb(stls, mats, out):
+def cluster(m, cell):
+    """Fewer triangles for the 3D view only: snap vertices to a `cell` mm grid (each cell's vertices
+    become their mean) and drop the triangles that collapse. Detail smaller than a cell goes (hidden
+    threads, pin holes); outlines move less than half a cell. No scipy needed."""
+    key = np.floor(m.vertices / cell).astype(np.int64)
+    _, inv = np.unique(key, axis=0, return_inverse=True)
+    inv = inv.reshape(-1)
+    verts = np.zeros((inv.max() + 1, 3))
+    np.add.at(verts, inv, m.vertices)
+    verts /= np.bincount(inv)[:, None]
+    faces = inv[m.faces]
+    faces = faces[(faces[:, 0] != faces[:, 1]) & (faces[:, 1] != faces[:, 2]) & (faces[:, 0] != faces[:, 2])]
+    _, keep = np.unique(np.sort(faces, axis=1), axis=0, return_index=True)
+    out = trimesh.Trimesh(verts, faces[np.sort(keep)], process=False)
+    out.remove_unreferenced_vertices()
+    return out
+
+
+def to_glb(stls, mats, out, simplify=None):
     scene = trimesh.Scene()
     for name, path in stls.items():
         m = trimesh.load(path, force="mesh")
         m.merge_vertices()
+        if simplify and name in simplify:
+            m = cluster(m, simplify[name])
         color, metal, rough = mats[name]
         rgba = [linear(int(color[i:i + 2], 16) / 255) for i in (1, 3, 5)] + [1.0]
         m.visual = trimesh.visual.TextureVisuals(material=PBRMaterial(
@@ -207,8 +231,154 @@ def build_v2(tmp):
     to_glb(stls, MATS_V2, os.path.join(ROOT, "build", "plotter-v2.glb"))
 
 
+# ---------- V3: the live printed frame (stands 3) + cable chain + carriage 2 + pen head + extras ----------
+# Every V3 print is already exported by the file that owns it (build/stl: frame_*, tray_*, chain_*,
+# carriage2_*, pen_head_*, switch_mount, board_cover), so V3 only writes the GLB.
+LIVE_FRAME = os.path.join(ROOT, "cad", "printed-frame.scad")
+CHAIN = os.path.join(ROOT, "cad", "cable-chain.scad")
+CARRIAGE2 = os.path.join(ROOT, "cad", "carriage-2.scad")
+EXTRAS = os.path.join(ROOT, "cad", "extras.scad")
+V3_C = -40          # carriage centre (world x) shown: pen 40 mm out on the drawing (idler) side
+V3_COLLET = 11      # collet shown: the 11 mm one, for the model's Sharpie (11 mm body)
+MATS_V3 = {
+    **{k: v for k, v in MATS_V2.items() if k not in ("carriage_plate", "pen_clip", "knob")},
+    # new prints in the CAD renders' colours (filament not chosen yet), as V2 did
+    "carriage2_plate": ("#3a9d5d", 0.0, 0.5), "carriage2_frame": ("#e0a020", 0.0, 0.5),
+    "pen_head": ("#7b5cd6", 0.0, 0.5), "pen_collet": ("#e07a35", 0.0, 0.5), "pen_sleeve": ("#e07a35", 0.0, 0.5),
+    "tray_left": ("#7a8f3a", 0.0, 0.5), "tray_right": ("#7a8f3a", 0.0, 0.5),
+    "chain_links": ("#303438", 0.0, 0.5), "chain_fixed": ("#b8862b", 0.0, 0.5), "chain_moving": ("#b8862b", 0.0, 0.5),
+    "switch_mount": ("#3a9d5d", 0.0, 0.5), "switch__body": BLACK, "switch__lever": ("#d8d8d8", 1.0, 0.3),
+    "board_cover": ("#3a9d5d", 0.0, 0.5),
+}
+V3_C2_VARS = ["c2_face", "st_front", "pk_z0", "sl_front", "sl_w", "ph_sb", "ph_grip", "ph_tz0", "ph_stick",
+              "peg_x", "peg_zc"]
+
+
+def echo_numbers(tmp, src, names, tag, extra=""):
+    """Read top-level numbers out of a scad file (included alone, nothing drawn)."""
+    f = os.path.join(tmp, f"{tag}.scad")
+    with open(f, "w") as fh:
+        fh.write(f'include <{src.replace(os.sep, "/")}>\npart = "none";\necho({tag} = [{", ".join(names)}]);\n{extra}')
+    out = os.path.join(tmp, f"{tag}.echo")
+    r = subprocess.run([OPENSCAD, "-o", out, f], capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.exists(out):
+        sys.exit(f"openscad failed reading {src}:\n{r.stderr}")
+    text = open(out).read()
+    nums = re.search(rf"{tag} = \[([^\]]*)\]", text).group(1).split(",")
+    return dict(zip(names, (float(n) for n in nums))), text
+
+
+V3_SCAD = """
+use <{chain}>
+use <{carriage2}>
+use <{extras}>
+use <{frame}>
+include <{assembly}>
+part = "none";
+v3 = "";
+$fn = 64;
+module v3show(n) if (v3 == n) children();
+module bearing_idler() {{          // bought GT2 20T idler, as in V2
+  w = {idler_w};
+  difference() {{
+    union() {{
+      for (z = [-w / 2, w / 2 - 1]) translate([0, 0, z]) cylinder(d = 18, h = 1);
+      translate([0, 0, -w / 2]) difference() {{
+        cylinder(d = 12.2, h = w);
+        for (i = [0 : 19]) rotate(i * 18) translate([6.1, 0, 0.9]) cylinder(d = 1.2, h = w - 1.8, $fn = 8);
+      }}
+    }}
+    translate([0, 0, -w / 2 - 1]) cylinder(d = 3.2, h = w + 2, $fn = 24);
+  }}
+}}
+v3show("frame_base") frame_base();
+v3show("stand_right") stand_right();
+v3show("stand_left") stand_left();
+v3show("wheel") translate([0, {pen_y}, {wheel_z0}]) platter_wheel();
+v3show("collar") translate([0, {pen_y}, {wheel_z0}]) shaft_collar();
+v3show("pad") translate([0, {pen_y}, {plate_top}]) cylinder(d = {disc_d}, h = {pad_t}, $fn = 160);
+v3show("paper") piece("sheet") translate([0, {pen_y}, {pz} + 0.05]) cylinder(d = {disc_d} - 4, h = {paper_t}, $fn = 160);
+v3show("clamp_ring") translate([0, {pen_y}, {pz} + {paper_t} + 0.1]) clamp_ring();
+v3show("y_motor") translate([0, {pen_y}, {face_z}]) nema17();
+v3show("x_motor") translate([{mx}, {col_y0}, {belt_z}]) rotate([-90, 0, 0]) nema17();   // plug DOWN (stands 3)
+v3show("rods") for (z = [{rod_lo}, {rod_hi}]) translate([-{rod_len} / 2, {rod_y}, z]) rotate([0, 90, 0]) cylinder(d = 8, h = {rod_len});
+v3show("idler") translate([-{ix}, {rod_y}, {belt_z}]) rotate([90, 0, 0]) bearing_idler();
+v3show("idler_spacers") for (y = [{rod_y} - {idler_w} / 2 - {spacer_t}, {rod_y} + {idler_w} / 2])
+  translate([-{ix}, y, {belt_z}]) rotate([-90, 0, 0]) idler_spacer();
+v3show("idler_bolt") translate([-{ix}, 0, {belt_z}]) rotate([-90, 0, 0]) {{
+  y0 = {rod_y} - {idler_gap} / 2 - {cheek_t};
+  translate([0, 0, y0 - 3]) cylinder(d = 5.5, h = 3, $fn = 24);
+  translate([0, 0, y0]) cylinder(d = 3, h = 25, $fn = 16);
+  translate([0, 0, {rod_y} + {idler_gap} / 2 + {cheek_t} - 2.5]) cylinder(d = 6.2, h = 2.4, $fn = 6);
+}}
+v3show("x_pulley") translate([{mx}, {rod_y} + 4.5, {belt_z}]) rotate([90, 0, 0]) gt2_16t();
+v3show("x_belt") translate([0, {rod_y} + 3, {belt_z}]) rotate([90, 0, 0])
+  open_belt(-{ix}, 6.37, {mx}, 5.09, [{c} - {peg_x}, {c} + {peg_x}], {peg_zc} - {belt_z}, 3.2);
+v3show("electronics") translate([{ard_x}, {ard_y}, {uno_pad}]) rotate(-90) {{ uno(); drivers(); }}
+// carriage 2 (cad/carriage-2.scad) at c
+v3show("blocks") c2_blocks({c});
+v3show("carriage2_plate") translate([{c}, 0, 0]) c2_plate();
+v3show("carriage2_frame") translate([{c}, 0, 0]) c2_frame();
+v3show("stage") translate([{c} - 12.5, {st_front}, {pk_z0}]) linear_stage();
+v3show("slider") translate([{c} - {sl_w} / 2, {sl_front}, {sb}]) stage_slider();
+v3show("pen_collet") translate([{c}, {pen_y}, {sb} - {ph_sb} + {ph_grip}]) ph_collet({collet});   // pen_head + pen_sleeve: V3_HEAD_SCAD
+v3show("pen") translate([{c}, {pen_y}, {sb} - {ph_sb} - {ph_stick} + 8]) pen();
+// cable chain (cad/cable-chain.scad) for the same c
+v3show("tray_left") tray_left();
+v3show("tray_right") tray_right();
+v3show("chain_fixed") chain_fixed_world();
+v3show("chain_links") chain_links({c});
+v3show("chain_moving") chain_moving({c});
+// homing switch + board cover (cad/extras.scad)
+v3show("switch_mount") switch_mount();
+v3show("switch") {{ piece("body") placed_switch(false); piece("lever") difference() {{ placed_switch(true); placed_switch(false); }} }}
+v3show("board_cover") board_cover();
+"""
+
+
+# Speed (the 3D view must stay fast): the pen head's two threads were 36k triangles, the 10 chain
+# links 42k. For the view only, the threads are drawn coarser (32 points a turn, 8 slices a pitch: the
+# same thread, hidden inside the housing anyway) and the links' tiny pin-hole facets are clustered.
+# The printable STLs are untouched (they come from the scad files' own exports).
+V3_HEAD_SCAD = """
+include <{carriage2}>
+part = "none";
+v3 = "";
+module thread_solid(rmin, d, P, h, n = 32)
+  linear_extrude(h, twist = -360 * h / P, slices = ceil(h / P * 8), convexity = 8)
+    polygon([for (i = [0 : n - 1]) let(t = 360 * i / n, r = thr_r(P * i / n, rmin, d, P)) [r * cos(t), r * sin(t)]]);
+if (v3 == "pen_head") translate([{c}, 0, {sb} - ph_sb]) ph_body();
+if (v3 == "pen_sleeve") translate([{c}, pen_y, {sb} - ph_sb + ph_tz0]) ph_sleeve();
+"""
+V3_HEAD_PARTS = ("pen_head", "pen_sleeve")
+V3_SIMPLIFY = {"chain_links": 0.3, "chain_moving": 0.3, "chain_fixed": 0.3}
+
+
+def build_v3(tmp):
+    v, text = echo_numbers(tmp, LIVE_FRAME, V2_VARS, "V3F", "echo(P = platter);\n")
+    c2, c2_text = echo_numbers(tmp, CARRIAGE2, V3_C2_VARS, "V3C", "echo(SB = c2_sb_touch(ph_stick));\n")
+    sb = float(re.search(r"SB = ([-\d.e]+)", c2_text).group(1))
+    if '"printed"' not in text:
+        sys.exit("plotter-v3.glb assumes platter = \"printed\" in printed-frame.scad")
+    src = os.path.join(tmp, "plotter-v3.scad")
+    p = lambda f: f.replace(os.sep, "/")
+    with open(src, "w") as f:
+        f.write(V3_SCAD.format(chain=p(CHAIN), carriage2=p(CARRIAGE2), extras=p(EXTRAS), frame=p(LIVE_FRAME),
+                               assembly=p(ASSEMBLY), pz=v["plate_top"] + v["pad_t"], c=V3_C, sb=sb,
+                               collet=V3_COLLET, **{**v, **{k: c2[k] for k in V3_C2_VARS}}))
+    head = os.path.join(tmp, "plotter-v3-head.scad")
+    with open(head, "w") as f:
+        f.write(V3_HEAD_SCAD.format(carriage2=p(CARRIAGE2), c=V3_C, sb=sb))
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
+        stls = dict(zip(MATS_V3, pool.map(lambda n: scad(head if n in V3_HEAD_PARTS else src, n,
+                                                         os.path.join(tmp, "v3_" + n + ".stl"), "v3"), MATS_V3)))
+    to_glb(stls, MATS_V3, os.path.join(ROOT, "build", "plotter-v3.glb"), V3_SIMPLIFY)
+
+
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else "v1"
+    if target in ("v3", "all"):
+        build_v3(tempfile.mkdtemp())
     if target in ("v2", "all"):
         build_v2(tempfile.mkdtemp())
     if target in ("v1", "all"):

@@ -6,12 +6,13 @@
 // VERSIONS below. A steps file may also export `extras()` (objects drawn in JS, like the wires).
 import { createView, THREE } from './build-view.js';
 import { createAnimator, dirVector } from './build-anim.js';
-import { extras, extrasV2 } from './build-look.js';
+import { extras, extrasV2, extrasV3 } from './build-look.js';
 
 const VERSIONS = {
   1: { label: 'V1', steps: () => import('./build-steps.js'), url: 'build/plotter.glb', extras, sim: 'sim.html?v=1' },
   2: { label: 'V2', steps: () => import('./build-steps-v2.js'), url: 'build/plotter-v2.glb', extras: extrasV2, sim: 'sim.html?v=2' },
-  // 3: { label: 'V3', steps: () => import('./build-steps-v3.js'), url: 'build/plotter-v3.glb', sim: null },
+  // the simulator has no V3 machine yet: its link opens V2's, which plots the same way
+  3: { label: 'V3', steps: () => import('./build-steps-v3.js'), url: 'build/plotter-v3.glb', extras: extrasV3, sim: 'sim.html?v=2' },
 };
 
 const $ = id => document.getElementById(id);
