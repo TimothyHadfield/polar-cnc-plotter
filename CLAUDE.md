@@ -60,11 +60,24 @@ previews it, and can stream it to the plotter over USB.
   `js/build-look.js` (textures, lighting, wires), `js/build-steps.js` (steps, parts, links, `about`
   text): the 3D build guide. GLB nodes are `<part>` or `<part>__<piece>`; steps list base names. Model: `cad/plotter-assembly.scad` -> `python tools/make-build-model.py`
   (needs OpenSCAD + trimesh) -> `build/plotter.glb` and printable `build/stl/*.stl`.
+  Per version: `js/build-steps-v2.js` / `-v3.js`, `js/build-anim.js` (fly-in animations), `VERSIONS`
+  in `js/build.js`. **V2 is frozen** (`cad/printed-frame-v2.scad`, `build/v2/stl/`). V3 =
+  `make-build-model.py v3` -> `build/plotter-v3.glb` from the live `cad/printed-frame.scad` +
+  `cad/cable-chain.scad` + `cad/carriage-2.scad` + `cad/extras.scad` (switch mount, board cover);
+  shared world frame and interfaces in `docs/upgrades-plan.md`. Rebuilding V1/V2 changes bytes
+  (vertex order only): restore with `git checkout -- <path>`.
+- More app modules: `js/home.js` (homing switch; settings `homing`, `homeX`, `penPress` max 3 mm,
+  with a press pen up = touch + 2 mm), `js/finetest.js` (Fine test rings + combs, step size per
+  radius), `js/progress.js` (live progress), `js/resume.js` (localStorage `polar-plotter-resume`,
+  -sim/-demo for pretend plotters), `js/speed.js` (Calibrate step 6), `js/photocal.js` +
+  `js/photoview.js` (Calibrate step 7, Photo check). Calibrate has 7 steps; Quick check is step 8.
+  FakeGrbl/SimGrbl take `switchX` (FakeGrbl also `jogSpeed`). Picture styles spaced in mm are in
+  app.js `SHADE`.
 - `samples/`: the three sample drawings behind the "or Hello World · UVU logo · HELLO.png" links.
 
 ## Run and test
 - Local: `node tools/serve.mjs 8765` (or `python -m http.server <port>`), open `http://localhost:8765/`.
-- Tests: `node --test tests/*.test.mjs` (13 files, 136 tests, about half a minute; no package.json,
+- Tests: `node --test tests/*.test.mjs` (181 tests, about a minute; a bare `tests/` doesn't work; no package.json,
   no install). Grbl/plot tests use FakeGrbl with real timers, so they are slow and timing-sensitive
   on a busy machine.
 - Browser-only code (`svg.js`, `app.js`, `machine.js` UI) has no node tests: check it with
