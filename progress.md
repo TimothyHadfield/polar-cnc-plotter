@@ -15,6 +15,21 @@ run on the real plotter: Turn test + Test, Turn direction, Pen height (is Down r
 Carriage test (ruler under the pen), Find center (a mark + Half turn); then a first real drawing.
 If the platter is slow: the turn test now raises `$111`/`$121` itself (Test = 5 s a circle). The older text below is history.
 
+**TIM'S MONDAY LIST (2026-11-14: "I'm not gonna see my plotter until monday so keep track of all
+the things I need to do when I'm back there as well as prints that need to be printed").** Keep
+this current; give it back to him when he returns (Mon 11-16). Tick items as he reports them.
+- Prints: [ ] base 2 (started 11-14 night, PLA, check it finished) · [ ] plate5 ring 2 + collar 3
+  (32 min) · [ ] plate3 stands 2 (4 h 04) · [ ] plate4 wheel 2 (2 h 53; optional, try collar 3 in
+  the old wheel first) · later: spacers (needs idler width), 3 snap-fit parts (needs measurements).
+- Measure: [ ] idler total width · [ ] rubber band thickness · [ ] motor shaft length above its face
+  (23.5 assumed) · [ ] stage: photos of back/ends/slider + slider protrusion & height, end-cap
+  length, back hole spacing & size · [ ] SC8UU block width/length/height.
+- Assemble/test: [ ] new base: slide the platter motor until the shaft is under the pen tip, then
+  tighten · [ ] collar 3 on (push down to the stop), wheel on · [ ] clamp ring with the band
+  (tight but not breaking?) · [ ] stands 2 + idler, tighten the bolt to a hard stop · [ ] slide pen
+  ~2 mm up in its holder · [ ] Connect -> Calibrate: Pen height + Find center (base and platter
+  moved), Check · [ ] first real drawing.
+
 **PRINT ISSUES (2026-11-14, TALK ONLY: Tim "Don't build or change anything yet, just remember
 them").** NOTHING IS BUILT. Tim's five, with what Claude told him:
 1. Collar ("hub-motor connector"): M3x8 screws don't reach the shaft (10 mm would); the D-flat in
