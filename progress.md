@@ -23,7 +23,10 @@ this current; give it back to him when he returns (Mon 11-16). Tick items as he 
   the old wheel first) · later: spacers (needs idler width), 3 snap-fit parts (needs measurements).
 - Measure: [ ] idler total width · [ ] rubber band thickness · [ ] motor shaft length above its face
   (23.5 assumed) · [ ] stage: photos of back/ends/slider + slider protrusion & height, end-cap
-  length, back hole spacing & size · [ ] SC8UU block width/length/height.
+  length, back hole spacing & size · [ ] SC8UU block width/length/height · [ ] pen diameter (and
+  the Expo marker's) for the spring pen holder (Tim 11-14 asked if it can be spring-loaded, lift on
+  command and all printed: yes, parallelogram flexure in the slider cap, 2-4 mm travel; Pen height
+  would then press a little past touch instead of lifting off. NOT built).
 - Assemble/test: [ ] new base: slide the platter motor until the shaft is under the pen tip, then
   tighten · [ ] collar 3 on (push down to the stop), wheel on · [ ] clamp ring with the band
   (tight but not breaking?) · [ ] stands 2 + idler, tighten the bolt to a hard stop · [ ] slide pen
