@@ -37,3 +37,13 @@ test('a plotter that is not at its defaults is told what to put back', () => {
   assert.equal(describe(off[0]), 'Platter steps ($101) 250 → 4.444');
   assert.deepEqual(plotterOff(null, vals), []);
 });
+
+test('top speeds: never taken as defaults by themselves, but put back once the speed test saved them', () => {
+  const d = capture({ ...vals, 110: 6000, 111: 7200 }, s);
+  assert.equal(d.grbl[110], undefined);
+  assert.deepEqual(plotterOff(d, { ...vals, 110: 500 }), []);
+  const d2 = apply(d, [{ n: 110, to: 6000 }, { n: 120, to: 250 }]);
+  const off = plotterOff(d2, { ...vals, 110: 500, 120: 10 });
+  assert.deepEqual(off.map(c => [c.n, c.from, c.to]), [[110, 500, 6000], [120, 10, 250]]);
+  assert.equal(describe(off[0]), 'Carriage speed ($110) 500 → 6000');
+});

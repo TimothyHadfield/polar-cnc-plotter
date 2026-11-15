@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { corrected, gapFromMark, parseSettings, saveSetting, snapDirect, snapBelt, beltSteps, turnSteps, slowJog,
   nudgeJog, fullTurn, partTurn, stopJog, waitIdle, centerBetween, touchLift, setDirection, uprightPen,
   SLOW, LINE, LIFT, START, FAST, platterSpeed } from '../js/calibrate.js';
+import * as cal from '../js/calibrate.js';
+const { PRESS_MAX, springPress } = cal;
 import { Grbl } from '../js/grbl.js';
 import { FakeGrbl } from '../js/fakegrbl.js';
 import { SimGrbl } from '../js/simgrbl.js';
@@ -163,6 +165,22 @@ test('pen height at GRBL\'s factory 250 steps per unit: the same lift in steps i
   assert.deepEqual(await touchLift(g, 250), { penUp: 0, penDown: -0.4 });
   assert.equal(sim.received.filter(l => l.startsWith('$J=')).at(-1), '$J=G91 G21 Z0.400 F96');   // 400 steps a second
   near(sim.pos[2], -0.1);
+});
+
+test('spring pen head: touch found pressing down; down = touch − press (never past 3 mm), up = touch + 2 mm', async () => {
+  const { sim, g } = await plotter({}, false);           // $102 = 100
+  await g.send(nudgeJog('Z', -1.5, 200, 100));          // clicked Down until the tip first meets the paper
+  await waitIdle(g);
+  near(sim.pos[2], -1.5);
+  assert.deepEqual(await touchLift(g, 100, undefined, 1.2), { penUp: 0, penDown: -3.2 });   // touch is 2 mm below up
+  near(sim.pos[2], 0.5);                                 // lifted 2 mm above the touch
+  assert.equal(PRESS_MAX, 3);
+  assert.equal(springPress(5), 3);                       // the spring's 3.5 mm stop is never reached
+  assert.equal(springPress(-1), 0);
+  assert.equal(springPress(undefined), 0);
+  await g.send(`G90 G0 Z0`); await waitIdle(g);
+  await g.send(nudgeJog('Z', -2, 200, 100)); await waitIdle(g);
+  assert.deepEqual(await touchLift(g, 100, undefined, 4), { penUp: 0, penDown: -5 });       // asked 4: pressed 3
 });
 
 test('find center: a mark under the pen, half a turn, the mark again; halfway is the center', async () => {

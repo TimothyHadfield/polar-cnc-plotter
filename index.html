@@ -94,7 +94,8 @@
           <button class="btn sm span2" id="setCenter">Set center</button>
           <button class="btn sm" id="home" data-homing hidden>Home</button>
         </div>
-        <div class="row plotrow" id="plotRow"><button class="btn primary" id="plot" disabled>Plot</button><button class="btn" id="resumePlot" hidden>Resume</button></div>
+        <div class="row plotrow" id="plotRow"><button class="btn primary" id="plot" disabled>Plot</button><button class="btn" id="resumePlot" hidden>Resume</button><button class="q" type="button" id="resumeQ" data-q="resumeHelp" aria-label="What is this?" hidden>?</button></div>
+        <p class="help" id="resumeHelp" hidden>Picks up at the last line drawn. Home or Set center finds the carriage; the platter angle comes back from where its motor stopped. Nothing measures the platter, so don't turn it by hand before resuming.</p>
         <div class="run" id="run" hidden>
           <div class="bar"><span id="bar"></span></div>
           <div class="row"><span id="runText"></span><button class="btn sm" id="pause">Pause</button><button class="btn sm" id="stop">Stop</button></div>
@@ -143,12 +144,12 @@
       <label><span class="lbl">Pen down <span class="unit">Z</span></span><input type="number" id="penDown" step="0.1"></label>
       <label><span class="lbl">Center gap <span class="unit">mm</span> <button class="q" type="button" data-q="gapHelp" aria-label="What is this?">?</button></span><input type="number" id="offset" step="0.1"></label>
       <label><span class="lbl">Line gap <span class="unit">mm</span> <button class="q" type="button" data-q="lineGapHelp" aria-label="What is this?">?</button></span><input type="number" id="gap" min="0.4" max="5" step="0.1"></label>
-      <label><span class="lbl">Pen press <span class="unit">mm</span> <button class="q" type="button" data-q="pressHelp" aria-label="What is this?">?</button></span><input type="number" id="penPress" min="0" max="5" step="0.1"></label>
+      <label><span class="lbl">Pen press <span class="unit">mm</span> <button class="q" type="button" data-q="pressHelp" aria-label="What is this?">?</button></span><input type="number" id="penPress" min="0" max="3" step="0.1"></label>
       <label data-homing hidden><span class="lbl">Switch at <span class="unit">mm</span></span><input type="number" id="homeX" step="0.1"></label>
     </div>
     <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
     <p class="help" id="lineGapHelp" hidden>Space between spiral rings, hatch lines, dots or wave lines.</p>
-    <p class="help" id="pressHelp" hidden>For a spring pen holder: how far pen down presses past the touch point. Calibrate's Pen height uses it.</p>
+    <p class="help" id="pressHelp" hidden>For a spring pen holder: how far pen down presses past the touch point (at most 3 mm). Calibrate's Pen height uses it, and puts pen up 2 mm above the touch.</p>
 
     <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
     <p class="help" id="flipHelp" hidden>For drawings that come out mirrored.</p>

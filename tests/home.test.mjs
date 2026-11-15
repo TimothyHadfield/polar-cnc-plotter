@@ -115,7 +115,7 @@ test('pen press: pen down goes that much below the touch point (Z+ lifts)', asyn
   await waitIdle(g);
   near(sim.pos[2], -3, 1e-9);                                // the tip touches here
   const s = await touchLift(g, 100, undefined, 0.5);
-  assert.deepEqual(s, { penUp: 0, penDown: -1.5 });          // lift 1 + press 0.5
+  assert.deepEqual(s, { penUp: 0, penDown: -2.5 });          // spring head: lift 2 mm + press 0.5
   await g.send(`G90 G0 Z${s.penDown}`);
   await waitIdle(g);
   near(sim.pos[2], -3.5, 1e-9);                              // 0.5 past the touch point

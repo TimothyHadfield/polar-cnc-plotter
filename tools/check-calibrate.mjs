@@ -59,7 +59,7 @@ try {
   // ----- step 1: Turn test + Test -----
   await page.click('#calOpen');
   await page.waitForTimeout(900);
-  ok('06 opens on Turn test, step 1 of 5, "Not started", Close + Check in the header', (await title()).startsWith('Turn test') && (await txt('#calCount')) === 'Step 1 of 5' && (await pill()) === 'Not started' && (await txt('#calTool [data-close-tool]')) === 'Close' && (await txt('#calCheckOpen')) === 'Check' && await page.evaluate(() => document.querySelectorAll('#calDots i').length === 5), { t: await title(), c: await txt('#calCount'), p: await pill(), err: await txt('#calErr') });
+  ok('06 opens on Turn test, step 1 of 7, "Not started", Close + Check in the header', (await title()).startsWith('Turn test') && (await txt('#calCount')) === 'Step 1 of 7' && (await pill()) === 'Not started' && (await txt('#calTool [data-close-tool]')) === 'Close' && (await txt('#calCheckOpen')) === 'Check' && await page.evaluate(() => document.querySelectorAll('#calDots i').length === 7), { t: await title(), c: await txt('#calCount'), p: await pill(), err: await txt('#calErr') });
   ok('07 arrows and Test are off until Start; Start is filled in', (await dis(act('turnTest')))[0] === true && (await dis(act('tCcw')))[0] === true && (await dis(act('done')))[0] === true && await page.evaluate(s => document.querySelector(s).classList.contains('go'), act('start')));
   ok('07b every step has a picture', await page.evaluate(() => [1, 2, 3, 4, 5].every(n => document.querySelector(`.calstep[data-n="${n}"] > svg.calpic`))));
   await shot('1-turn');
@@ -123,7 +123,7 @@ try {
 
   // ----- step 2: Turn direction (a question, nothing is drawn) -----
   await click('next');
-  ok('16x Next button names step 2; cw/ccw off before Start', (await txt('#calCount')) === 'Step 2 of 5' && (await dis(act('ccw')))[0] === true);
+  ok('16x Next button names step 2; cw/ccw off before Start', (await txt('#calCount')) === 'Step 2 of 7' && (await dis(act('ccw')))[0] === true);
   before = await sim('plotterSim.grbl.real()[1]');
   await sim('plotterSim.grbl.speed = 6');
   await click('start'); await msgIs('Which way did it go?');
@@ -175,7 +175,7 @@ try {
 
   // ----- step 4: Carriage test (the pen stays up) -----
   await click('next');
-  ok('22 step 4 is Carriage test', (await title()).startsWith('Carriage test') && (await txt('#calCount')) === 'Step 4 of 5', await title());
+  ok('22 step 4 is Carriage test', (await title()).startsWith('Carriage test') && (await txt('#calCount')) === 'Step 4 of 7', await title());
   await click('start'); await page.waitForTimeout(300);
   await page.click('.calstep:not([hidden]) .xstep [data-step="10"]');
   await click('xLeft'); await idle('xLeft', 'Left');
@@ -215,7 +215,7 @@ try {
 
   // ----- step 5: Find center (a mark, half a turn, the mark again) -----
   await click('next');
-  ok('29 step 5 of 5 is Find center, five numbered lines, carriage buttons under line 3, Next says Finished', (await title()).startsWith('Find center') && (await txt('#calCount')) === 'Step 5 of 5' && await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')].filter(p => !p.closest('[hidden]')).map(p => p.textContent[0]).join('') === '12345') && await page.evaluate(() => { const p = [...document.querySelectorAll('.calstep:not([hidden]) .calsay')][2]; return p.nextElementSibling.querySelector('[data-act=xRight2]') !== null; }) && (await txt(act('next'))) === 'Finished', await title());
+  ok('29 step 5 of 7 is Find center, five numbered lines, carriage buttons under line 3, Next says Next', (await title()).startsWith('Find center') && (await txt('#calCount')) === 'Step 5 of 7' && await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')].filter(p => !p.closest('[hidden]')).map(p => p.textContent[0]).join('') === '12345') && await page.evaluate(() => { const p = [...document.querySelectorAll('.calstep:not([hidden]) .calsay')][2]; return p.nextElementSibling.querySelector('[data-act=xRight2]') !== null; }) && (await txt(act('next'))) === 'Next', await title());
   ok('30 Done and Half turn wait for Start', (await dis(act('done')))[0] === true && (await dis(act('half')))[0] === true);
   ok('30b line 4 says it is optional, its ? shows why with a picture', (await page.evaluate(() => [...document.querySelectorAll('.calstep:not([hidden]) .calsay')][3].textContent)).startsWith('4. Only if needed') && await page.evaluate(() => !!document.querySelector('#calGapHelp svg.calpic')));
   await page.click('.calstep:not([hidden]) [data-q=calGapHelp]');
@@ -253,8 +253,10 @@ try {
   const xc = await sim('plotterSim.grbl.real()[0]');
   const s5 = await stored();
   ok('33a ↺ twice turned the platter 2° further', Math.abs(yc - yb - 2) < 0.3 && Math.abs(xa - xb - 80) < 0.05, { extra: yc - yb, across: xa - xb });
-  ok('33b Done goes halfway and saves the gap (40 mm out, 2°: 0.7 mm); all five dots green', Math.abs(xc - (xa + xb) / 2) < 0.05 && (await txt('#calMsg')) === 'Center set. The pen is over it now. Center gap 0.7 mm.' && s5.offset === 0.7 && await page.evaluate(() => document.getElementById('offset').value === '0.7') && await page.evaluate(() => [...document.querySelectorAll('#calDots i')].every(i => i.dataset.st === 'done')), { xa, xb, xc, msg: await txt('#calMsg'), err: await txt('#calErr'), offset: s5.offset });
-  ok('33c nothing in the whole tool draws', !(await page.evaluate(() => /draw|paper/i.test(document.getElementById('calTool').textContent))), await page.evaluate(() => (document.getElementById('calTool').textContent.match(/.{0,20}(draw|paper).{0,20}/i) || [''])[0]));
+  ok('33b Done goes halfway and saves the gap (40 mm out, 2°: 0.7 mm); dots 1-5 green',Math.abs(xc - (xa + xb) / 2) < 0.05 && (await txt('#calMsg')) === 'Center set. The pen is over it now. Center gap 0.7 mm.' && s5.offset === 0.7 && await page.evaluate(() => document.getElementById('offset').value === '0.7') && await page.evaluate(() => [...document.querySelectorAll('#calDots i')].slice(0, 5).every(i => i.dataset.st === 'done')), { xa, xb, xc, msg: await txt('#calMsg'), err: await txt('#calErr'), offset: s5.offset });
+  // the Photo check (step 7) is the one step about a plotted drawing
+  const toolText = () => [...document.getElementById('calTool').children].filter(e => e.dataset.n !== '7').map(e => e.textContent).join(' ');
+  ok('33c nothing in the tool draws (but the Photo check)', !(await page.evaluate(t => /draw|paper/i.test(eval(t)()), toolText.toString())), await page.evaluate(t => (eval(t)().match(/.{0,20}(draw|paper).{0,20}/i) || [''])[0], toolText.toString()));
   await shot('7-center-set');
 
   // ----- quick check: the plotter moves, the user answers -----
@@ -301,7 +303,34 @@ try {
   await click('next');
   await click('next');
   await page.waitForTimeout(300);
-  ok('42 Finished closes the tool', !(await vis('#calTool')) || !(await vis('.calstep[data-n="5"]')), await vis('#calTool'));
+  // ----- step 6: Speed test (the carriage: smooth once, then skipped; the platter: skipped at once) -----
+  ok('43 step 6 of 7 is Speed test with a picture; Smooth / Skipped off until a run is done', (await title()).startsWith('Speed test') && (await txt('#calCount')) === 'Step 6 of 7' && await vis('.calstep[data-n="6"] > svg.calpic') && (await dis(act('smooth')))[0] === true, await title());
+  await sim('plotterSim.grbl.speed = 20');
+  const x110 = await sim('plotterSim.grbl.settings[110]');
+  await click('start');
+  const runDone = async () => { await page.waitForFunction(() => { const b = document.querySelector('.calstep:not([hidden]) [data-act=smooth]'); return (b && !b.disabled) || document.getElementById('calErr').textContent; }, null, { timeout: 90000 }); await page.waitForTimeout(200); };
+  await runDone();
+  const run1 = await txt('#calRun');
+  await shot('10-speed');
+  ok('44 first run: the carriage, run 1 of 8, Start says Stop, no page scroll', /^Carriage run 1 of 8 · \d+ mm\/min$/.test(run1) && (await txt(act('start'))) === 'Stop' && !(await scrolls()), { run1, err: await txt('#calErr') });
+  await click('smooth'); await runDone();
+  await click('skipped'); await runDone();
+  const run3 = await txt('#calRun');
+  await click('skipped');
+  await page.waitForFunction(() => document.querySelector('.calstep:not([hidden]) [data-act=start]').textContent !== 'Stop', null, { timeout: 90000 });
+  await page.waitForTimeout(300);
+  const topX = await txt('#calTopX'), topY = await txt('#calTopY');
+  ok('45 then the platter; afterwards the old rates are back, results shown, center asked again', run3.startsWith('Platter run 1 of 9') && (await sim('plotterSim.grbl.settings[110]')) === x110 && /^\d+ mm\/min$/.test(topX) && topY === 'none smooth' && (await txt('#calMsg')).startsWith('Set the center again'), { run3, topX, topY, x110, now: await sim('plotterSim.grbl.settings[110]'), msg: await txt('#calMsg'), err: await txt('#calErr') });
+  await click('done'); await page.waitForTimeout(1500);
+  ok('46 Done saves the carriage top speed and its acceleration', (await sim('plotterSim.grbl.settings[110]')) === (+topX.split(' ')[0]).toFixed(3) && (await pill()) === '✓ Done' && (await txt('#calMsg')).startsWith('Saved $110='), { s110: await sim('plotterSim.grbl.settings[110]'), msg: await txt('#calMsg'), err: await txt('#calErr') });
+  // ----- step 7: Photo check (no photo here: the screen and its order only) -----
+  await click('next');
+  await page.waitForTimeout(300);
+  await shot('11-photo');
+  ok('47 step 7 of 7 is Photo check: Load photo, Undo off, Next says Finished, no page scroll', (await title()).startsWith('Photo check') && (await txt('#calCount')) === 'Step 7 of 7' && (await txt(act('photo'))) === 'Load photo' && (await dis(act('undo')))[0] === true && (await txt(act('next'))) === 'Finished' && !(await scrolls()), await title());
+  await click('next');
+  await page.waitForTimeout(300);
+  ok('42 Finished closes the tool', !(await vis('#calTool')) || !(await vis('.calstep[data-n="7"]')), await vis('#calTool'));
   await sim('plotterSim.grbl.speed = 1');
   await page.waitForTimeout(400);
   // main panel: the up arrow is Z+
