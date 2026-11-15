@@ -23,8 +23,9 @@ this current; give it back to him when he returns (Mon 11-16). Tick items as he 
   the old wheel first) · later: spacers (needs idler width), 3 snap-fit parts (needs measurements).
 - Measure: [ ] idler total width · [ ] rubber band thickness · [ ] motor shaft length above its face
   (23.5 assumed) · [ ] stage: photos of back/ends/slider + slider protrusion & height, end-cap
-  length, back hole spacing & size · [ ] SC8UU block width/length/height · [ ] pen diameter (and
-  the Expo marker's) for the spring pen holder (Tim 11-14 asked if it can be spring-loaded, lift on
+  length, back hole spacing & size · [ ] SC8UU block width/length/height · [ ] diameter of EVERY
+  pen he wants to use (Sharpie, Expo, fine pens), measured ~10-20 mm above the tip, for the collet
+  pen grip (PEN GRIP below) and the spring pen holder (Tim 11-14 asked if it can be spring-loaded, lift on
   command and all printed: yes, parallelogram flexure in the slider cap, 2-4 mm travel; Pen height
   would then press a little past touch instead of lifting off. NOT built).
 - Assemble/test: [ ] new base: slide the platter motor until the shaft is under the pen tip, then
@@ -87,6 +88,15 @@ snap-on cap that grips the slider's exposed top/bottom faces; (c) blocks -> plat
 new carriage plate instead of tape. Needs from Tim: photos + calipers of the stage back (holes),
 the slider (what sticks out, any holes), the stage ends, and the SC8UU block (size, whether its
 sides are flat).
+
+**PEN GRIP (11-14, NOTHING BUILT).** Tim: the clip + gear knob needs a screw with its head cut off
+("messy"), and a Sharpie didn't fit the round holder. Claude proposed: replace clip + knob with a
+printed **collet chuck** (split tapered fingers + big-pitch printed nut, turned by hand, no
+hardware), bore sized for the fattest pen, one swappable ~1 g collet per pen size. Self-centres,
+so the tip stays on the same line after a pen swap (only Pen height to redo, not Find center).
+Goes into the same snap-on slider cap as ATTACHMENTS (b), riding on the spring flexure. Needs:
+diameters of every pen he wants (where the holder grips, ~10-20 mm above the tip) + the slider
+measurements already on the Monday list.
 
 **DEFAULTS (2026-11-14, late night).** Tim, after a full calibration on the real plotter: "Could
 you make our settings saved right now the default settings of the app? This means if you
