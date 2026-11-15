@@ -1,7 +1,9 @@
-// Picture -> pen strokes in two shading styles, for photos rather than line art.
-//   spiral: ONE line from the centre outward that wiggles side to side where the picture is dark
-//   hatch:  straight parallel lines, up to three directions; darker areas get more directions
-// Both take { gray, w, h } (0 = black) and return { strokes, gapPx } with strokes in pixel
+// Picture -> pen strokes in shading styles, for photos rather than line art.
+//   spiral:  ONE line from the centre outward that wiggles side to side where the picture is dark
+//   hatch:   straight parallel lines, up to three directions; darker areas get more directions
+//   stipple: dots, more where darker
+//   lines:   level lines that wave harder and tighter where darker (linePortrait)
+// All take { gray, w, h } (0 = black) and return { strokes, gapPx } with strokes in pixel
 // coordinates, y down, like traceImage. `threshold` is the paper-white point: pixels at least
 // that light get no ink. `gap` is millimetres ON THE PAPER, so these also need the drawing size
 // (diameter, size) that fitStrokes in polar.js will scale the strokes' extent to.
@@ -154,8 +156,14 @@ function hatchLines(gray, w, h, thr, s) {
 // Line spacing on paper depends on how big the hatched area ends up (fitStrokes scales its
 // extent to the drawing circle), and the area depends a little on the spacing, so a few rounds.
 export function hatch(img, opts = {}) {
-  const { gray, w, h } = img;
   const o = options(opts);
+  return fitted(img, o, s => hatchLines(img.gray, img.w, img.h, o.thr, s));
+}
+
+// make(s) -> strokes for a spacing of s pixels; returns { strokes, gapPx } with s chosen so that s
+// pixels come out `gap` mm on paper once fitStrokes has scaled the strokes' extent.
+function fitted(img, o, make) {
+  const { gray, w, h } = img;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (gray[y * w + x] < o.thr) {
     if (x < x0) x0 = x; if (x + 1 > x1) x1 = x + 1; if (y < y0) y0 = y; if (y + 1 > y1) y1 = y + 1;
@@ -165,7 +173,7 @@ export function hatch(img, opts = {}) {
   let best = { strokes: [], gapPx: 0 }, bestErr = Infinity;
   for (let round = 0; round < 6; round++) {
     const s = o.gap * R / o.target;
-    const strokes = hatchLines(gray, w, h, o.thr, s);
+    const strokes = make(s);
     if (!strokes.length) return best.strokes.length ? best : { strokes, gapPx: s };
     const Rout = extent(strokes);
     const err = Math.abs(Rout - R) / R;
@@ -174,4 +182,88 @@ export function hatch(img, opts = {}) {
     R = Rout;
   }
   return best;
+}
+
+// Small seeded random numbers, so the same picture always stipples the same way.
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const darknessAt = (mean, w, h, thr) => (x, y) => {
+  const i = Math.min(w - 1, Math.max(0, Math.floor(x))), j = Math.min(h - 1, Math.max(0, Math.floor(y)));
+  return Math.max(0, Math.min(1, (thr - mean[j * w + i]) / thr));
+};
+
+// ---------- stipple ----------
+// A grid of cells `gap` mm wide; each cell gets one dot (somewhere in its middle half, so dots stay at
+// least half a gap apart) with a chance equal to how dark the picture is there. Each dot is a tiny
+// closed circle DOT mm across (the pen goes down, round, up). Rows run back and forth, so the pen
+// hops to a neighbour each time. More than MAX_DOTS takes too long to plot, and polar.js's
+// orderStrokes (nearest next, n²) needs 2-3 s for 6000 on a laptop: the cells grow to stay under.
+export const DOT = 0.3;
+export const MAX_DOTS = 4000;
+function dots(gray, w, h, thr, s0, gap) {
+  const mean = blur(gray, w, h, Math.max(1, Math.round(s0 / 2)));
+  const dark = darknessAt(mean, w, h, thr);
+  let want = 0;
+  for (let y = s0 / 2; y < h; y += s0) for (let x = s0 / 2; x < w; x += s0) want += dark(x, y);
+  const s = want > MAX_DOTS ? s0 * Math.sqrt(want / MAX_DOTS) : s0;
+  const rd = DOT / 2 * s0 / gap;   // dot radius in pixels (s0 pixels are `gap` mm)
+  const rand = rng(1);
+  const out = [];
+  const rows = Math.ceil(h / s), cols = Math.ceil(w / s);
+  for (let j = 0; j < rows; j++) {
+    const row = [];
+    for (let i = 0; i < cols; i++) {
+      const x = (i + 0.25 + 0.5 * rand()) * s, y = (j + 0.25 + 0.5 * rand()) * s, p = rand();
+      if (x <= w && y <= h && p < dark(x, y)) {
+        const c = [];
+        for (let k = 0; k <= 8; k++) c.push([x + rd * Math.cos(k * TAU / 8), y + rd * Math.sin(k * TAU / 8)]);
+        c[8] = c[0].slice();
+        row.push(c);
+      }
+    }
+    if (j & 1) row.reverse();
+    out.push(...row);
+  }
+  return out;
+}
+export function stipple(img, opts = {}) {
+  const o = options(opts);
+  return fitted(img, o, s => dots(img.gray, img.w, img.h, o.thr, s, o.gap));
+}
+
+// ---------- line portrait ----------
+// Level lines `gap` mm apart that wave where the picture is dark: the wave grows (up to 0.45 gap)
+// and tightens (wavelength 3 gaps -> 1 gap) as it gets darker. White paper gets no line.
+function waves(gray, w, h, thr, s) {
+  const mean = blur(gray, w, h, Math.max(1, Math.round(s / 2)));
+  const dark = darknessAt(mean, w, h, thr);
+  const cy = h / 2, dx = Math.min(1, s / 12);
+  const out = [];
+  for (let k = Math.ceil(-cy / s); k <= Math.floor((h - cy) / s); k++) {
+    const y0 = cy + k * s;
+    const segs = [];
+    let cur = null, ph = 0;
+    for (let x = 0; x <= w; x += dx) {
+      const d = dark(x, y0);
+      if (d > 0) {
+        if (!cur) cur = [];
+        cur.push([x, y0 + 0.45 * s * d * Math.sin(ph)]);
+      } else if (cur) { if (cur.length > 1 && cur.at(-1)[0] - cur[0][0] >= s) segs.push(cur); cur = null; }
+      ph += TAU * dx / (s * (3 - 2 * d));
+    }
+    if (cur && cur.length > 1 && cur.at(-1)[0] - cur[0][0] >= s) segs.push(cur);
+    if (k & 1) { segs.reverse(); for (const sg of segs) sg.reverse(); }
+    out.push(...segs);
+  }
+  return out;
+}
+export function linePortrait(img, opts = {}) {
+  const o = options(opts);
+  return fitted(img, o, s => waves(img.gray, img.w, img.h, o.thr, s));
 }

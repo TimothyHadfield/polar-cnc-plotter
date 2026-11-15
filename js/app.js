@@ -5,7 +5,8 @@ import { svgToStrokes } from './svg.js';
 import { loadGray } from './image.js';
 import { traceImage, otsu } from './trace.js';
 import { initPlace } from './place.js';
-import { spiral, hatch } from './styles.js';
+import { spiral, hatch, stipple, linePortrait } from './styles.js';
+import { initFine } from './finetest.js';
 import { initText } from './text.js';
 import { initPatterns } from './patterns.js';
 import { initSketch } from './sketch.js';
@@ -17,7 +18,8 @@ const PAPER = 200;  // mm, the round sheet on the platter
 // ---------- settings (kept in this browser) ----------
 const KEY = 'polar-plotter-settings';
 const FIELDS = ['diameter', 'speed', 'penUp', 'penDown', 'offset', 'gap', 'penPress', 'homeX'];
-const STYLES = ['outline', 'center', 'spiral', 'hatch'];   // picture style
+const STYLES = ['outline', 'center', 'spiral', 'hatch', 'stipple', 'lines'];   // picture style
+const SHADE = { spiral, hatch, stipple, lines: linePortrait };   // styles whose line gap is mm on paper
 // zFlip: the pen motor is mounted so that GRBL's Z direction has to be reversed (js/machine.js)
 // penPress: mm a spring pen holder presses past the touch point (Calibrate's Pen height)
 // homing / homeX: the homing switch is fitted / where it is, mm from the center (js/home.js)
@@ -152,12 +154,12 @@ function showName(fileName) {
 // Picture -> strokes in the chosen style. Skips the work when nothing it depends on changed.
 function retrace() {
   if (!picture) return;
-  const st = settings.style, shade = st === 'spiral' || st === 'hatch';
+  const st = settings.style, shade = !!SHADE[st];
   const key = [st, picture.threshold, ...(shade ? [settings.gap, settings.diameter, settings.size] : [])].join();
   if (picture.key === key) return;
   picture.key = key;
   const o = { threshold: picture.threshold, gap: settings.gap, diameter: settings.diameter, size: settings.size };
-  raw = (st === 'spiral' ? spiral(picture, o) : st === 'hatch' ? hatch(picture, o) : traceImage(picture, { threshold: picture.threshold, mode: st })).strokes;
+  raw = (shade ? SHADE[st](picture, o) : traceImage(picture, { threshold: picture.threshold, mode: st })).strokes;
 }
 function showDark() {
   $('darkRow').style.visibility = picture ? 'visible' : 'hidden';
@@ -371,6 +373,7 @@ api.machine = machine;   // null when this browser can't use USB serial
 initCalibrate(api);
 initText(api);
 initPatterns(api);
+initFine(api);
 initSketch(api);
 showHoming();
 takeHandoff();

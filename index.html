@@ -35,10 +35,12 @@
       <button class="btn" id="openText">Text</button>
       <button class="btn" id="openPattern">Pattern</button>
       <button class="btn" id="openDraw">Draw</button>
-      <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button> · <button class="link" id="testDraw">Test drawing</button> <button class="q" type="button" data-q="testDrawHelp" aria-label="How to read it">?</button></span>
+      <span class="samples">or <button class="link" data-sample="hello-world.svg">Hello World</button> · <button class="link" data-sample="uvu-logo.svg">UVU logo</button> · <button class="link" data-sample="hello-block.png">HELLO.png</button> · <button class="link" id="testDraw">Test drawing</button> <button class="q" type="button" data-q="testDrawHelp" aria-label="How to read it">?</button> · <button class="link" id="fineDraw">Fine test</button> <button class="q" type="button" data-q="fineHelp" aria-label="How to read it">?</button></span>
     </div>
 
     <p class="help" id="testDrawHelp" hidden>Plot it, then look:<br>Big circle doesn't close: Turn test.<br>Square not <b id="testSide">100</b> mm wide: Carriage test.<br>Cross misses in the middle, or small circle egg-shaped: Find center.<br>Small circle and spiral on swapped sides: Turn direction.<br>Gaps in the lines: Pen height.</p>
+    <p class="help" id="fineHelp" hidden>Combs blurry only on the outer rings: the platter is the limit. <button class="q" type="button" data-q="fineWhy" aria-label="Why?">?</button><br>Platter step, mm: <span id="fineSteps"></span><br>Carriage step: <span id="fineCarriage"></span> mm (<span id="fineFrom"></span>)</p>
+    <p class="help" id="fineWhy" hidden>One platter step moves the pen r·π/180 ÷ $101 mm, so it grows with distance from the center; a carriage step is 1 ÷ $100 mm everywhere. Combs are 2, 1, 0.5 and 0.25 mm apart. Fix: 1/16 microsteps first (doubles $101), then a gear reduction. Plot at Size 100% so the rings are true mm.</p>
 
     <div class="file" id="fileName">No drawing yet <span class="hint">· or paste one (Ctrl+V)</span></div>
 
@@ -110,8 +112,8 @@
     </section>
 
     <section class="tool" id="patternTool" hidden>
-      <header class="top"><h2>Pattern</h2><button class="btn" data-close-tool>Done</button></header>
-      <span class="seg" id="patternType"><button data-v="spiral" class="on">Spiral</button><button data-v="rose">Rose</button><button data-v="spirograph">Spirograph</button><button data-v="waves">Waves</button></span>
+      <header class="top"><h2>Pattern</h2><button class="btn" id="patternShuffle" type="button">Shuffle</button><button class="btn" data-close-tool>Done</button></header>
+      <span class="seg" id="patternType"><button data-v="spiral" class="on">Spiral</button><button data-v="rose">Rose</button><button data-v="spirograph">Spirograph</button><button data-v="waves">Waves</button><button data-v="harmonograph">Swing</button></span>
       <div class="pattern-sliders" id="patternSliders"></div>
     </section>
 
@@ -145,7 +147,7 @@
       <label data-homing hidden><span class="lbl">Switch at <span class="unit">mm</span></span><input type="number" id="homeX" step="0.1"></label>
     </div>
     <p class="help" id="gapHelp" hidden>Fixes drawings when the pen's line misses the platter center. Negative = other side.</p>
-    <p class="help" id="lineGapHelp" hidden>Space between spiral rings or hatch lines.</p>
+    <p class="help" id="lineGapHelp" hidden>Space between spiral rings, hatch lines, dots or wave lines.</p>
     <p class="help" id="pressHelp" hidden>For a spring pen holder: how far pen down presses past the touch point. Calibrate's Pen height uses it.</p>
 
     <label class="switch"><input type="checkbox" id="flip"><span></span>Reverse rotation <button class="q" type="button" data-q="flipHelp" aria-label="What is this?">?</button></label>
@@ -154,8 +156,8 @@
     <label class="switch"><input type="checkbox" id="homing"><span></span>Homing switch <button class="q" type="button" data-q="homingHelp" aria-label="What is this?">?</button></label>
     <p class="help" id="homingHelp" hidden>A switch on the carriage's motor side, wired to X limit and GND. Home finds it and sets the center. Measure it once in Calibrate, Find center.</p>
     <div class="pick"><span class="lbl">Picture style <button class="q" type="button" data-q="styleHelp" aria-label="What is this?">?</button></span>
-      <span class="seg" id="pictureStyle"><button type="button" data-style="outline">Outlines</button><button type="button" data-style="center">Centerlines</button><button type="button" data-style="spiral">Spiral</button><button type="button" data-style="hatch">Hatch</button></span></div>
-    <p class="help" id="styleHelp" hidden>Outlines: the pen goes around each dark shape.<br>Centerlines: for line drawings, each line drawn once.<br>Spiral: one line from the center, wiggling where dark.<br>Hatch: crossed lines shade photos; darker gets more.</p>
+      <span class="seg" id="pictureStyle"><button type="button" data-style="outline">Outlines</button><button type="button" data-style="center">Centerlines</button><button type="button" data-style="spiral">Spiral</button><button type="button" data-style="hatch">Hatch</button><button type="button" data-style="stipple">Stipple</button><button type="button" data-style="lines">Lines</button></span></div>
+    <p class="help" id="styleHelp" hidden>Outlines: the pen goes around each dark shape.<br>Centerlines: for line drawings, each line drawn once.<br>Spiral: one line from the center, wiggling where dark.<br>Hatch: crossed lines shade photos; darker gets more.<br>Stipple: dots, more where darker.<br>Lines: level lines that wave where dark.</p>
 
     <h3>Test files <button class="q" type="button" data-q="testHelp" aria-label="What is this?">?</button></h3>
     <p class="help" id="testHelp" hidden>If the circle closes and the spoke is straight, the machine is fine. Start with G92 X0 Y0 Z0, pen on the center.</p>
