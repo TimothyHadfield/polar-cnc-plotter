@@ -261,3 +261,27 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   calibration; it tells GRBL where the center is, which it forgets at every connect/reset, and
   after the carriage or platter is moved by hand or skips steps. **Verified:** defaults walk 10/10,
   calibrate walk 54/54, 136 node tests.
+
+## 2026-11-14/15 · V3 hardware, build guide, software waves, ideas artifacts
+- **Asked:** pen holder ("cut off the head of the screw … a sharpie … wasn't big enough"); homing
+  switch; wire hooks ("think about what orientation the X carraige motor is facing"); "adjust our
+  current 3D print designs in order to fit with them … Consider everything you can to make the
+  output perfect"; "make a V3 on the cite … keep all the content our V2 has with V2"; brainstorm +
+  artifact; "build all the software improvements right now", "make the app's layout and design much
+  more improved", exact build instructions per version with animations, faster 3D, a "fining test";
+  gear reduction ("we shouldn't use our old DVD bearing thing"); sand table ("show it extreamly
+  clearly and in-depth"); WiFi brain.
+- **Built (merged + pushed):** stands 3 wire clips (7a7e562); V2 freeze (9400cf0); homing + pen
+  press + Test drawing; build guide steps/animations/3D speed; Fine test, Stipple, Lines, Swing +
+  Shuffle; cable chain + tray, carriage 2 + spring pen head + collets, switch mount + board cover;
+  live progress, Resume, Calibrate 6 Speed test + 7 Photo check; V3 tab (d81d66e); CLAUDE.md
+  (ce5ca64). Artifacts McW2e5CAoqo8RtPp6u54a1 (upgrades) and HBpKibNKhBnTWh7uVMuFcS (more ideas: gear
+  reduction card, interactive sand table deep-dive).
+- **Decided (Claude, flagged to Tim):** 608 bearings for a future gear reduction; sand table as V4
+  with both motors fixed; ESP32 bridge for WiFi (not built, $); names Swing/Lines; stipple 4000 dots.
+- **Verified:** 181/181 node tests; sim.html ?v=1/?v=2 + ?demo + build.html headless clean at 393 px;
+  check-calibrate 59/59; Bambu CLI slices clean (no floating regions) for every plate; OpenSCAD clash
+  checks (chain↔carriage socket only intended snap contact; switch lever pressed 1.2–2.3 mm).
+  Slice recipe: `bambu-studio.exe --slice 0 --load-settings "machine.json;process.json"
+  --load-filaments filament.json --outputdir o --export-3mf out.3mf in.3mf` from scratchpad/slice.
+- **Open:** layout redesign builder (`up-look`) running; nothing printed; Monday list in progress.md.
