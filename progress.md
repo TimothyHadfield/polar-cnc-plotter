@@ -102,9 +102,14 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   + extras; only one file owner per scad (docs/upgrades-plan.md I5).
 - D9 · 2026-11-15 · homing is app-side (jog to `Pn:X`, back off, re-touch, G92), no `$H`, `$21`=0.
 - D10 · 2026-11-15 · spring pen head: press capped 3 mm (stop at 3.5); with a press, up = touch + 2.
-- D11 · 2026-11-15 · gear reduction NOT built: Fine test decides; try 1/16 microsteps first; if
-  needed, 608 bearings on a post in the base + 60T printed into the wheel hub + 20T, Tim's 220 mm belt
-  (artifact card 6).
+- D11 · 2026-11-15 · gear reduction NOT built: Fine test decides; try 1/16 microsteps first.
+  2026-11-16 designed in CAD `cad/gear-reduction.scad` (artifact card 6, 3D + to-scale section):
+  spare metal 16T → 60T ring on the wheel hub = 3.75:1, 220 mm (110 T) belt → C 70.611 mm; Tim's two
+  spare idlers stacked as the wheel bearings on a fixed 3 mm rod (55.5 mm) in a printed post; motor
+  drops 5.5 mm through a base window on a drive sled (slides y, ±3 mm x belt tension, separate roof);
+  wheel ribs notched for the pulley. Wheel underside still z 49.0 (same as collar 3). $101 → 16.667.
+  4 prints (base, sled, roof, wheel ~6 h) slice clean, no supports; clash checks empty/contact only.
+  Tim asked "1 bearing or 2?": 1 works, 2 ~3× steadier (reasoned). Not printed, not committed to build.
 - D12 · 2026-11-15 · ideas parked as artifact cards: sand table (V4, option B both motors fixed),
   WiFi brain (ESP32 bridge recommended, ~$6, NOT built: needs his OK to buy).
 
@@ -120,6 +125,9 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   with a busy CPU).
 - CALIBRATE 3/4 + SAFEGUARDS on the real plotter (details in the archive).
 - Web Serial only exercised with `?demo` / stand-in `navigator.serial`.
+- Gear reduction (`cad/gear-reduction.scad`): idler flange Ø18 and belt width 6 are ASSUMED (belt
+  listing says "-9"; a 9 mm belt needs a printed 20T instead); which two leftover parts are idlers is
+  Claude's reading of Tim's words; wobble 0.14 vs 0.45 mm is reasoned from ~0.02 mm bearing play.
 
 ## Rejected / parked
 - ~~Short NEMA motors~~ · 2026-10-25 · keep the 42 Ncm motors with direct drive.

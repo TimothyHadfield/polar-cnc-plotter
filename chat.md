@@ -289,3 +289,17 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   Settings Drawing/Machine, 2 columns on laptop, styles 3×2; Calibrate/Disconnect as small buttons;
   Calibrate pictures 76 px on phone. Verified 181/181, check-calibrate 60/60 both widths, connect 5/5.
 - **Open:** phone auto-switch to Adjust after loading? (kept no); nothing printed; Monday list in progress.md.
+
+## 2026-11-16 · gear reduction designed in CAD (artifact card 6)
+- **Asked:** "design the gear reduction more specifically, especially with the specific length belt
+  I got"; "the platter ... looks much higher up. Are you sure it's the same hight?"; "Would it be much
+  worse if we only used 1 [bearing]?" (use his 2 leftovers); "put all the info and clear 3D
+  demonstration ... on the artifact".
+- **Decided:** 16T metal pulley → 60T printed ring (3.75:1) over 20T (3:1); both idlers as bearings;
+  motor through a base window; roof as a separate flat print (one-piece sled needed supports).
+- **Built:** `cad/gear-reduction.scad` (parts, print_*, chk_* clash checks); card 6 rebuilt with a
+  three.js model (cut / lift / whole, spinning at the real ratio) + two to-scale side sections.
+- **Verified how:** OpenSCAD clash checks empty or face-contact only (negative control notch_z 45 →
+  clash); Bambu CLI slices of 4 parts, no supports, no warnings; phone-view WebKit 393 px + desktop
+  (light + dark), no errors, no overflow.
+- **Open:** measure belt width (6 vs 9) and idler flange (18 assumed); still Fine test first.

@@ -64,7 +64,9 @@ previews it, and can stream it to the plotter over USB.
   in `js/build.js`. **V2 is frozen** (`cad/printed-frame-v2.scad`, `build/v2/stl/`). V3 =
   `make-build-model.py v3` -> `build/plotter-v3.glb` from the live `cad/printed-frame.scad` +
   `cad/cable-chain.scad` + `cad/carriage-2.scad` + `cad/extras.scad` (switch mount, board cover);
-  shared world frame and interfaces in `docs/upgrades-plan.md`. Rebuilding V1/V2 changes bytes
+  shared world frame and interfaces in `docs/upgrades-plan.md`. `cad/gear-reduction.scad` = the
+  designed-not-built 3.75:1 platter drive (includes printed-frame.scad; parts gr_*; clash checks
+  chk_*; header explains). Rebuilding V1/V2 changes bytes
   (vertex order only): restore with `git checkout -- <path>`.
 - More app modules: `js/home.js` (homing switch; settings `homing`, `homeX`, `penPress` max 3 mm,
   with a press pen up = touch + 2 mm), `js/finetest.js` (Fine test rings + combs, step size per
