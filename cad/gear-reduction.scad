@@ -45,6 +45,8 @@ pd = function(n) n * 2 / PI;                       // pitch diameter, GT2 2 mm
 A_ = belt_L - PI * (pd(n_ring) + pd(n_pul)) / 2;
 C  = (A_ + sqrt(A_ * A_ - 2 * pow(pd(n_ring) - pd(n_pul), 2))) / 4;   // 70.6 (L = 2C + pi(D+d)/2 + (D-d)^2/4C)
 ratio = n_ring / n_pul;                            // 3.75
+A20 = belt_L - PI * (pd(n_ring) + pd(20)) / 2;     // the same loop with a 20T pulley (a 9 mm belt): 68.8
+C20 = (A20 + sqrt(A20 * A20 - 2 * pow(pd(n_ring) - pd(20), 2))) / 4;
 
 // ---------- heights (world z, base top = 0) ----------
 W        = wheel_z0 + raise;      // 49.0: the wheel's underside today (collar 3 puts it 4.5 over the cage)
@@ -154,9 +156,11 @@ module gr_base() difference() {
     }
     tray();
   }
-  // the motor window: the motor's body at every sled position (y) and belt tension (x)
+  // the motor window: the motor's body at every sled position (y) and belt tension (x). 11-16: it also
+  // covers C20 (a printed 20T pulley, if Tim's "220-2GT-9" loop turns out 9 mm wide), so this base
+  // fits either drive; only the sled, roof and wheel change with the belt.
   translate([-C - win_hx - 0.5, cage_y - motor_adj - in_y - 0.5, -base_t - 1])
-    cube([2 * win_hx + 1, 2 * (motor_adj + in_y) + 1, base_t + 2]);
+    cube([2 * win_hx + 1 + (C - C20), 2 * (motor_adj + in_y) + 1, base_t + 2]);
   // sled screws: slots through, hex nut slots from underneath (the nut slides with the screw)
   for (x = scr_x, s = [-1, 1]) translate([x, cage_y + s * 20, 0]) {
     translate([0, 0, -base_t - 1]) obround(3.4, base_t + 2, motor_adj);
