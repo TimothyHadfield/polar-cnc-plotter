@@ -90,6 +90,10 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   (Permission denied on `.git/worktrees/*`, OneDrive): leave for the weekly sweep. Stale: software,
   guide, draw, chain, carriage, misc, run, v3.
 - Leave the untracked `build/stl/carriage_plate.3mf` alone (Tim's file).
+- **Pen head cap is WRONG for the real slider** (Tim measured 11-16: 25.2 wide × **10.3 tall** along
+  the travel; carriage-2.scad assumes sl_h 14 → 3.8 mm vertical slop). Fix sl_h (cap 10.4) before plate10
+  is printed; stick-out still unmeasured. Not changed yet (Tim: "just talk to me"). Explainer artifact:
+  https://claude.ai/artifact/XfTWdPC4rFQRP3Wq4Gj32H (finger test, slot-guide idea).
 - Claude can drive the plotter (COM3 115200, PowerShell SerialPort) only with the app disconnected,
   ~2.5 s after open, after Tim says "ready" in the question box.
 
