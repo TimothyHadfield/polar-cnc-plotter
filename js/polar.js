@@ -107,7 +107,8 @@ export function fitStrokes(strokes, o) {
 
 // ---------- placement: crop, turn, move, and keep the pen on the paper ----------
 // place = { turn (degrees, + = counter-clockwise on the preview), dx, dy (mm), crop ([u0,v0,u1,v1] in
-// 0…1 of the raw drawing's bounding box, or null) }.
+// 0…1 of the raw drawing's bounding box, or null), scale (shrink after the move, default 1; set by
+// dodgeGap), auto (app.js: dx/dy/scale come from dodgeGap until the user drags) }.
 
 const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 
@@ -176,12 +177,12 @@ export function cropStrokes(strokes, crop) {
   return clipConvex(strokes, span);
 }
 
-// Turn about the centre, move, then cut whatever left the drawing circle (radius R).
+// Turn about the centre, move, shrink (scale), then cut whatever left the drawing circle (radius R).
 export function placeStrokes(strokes, place, R) {
   const a = (place.turn || 0) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
-  const dx = place.dx || 0, dy = place.dy || 0;
-  if (!a && !dx && !dy) return strokes;
-  const moved = strokes.map(st => keepColor(st.map(([x, y]) => [x * c - y * s + dx, x * s + y * c + dy]), st));
+  const dx = place.dx || 0, dy = place.dy || 0, k = place.scale || 1;
+  if (!a && !dx && !dy && k === 1) return strokes;
+  const moved = strokes.map(st => keepColor(st.map(([x, y]) => [(x * c - y * s + dx) * k, (x * s + y * c + dy) * k]), st));
   return clipOuter(moved, R);
 }
 
@@ -216,6 +217,66 @@ export function clipInner(strokes, rMin) {
     if (cur && cur.length > 1) out.push(cur);
   }
   return out;
+}
+
+// ---------- keep the centre gap on blank paper ----------
+// With a centre gap d the pen can't reach the circle of radius |d| around the centre, so clipInner
+// cuts any ink there. dodgeGap finds the SMALLEST move that puts that circle on blank paper (between
+// letters, inside an empty shape, beside a line) and, if the move would push the drawing past the
+// drawing circle R, the shrink (scale <= 1, about the platter centre) that keeps it inside.
+// strokes: platter mm, already fitted and turned, not moved. Returns { dx, dy, scale, moved } to
+// use as place.dx / place.dy / place.scale, or null when the gap already misses the ink or no blank
+// spot is near enough (dense shading, a spiral, lines closer together than the gap).
+export function dodgeGap(strokes, gap, R, opt = {}) {
+  const d = Math.abs(gap);
+  if (!(d > 1e-9) || !strokes.length) return null;
+  const h = d + (opt.margin ?? 0.5);                 // gap + half a pen line + a little play
+  const kMin = opt.minScale ?? 0.85;                 // never shrink the drawing more than this
+  const g = opt.cell ?? 0.4;                         // search grid, mm
+  const n = Math.ceil(Math.min(opt.maxMove ?? 20, 0.15 * R) / g), S = n * g, N = 2 * n + 1;
+  const H = h / kMin, lim = S + H;
+  // distance from each grid point (a candidate spot for the gap, drawing frame) to the nearest ink
+  const dist = new Float64Array(N * N).fill(Infinity);
+  const pts = [];
+  for (const s of strokes) {
+    for (const p of s) pts.push(p);
+    for (let i = 0; i + 1 < s.length || (s.length === 1 && i === 0); i++) {
+      const a = s[i], b = s[i + 1] || a;
+      const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+      if (x1 < -lim || x0 > lim || y1 < -lim || y0 > lim) continue;
+      const i0 = Math.max(0, Math.ceil((x0 - H + S) / g)), i1 = Math.min(N - 1, Math.floor((x1 + H + S) / g));
+      const j0 = Math.max(0, Math.ceil((y0 - H + S) / g)), j1 = Math.min(N - 1, Math.floor((y1 + H + S) / g));
+      for (let j = j0; j <= j1; j++) for (let ix = i0; ix <= i1; ix++) {
+        const q = distToSegment([ix * g - S, j * g - S], a, b), at = j * N + ix;
+        if (q < dist[at]) dist[at] = q;
+      }
+    }
+  }
+  if (dist[n * N + n] >= h) return null;             // the gap already sits on blank paper
+  const hull = convexHull(pts);
+  const scaleAt = (cx, cy) => { let m = 0; for (const [x, y] of hull) m = Math.max(m, Math.hypot(x - cx, y - cy)); return m > R ? R / m : 1; };
+  const cand = [];
+  for (let j = 0; j < N; j++) for (let ix = 0; ix < N; ix++) {
+    const cx = ix * g - S, cy = j * g - S, r = Math.hypot(cx, cy);
+    if (r <= S && dist[j * N + ix] >= h) cand.push([r, cx, cy, dist[j * N + ix]]);
+  }
+  cand.sort((a, b) => a[0] - b[0] || b[3] - a[3]);
+  for (const [r, cx, cy, q] of cand) {
+    const k = scaleAt(cx, cy);
+    if (k >= kMin && q * k >= h) return { dx: -cx, dy: -cy, scale: k, moved: r };
+  }
+  return null;
+}
+
+// Andrew's monotone chain; points [x, y] -> hull corners.
+function convexHull(points) {
+  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length < 3) return p;
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const q of p) { while (lo.length > 1 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (let i = p.length - 1; i >= 0; i--) { const q = p[i]; while (up.length > 1 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
 }
 
 // Greedy nearest-neighbour order (strokes may be reversed) to cut pen-up travel.

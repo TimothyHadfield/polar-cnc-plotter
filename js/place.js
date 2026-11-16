@@ -16,7 +16,7 @@ export function cropFromBox(raw, place, opts, pts) {
   const w = b[2] - b[0], h = b[3] - b[1];
   let u0 = Infinity, v0 = Infinity, u1 = -Infinity, v1 = -Infinity;
   for (const [x, y] of pts) {
-    const px = x - (place.dx || 0), py = y - (place.dy || 0);
+    const k = place.scale || 1, px = x / k - (place.dx || 0), py = y / k - (place.dy || 0);
     const qx = px * c - py * s, qy = px * s + py * c;
     const u = ((qx / f.k + f.cx) - b[0]) / (w || 1), v = ((-qy / f.k + f.cy) - b[1]) / (h || 1);
     u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
@@ -33,7 +33,8 @@ export function initPlace(api) {
   const cropBtn = $('crop'), resetBtn = $('resetPlace'), turn = $('turn'), turnOut = $('turnOut');
   let cropping = false, box = null, drag = null, frame = 0;
 
-  const moved = p => !!(p.turn || p.dx || p.dy || p.crop);
+  // the automatic centre-gap nudge doesn't count as a move; a hand drag does
+  const moved = p => !!(p.turn || p.crop || (!p.auto && (p.dx || p.dy)));
   // screen px (relative to the canvas) -> paper mm, using the scale draw() last used
   const toMM = (x, y) => { const v = api.view; return [(x - v.cx) / v.k, (v.cy - y) / v.k]; };
   const local = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
@@ -69,7 +70,7 @@ export function initPlace(api) {
     api.setPlace({ turn: +turn.value }, 30);
   });
   cropBtn.addEventListener('click', () => setCropping(!cropping));
-  resetBtn.addEventListener('click', () => { setCropping(false); api.setPlace({ turn: 0, dx: 0, dy: 0, crop: null }); });
+  resetBtn.addEventListener('click', () => { setCropping(false); api.setPlace({ turn: 0, dx: 0, dy: 0, crop: null, scale: 1, auto: true }); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && cropping) setCropping(false); });
 
   canvas.addEventListener('pointerdown', e => {
@@ -77,7 +78,7 @@ export function initPlace(api) {
     const at = local(e);
     try { canvas.setPointerCapture(e.pointerId); } catch {}
     const p = api.getPlace();
-    drag = { id: e.pointerId, at, dx: p.dx, dy: p.dy, live: false, heavy: (api.getResult()?.ms || 0) > 25 };
+    drag = { id: e.pointerId, at, dx: p.dx, dy: p.dy, sc: p.scale || 1, live: false, heavy: (api.getResult()?.ms || 0) > 25 };
     if (cropping) box = [...at, ...at];
   });
 
@@ -88,7 +89,7 @@ export function initPlace(api) {
     drag.live = true;
     if (cropping) box[2] = at[0], box[3] = at[1];
     else {
-      const k = api.view.k;
+      const k = api.view.k * drag.sc;   // dx/dy are applied before the shrink, so a finger mm is 1/scale of them
       drag.to = [drag.dx + (at[0] - drag.at[0]) / k, drag.dy - (at[1] - drag.at[1]) / k];
     }
     if (frame) return;   // one update per animation frame
@@ -96,7 +97,7 @@ export function initPlace(api) {
       frame = 0;
       if (!drag) return;
       if (cropping || !drag.to) return api.draw();
-      if (drag.heavy) { api.inkShift = [drag.to[0] - drag.dx, drag.to[1] - drag.dy]; api.draw(); }
+      if (drag.heavy) { api.inkShift = [(drag.to[0] - drag.dx) * drag.sc, (drag.to[1] - drag.dy) * drag.sc]; api.draw(); }
       else api.setPlace({ dx: drag.to[0], dy: drag.to[1] });
     });
   });
@@ -111,7 +112,7 @@ export function initPlace(api) {
         const crop = cropFromBox(api.getRaw(), api.getPlace(), api.getSettings(), corners);
         setCropping(false);
         // the cropped part refits: centred, filling the drawing circle at the current Size
-        if (crop) api.setPlace({ crop, dx: 0, dy: 0 });
+        if (crop) api.setPlace({ crop, dx: 0, dy: 0, scale: 1, auto: true });
       } else api.draw();
       return;
     }

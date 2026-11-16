@@ -1,4 +1,4 @@
-import { DEFAULTS, prepare, toGcode, simulate, placedToGcode, testCircle, testSpoke, toPlatter } from './polar.js';
+import { DEFAULTS, prepare, toGcode, simulate, placedToGcode, testCircle, testSpoke, toPlatter, layout, dodgeGap } from './polar.js';
 import { initMachine } from './machine.js';
 import { initCalibrate } from './calibrate.js';
 import { svgToStrokes } from './svg.js';
@@ -38,8 +38,25 @@ let result = null;       // { gcode, stats, sim }
 let pen = null;          // live pen position [r, θ, z] from the plotter, when connected
 let machine = null;
 // where the drawing sits (js/place.js): not saved, reset for every new drawing
-const place = { turn: 0, dx: 0, dy: 0, crop: null };
-const resetPlace = () => Object.assign(place, { turn: 0, dx: 0, dy: 0, crop: null });
+// auto: dx/dy/scale are chosen by dodgeGap (centre gap kept on blank paper) until the user drags
+const place = { turn: 0, dx: 0, dy: 0, crop: null, scale: 1, auto: true };
+const resetPlace = () => Object.assign(place, { turn: 0, dx: 0, dy: 0, crop: null, scale: 1, auto: true });
+let dodged = 0;          // mm the drawing was moved off the centre gap (0 = not moved)
+
+// Tim 11-16: "If this happens and the user loads some drawing, try to manuvure the drawing in such a
+// way that the circle in the middle doesn't interfere with the drawing". Re-run whenever the drawing,
+// the gap, the size or the turn changes, while the user hasn't moved the drawing by hand.
+let dodgeKey = '', dodgeRaw = null;
+function autoPlace() {
+  if (!place.auto) { dodged = 0; return; }
+  const key = [settings.offset, settings.diameter, settings.size, place.turn, JSON.stringify(place.crop)].join();
+  if (raw === dodgeRaw && key === dodgeKey) return;
+  dodgeRaw = raw; dodgeKey = key;
+  // hand-drawn sketches sit exactly where they were drawn: leave them be
+  const dg = raw.radius ? null : dodgeGap(layout(raw, settings, { turn: place.turn, crop: place.crop }), settings.offset, settings.diameter / 2);
+  Object.assign(place, { dx: dg?.dx || 0, dy: dg?.dy || 0, scale: dg?.scale || 1 });
+  dodged = dg?.moved || 0;
+}
 
 // ---------- conversion ----------
 let timer = 0;
@@ -50,6 +67,7 @@ function rebuild(delay = 0) {
     if (!raw) { result = null; draw(); showStats(); return; }
     try {
       const t0 = performance.now();
+      autoPlace();
       const strokes = prepare(raw, settings, place);
       const out = toGcode(strokes, settings);
       result = { ...out, sim: simulate(out.gcode, settings, 0.4), ms: performance.now() - t0 };
@@ -69,7 +87,7 @@ function showStats() {
   if (!result) { $('stats').textContent = ''; return; }
   const s = result.stats;
   const mins = s.minutes + s.travelMM / 400;
-  $('stats').textContent = `${s.strokes} strokes · ${(s.drawMM / 1000).toFixed(1)} m of ink · ~${Math.max(1, Math.round(mins))} min${s.pens > 1 ? ` · ${s.pens} pens` : ''}`;
+  $('stats').textContent = `${s.strokes} strokes · ${(s.drawMM / 1000).toFixed(1)} m of ink · ~${Math.max(1, Math.round(mins))} min${s.pens > 1 ? ` · ${s.pens} pens` : ''}${dodged ? ` · moved ${dodged.toFixed(1)} mm off the center gap` : ''}`;
 }
 
 // ---------- preview ----------
@@ -357,7 +375,12 @@ const api = {
   canvas,
   getRaw: () => raw,
   getPlace: () => place,
-  setPlace: (patch, delay = 0) => { Object.assign(place, patch); rebuild(delay); },
+  // a hand move (dx/dy without auto) ends the automatic placement; Reset and Crop turn it back on
+  setPlace: (patch, delay = 0) => {
+    if (('dx' in patch || 'dy' in patch) && !('auto' in patch)) place.auto = false;
+    if (patch.auto) dodgeKey = '';   // Reset / Crop: work the nudge out again
+    Object.assign(place, patch); rebuild(delay);
+  },
   view: { k: 1, cx: 0, cy: 0 },   // preview scale, set by draw()
   inkShift: null,
   sketching: false,               // true while the Draw tool is open (js/sketch.js): the pointer draws
