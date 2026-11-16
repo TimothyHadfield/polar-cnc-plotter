@@ -303,3 +303,17 @@ are only in git history and `docs/archive/progress-2026-10-27.md`._
   clash); Bambu CLI slices of 4 parts, no supports, no warnings; phone-view WebKit 393 px + desktop
   (light + dark), no errors, no overflow.
 - **Open:** measure belt width (6 vs 9) and idler flange (18 assumed); still Fine test first.
+
+## 2026-11-16 · centre-gap dodge + Set center keeps calibration
+- **Asked:** "try to manuvure the drawing in such a way that the circle in the middle doesn't
+  interfere with the drawing, besides shifting it slightly off-center"; "If I click "set center" after
+  the center has been calibrated, automatically move the pen to the center, don't mess with or change
+  any calibration settings."
+- **Decided:** smallest slide to blank paper, shrink ≤ 15 % only when needed, hand drag overrides
+  (Reset restores); Set center with a known center = pen up + X0 only; lost center + homing → Home.
+- **Built:** 751658d (`dodgeGap`, `place.scale/auto`, stats note), 617fe7d (`grbl.goCenter`, machine.js).
+- **Verified how:** 189/189 node tests (new dodge.test.mjs, 2 grbl tests); Hello World at offset 3 moves
+  4.0 mm (node and headless WebKit 393 px + desktop agree); `?demo` desktop: 1st press "Center set.",
+  jog, 2nd press "Pen moved to the center."; sim.html no exceptions.
+- **Open:** label "Set center" kept though it now mostly means "go to center" (Tim's wording call).
+  Earlier today: print list + download links given; portfolio artifact (4 projects, visuals, prices).

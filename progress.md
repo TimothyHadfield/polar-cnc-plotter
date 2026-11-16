@@ -62,6 +62,9 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   different prints … Consider everything you can to make the output perfect." (11-15, V3 hardware)
 - "everything is able to easily come apart", "I don't really want to get any more bolts/screws" (11-14)
 - "replace my current pen holder with the nicer one I desigend and bought" (micro linear stage, 10-26).
+- "If I click "set center" after the center has been calibrated, automatically move the pen to the
+  center, don't mess with or change any calibration settings. Calibration can only be changed if you
+  re-do calibration." (11-16)
 - Global rules apply (`~/.claude/CLAUDE.md`).
 
 ## Traps
@@ -110,6 +113,14 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   wheel ribs notched for the pulley. Wheel underside still z 49.0 (same as collar 3). $101 → 16.667.
   4 prints (base, sled, roof, wheel ~6 h) slice clean, no supports; clash checks empty/contact only.
   Tim asked "1 bearing or 2?": 1 works, 2 ~3× steadier (reasoned). Not printed, not committed to build.
+- D13 · 2026-11-16 · centre gap auto-dodge (751658d): with offset ≠ 0, `dodgeGap` (polar.js) slides the
+  drawing the smallest amount that puts the |offset| circle (+0.5 mm) on blank paper, shrink ≥ 0.85 only
+  if the slide would cross R; null when no blank spot within min(20, 0.15R) mm (UVU logo at 5 mm).
+  `place.auto` (app.js `autoPlace`) until a hand drag; Reset / Crop turn it back on; sketches skipped.
+  Stats line says "moved X mm off the center gap". Tests `tests/dodge.test.mjs`.
+- D14 · 2026-11-16 · Set center (617fe7d): once `grbl.center` is known, the button only lifts the pen and
+  goes to X0 (`grbl.goCenter`), no G92. Center lost + homing measured → Home first. Neither → sets as before.
+  Tim: "Calibration can only be changed if you re-do calibration." Label still "Set center" (his call).
 - D12 · 2026-11-15 · ideas parked as artifact cards: sand table (V4, option B both motors fixed),
   WiFi brain (ESP32 bridge recommended, ~$6, NOT built: needs his OK to buy).
 
@@ -125,6 +136,7 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   with a busy CPU).
 - CALIBRATE 3/4 + SAFEGUARDS on the real plotter (details in the archive).
 - Web Serial only exercised with `?demo` / stand-in `navigator.serial`.
+- Centre-gap dodge and the new Set center are tested in node + headless `?demo` only, not on the plotter.
 - Gear reduction (`cad/gear-reduction.scad`): idler flange Ø18 and belt width 6 are ASSUMED (belt
   listing says "-9"; a 9 mm belt needs a printed 20T instead); which two leftover parts are idlers is
   Claude's reading of Tim's words; wobble 0.14 vs 0.45 mm is reasoned from ~0.02 mm bearing play.
