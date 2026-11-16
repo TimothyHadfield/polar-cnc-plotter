@@ -21,6 +21,12 @@ nothing changes without a tap). Next: give Tim the Monday list when he's back (M
 **TIM'S MONDAY LIST** (Tim 11-14: "I'm not gonna see my plotter until monday so keep track of all
 the things I need to do when I'm back there as well as prints that need to be printed"). Tick as he
 reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the archive).
+- **11-16 GEAR PLAN (supersedes the list below):** [x] plate3 stands printed · READY: plate12 gear
+  base (floored pocket, 73cad63) · plate13 sled + roof (ca9bd24; all chk_* rerun 11-16 at final
+  height: EMPTY, motor_sled = 0-thick face contact only) · plate5 clamp ring WITHOUT collar 3 ·
+  WAITING: plate14 wheel (needs idler rim Ø → `idl_fd`; 1 idler now, 2nd pushes in later) ·
+  BLOCKED: plate9/9t/10 (carriage2_frame hits the 17.3 frame; cap needs sl_h 10.3 + 4 pegs). Belt 6 mm.
+  Base 2 superseded. Hardware: 4 M3x8 + nuts, 3 mm rod cut to 56.7.
 - Prints, in this order: [ ] base 2 (started 11-14, check it finished) · [ ] plate5 ring 2 +
   collar 3 (32 min) · [ ] **plate9t + plate11t fit tests first** (53 + 14 min) · [ ] plate3 stands
   (stands 3 + tray pockets, 4 h 22 / 204 g) · [ ] plate9 carriage 2 (53 min / 31 g) · [ ] plate10 pen
