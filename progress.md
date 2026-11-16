@@ -92,7 +92,14 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
 - Leave the untracked `build/stl/carriage_plate.3mf` alone (Tim's file).
 - **Pen head cap is WRONG for the real slider** (Tim measured 11-16: 25.2 wide × **10.3 tall** along
   the travel; carriage-2.scad assumes sl_h 14 → 3.8 mm vertical slop). Fix sl_h (cap 10.4) before plate10
-  is printed; stick-out still unmeasured. Not changed yet (Tim: "just talk to me"). Explainer artifact:
+  is printed; stick-out still unmeasured. Slider = cream plastic block on 2 steel rods, front face has
+  4 plain (unthreaded) holes Ø2.2, 3.0 deep, centres 4.9 apart along the travel × 19 apart across
+  (Tim confirmed 11-16) + lead-screw nut screw in the middle. Plan: 4 printed pegs inside the cap.
+  More 11-16 measurements (Tim's words: "linear motor" = stage, "frame", "block"): frame depth 17.3
+  (st_d, was 10), block top 19.85 → sticks out 2.55 (sl_d, was 10): cap can only wrap 2.55 of the block
+  sides, and **carriage2_frame (fr_y0 25.3, straps) collides** with the deeper frame → redesign it.
+  End caps: top (motor end) 16.1, bottom 5.2 (st_cap was 4). Motor ~Ø16 with flats 12.6 wide, top 17.6
+  above the frame's back (0.3 above the frame face), sits within the top end cap. Not changed yet (Tim: "just talk to me"). Explainer artifact:
   https://claude.ai/artifact/XfTWdPC4rFQRP3Wq4Gj32H (finger test, slot-guide idea).
 - Claude can drive the plotter (COM3 115200, PowerShell SerialPort) only with the app disconnected,
   ~2.5 s after open, after Tim says "ready" in the question box.
@@ -117,6 +124,10 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   wheel ribs notched for the pulley. Wheel underside still z 49.0 (same as collar 3). $101 → 16.667.
   4 prints (base, sled, roof, wheel ~6 h) slice clean, no supports; clash checks empty/contact only.
   Tim asked "1 bearing or 2?": 1 works, 2 ~3× steadier (reasoned). Not printed, not committed to build.
+  **11-16: Tim chose gears before printing base 2** ("design a base plate print that supports the double
+  gear system"). `build/print/plate12_gear_base.3mf` (b6f2287) = gr_base, window widened to also fit C20
+  (printed 20T if the loop is 9 mm). Sled/roof/wheel prints wait on belt width + idler flange. With gears:
+  collar 3 and wheel 2 not needed; $101 ×3.75 (re-run Calibrate turn test). Base 2 superseded.
 - D13 · 2026-11-16 · centre gap auto-dodge (751658d): with offset ≠ 0, `dodgeGap` (polar.js) slides the
   drawing the smallest amount that puts the |offset| circle (+0.5 mm) on blank paper, shrink ≥ 0.85 only
   if the slide would cross R; null when no blank spot within min(20, 0.15R) mm (UVU logo at 5 mm).
