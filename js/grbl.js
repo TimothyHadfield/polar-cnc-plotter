@@ -248,6 +248,14 @@ export class Grbl {
     const s = await this.nextStatus();
     this.center = [s.mpos[0], s.mpos[1]];
   }
+  // Tim 11-16: once the center is known, Set center only carries the pen there (pen up, carriage to
+  // X0; the platter's angle doesn't matter at the center). The center itself is left alone: only a
+  // re-done calibration may change it.
+  async goCenter(penUp = 2) {
+    if (!this.center) throw new Error('Set center first.');
+    await this.send(`G90 G0 Z${penUp}`);
+    await this.send('G90 G0 X0');
+  }
   // Work Z0 = the pen where it is now (Calibrate: the pen-up height).
   async setPenZero() {
     await this.send('G92 Z0');

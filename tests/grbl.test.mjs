@@ -107,6 +107,29 @@ test('stop: holds, resets, keeps the center, and the job ends', async () => {
   fake.close();
 });
 
+test('Set center again only carries the pen to the center; the center stays', async () => {
+  const { fake, g } = await connect({ moveTicks: 1 });
+  await g.send('G0 X20 Y30');
+  await g.setCenter();
+  const center = [...g.center];
+  await g.send('G0 X35 Y90 Z0');                           // pen down somewhere in the drawing
+  await g.goCenter(2);
+  let s;
+  for (const t = Date.now() + 3000; Date.now() < t;) { s = await g.nextStatus(); if (s.state === 'Idle') break; }
+  assert.deepEqual(g.center, center, 'center unchanged');
+  assert.ok(Math.abs(s.wpos[0]) < 1e-6, `carriage at X0, got ${s.wpos[0]}`);
+  assert.ok(Math.abs(s.mpos[0] - center[0]) < 1e-6);
+  assert.ok(Math.abs(s.wpos[2] - 2) < 1e-6, 'pen up');
+  assert.ok(!fake.received.slice(-3).some(l => /G92/.test(l)), 'no G92');
+  fake.close();
+});
+
+test('goCenter refuses before any center is set', async () => {
+  const { fake, g } = await connect();
+  await assert.rejects(g.goCenter(2), /Set center first/);
+  fake.close();
+});
+
 test('a reset nobody asked for (USB reconnect) forgets the center', async () => {
   const { fake, g, events } = await connect();
   await g.setCenter();

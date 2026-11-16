@@ -295,7 +295,19 @@ export function initMachine({ getJob, getSettings, onPen, api }) {
     step = +b.dataset.step;
     $('steps').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   });
+  // Tim 11-16: "If I click "set center" after the center has been calibrated, automatically move the
+  // pen to the center, don't mess with or change any calibration settings. Calibration can only be
+  // changed if you re-do calibration." Center known -> just move there. Lost (plotter restarted) and
+  // a homing switch is measured -> find it again from the switch. Only with neither is it set here.
   $('setCenter').addEventListener('click', () => run((async () => {
+    const s = getSettings();
+    if (!grbl.center && s.homing && Number.isFinite(s.homeX) && !(await doHome())) return;
+    if (grbl.center) {
+      await grbl.goCenter(s.penUp);
+      say('Pen moved to the center.');
+      refresh();
+      return;
+    }
     const back = sim?.centerMove?.();   // simulator: lift the pen and carry it to the platter centre first
     if (back) { await grbl.send(`G90 G0 Z${getSettings().penUp}`); await grbl.send(back); }
     await grbl.setCenter();
