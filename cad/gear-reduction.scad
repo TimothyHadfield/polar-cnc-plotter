@@ -31,13 +31,21 @@ part = "gr_assembly";
 
 // ---------- ASSUMED sizes of bought parts: measure before printing ----------
 idl_h  = 8.5;     // idler height (B08J9W4PJT listing; same number as idler_w in printed-frame.scad)
-idl_fd = 18;      // ASSUMED, measure: idler flange diameter (typical for 20T 3 mm idlers)
-idl_td = 12.2;    // ASSUMED: idler tooth diameter (drawing only)
-idl_n  = 2;       // idlers stacked in the hub: 2 (Tim's two). 1 works (see the artifact: ~3x the wobble)
+idl_fd = 18;      // listing (Tim 11-16: "outer diameter: 18mm ... Just trust these measurements")
+idl_td = 12.2;    // ASSUMED: idler tooth diameter (drawing only; listing: tooth width 6.5 = flanges 1 mm)
+idl_n  = 2;       // pocket depth = 2 idlers. Tim has ONE spare (11-16): the lower slot gets the real
+                  // idler (its inner race sits on the boss and carries the wheel), the upper slot a
+                  // printed stand-in (gr_standin) until he buys a 2nd; a centre hole lets him push it out.
 p16_fd = 16;  p16_h = 16;   // aluminium 16T pulley: flange, 7 teeth, flange, 7 hub (plotter-assembly gt2_16t)
 belt_w = 6;       // ASSUMED: listed 6 mm, sold as "220-2GT-9" (9 mm?). A 9 mm belt does not fit the 16T
 belt_L = 220;     // Tim's closed loop: 110 teeth
 ax_d   = 3;       // 304 stainless rod, 3 x 100 (Tim has 5)
+si_fd  = idl_fd - 0.05;   // stand-in OD (printed ODs come out ~0.1 big: same press as the real idler)
+si_h   = idl_h - 0.1;
+si_bore = ax_d + 0.3;     // prints ~3.15: slides on the 3 mm rod
+push_d = 6.5;             // push-out hole through the platter face (under the pad), for a screwdriver
+gt2_plo = 0.254;          // copy of plotter-parts.scad's value: `use` doesn't import variables (before
+                          // 11-16 it was undefined here and the 60T ring's lower flange silently vanished)
 
 // ---------- ratio and centre distance ----------
 n_ring = 60;  n_pul = 16;
@@ -103,8 +111,20 @@ module gr_wheel() difference() {
   }
   translate([0, 0, ring_bot - W - 1]) cylinder(d = pk_d, h = pk_top - ring_bot + 1, $fn = 96);   // idlers
   translate([0, 0, ring_bot - W - 1]) cylinder(d1 = pk_d + 2, d2 = pk_d, h = 1.5, $fn = 96);     // lead-in
-  translate([0, 0, pk_top - W - 0.01]) cylinder(d = ax_d + 1.5, h = 2.5, $fn = 32);              // rod tip room
+  translate([0, 0, pk_top - W - 0.01]) cylinder(d = push_d, h = 40, $fn = 32);   // rod tip room + push-out hole
 }
+// Stand-in for the missing 2nd idler: a plastic bushing the idler's size, pressed in FIRST (up to the
+// ceiling). It turns with the wheel and slides on the rod. Its lower face is relieved so it never
+// rubs the real idler's inner race (that race stands still). Printed relief-side up.
+module gr_standin() difference() {
+  union() {
+    cylinder(d1 = si_fd - 1, d2 = si_fd, h = 0.5, $fn = 96);                 // lead-in (bed side = top when fitted)
+    translate([0, 0, 0.5 - 0.01]) cylinder(d = si_fd, h = si_h - 0.5, $fn = 96);
+  }
+  translate([0, 0, -1]) cylinder(d = si_bore, h = si_h + 2, $fn = 32);
+  translate([0, 0, si_h - 0.6]) cylinder(d = 9, h = 1, $fn = 48);              // inner-race relief
+}
+module print_plate14() { print_gr_wheel(); translate([110, -110, 0]) gr_standin(); }
 
 // ---------- drive sled: post + motor roof, one print, flat on the base top ----------
 sl_x0 = -C - motor_w / 2 - 6;      // left end (-97.8)
@@ -237,6 +257,9 @@ if (part == "print_gr_roof")    print_gr_roof();
 if (part == "chk_roof_sled")    chk_roof_sled();
 if (part == "gr_base")          gr_base();
 if (part == "print_gr_wheel")   print_gr_wheel();
+if (part == "gr_standin")       gr_standin();
+if (part == "print_plate14")    print_plate14();
+if (part == "chk_standin_wheel") intersection() { translate([0, 0, W]) gr_wheel(); translate([0, 0, idl_z0 + idl_h]) translate([0, 0, si_h]) rotate([180, 0, 0]) gr_standin(); }
 if (part == "print_gr_sled")    print_gr_sled();
 if (part == "print_gr_base")    print_gr_base();
 if (part == "gr_motor")         gr_motor();
