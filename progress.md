@@ -21,6 +21,12 @@ nothing changes without a tap). Next: give Tim the Monday list when he's back (M
 **TIM'S MONDAY LIST** (Tim 11-14: "I'm not gonna see my plotter until monday so keep track of all
 the things I need to do when I'm back there as well as prints that need to be printed"). Tick as he
 reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the archive).
+- **11-16 later: Tim printed sled 1 + roof 1 + base (plate12).** Problems → sled 2 (plate13 re-exported):
+  rod hole 3.1 too tight → 3.3; motor cage open at the BACK (+y) with the plate cut away, walls front /
+  outer / wheel side, motor plug points back; 4 printed M3 nuts in plate13 (Tim has only 1 real nut;
+  printed ones only locate the sled). Tim's standing asks for any future reprint: **stands → full
+  trapezoid groove that grips the rail** ("I was right ... it comes apart easily"; printability of
+  the undercut must be solved, e.g. supports) and **base → wire guides for the Y (platter) motor cord**.
 - **11-16 GEAR PLAN (supersedes the list below):** [x] plate3 stands printed · READY: plate12 gear
   base (floored pocket, 73cad63) · plate13 sled + roof (ca9bd24; all chk_* rerun 11-16 at final
   height: EMPTY, motor_sled = 0-thick face contact only) · plate5 clamp ring WITHOUT collar 3 ·

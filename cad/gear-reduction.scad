@@ -42,7 +42,7 @@ belt_L = 220;     // Tim's closed loop: 110 teeth
 ax_d   = 3;       // 304 stainless rod, 3 x 100 (Tim has 5)
 si_fd  = idl_fd - 0.05;   // stand-in OD (printed ODs come out ~0.1 big: same press as the real idler)
 si_h   = idl_h - 0.1;
-si_bore = ax_d + 0.3;     // prints ~3.15: slides on the 3 mm rod
+si_bore = ax_d + 0.4;     // prints ~3.2: slides on the 3 mm rod (a 3.1 hole printed too tight on sled 1)
 push_d = 6.5;             // push-out hole through the platter face (under the pad), for a screwdriver
 gt2_plo = 0.254;          // copy of plotter-parts.scad's value: `use` doesn't import variables (before
                           // 11-16 it was undefined here and the 60T ring's lower flange silently vanished)
@@ -127,31 +127,41 @@ module gr_standin() difference() {
 module print_plate14() { print_gr_wheel(); translate([110, -110, 0]) gr_standin(); }
 
 // ---------- drive sled: post + motor roof, one print, flat on the base top ----------
-sl_x0 = -C - motor_w / 2 - 6;      // left end (-97.8)
-sl_x1 = 24;
-sl_hw = motor_w / 2 + motor_fit + 3 + 2.5;   // half width in y (27.6)
-ten   = 3;                          // belt tension travel each way (motor slides along x)
+// Sled 2 (11-16, after Tim printed sled 1): "the steel rod ... doesn't fit at all into the hole in the
+// cone" (3.1 hole printed small) -> 3.3. "the little bar at the bottom blocks the cord ... It would be
+// much better if the opening was truely open (even with the lid on), and pointed to the back of the
+// base plate." -> walls on the front, outer (-x) and wheel (+x) sides only; the BACK (+y) is open
+// from the base pocket up to the roof, and the plate under it is cut away to the back edge. Mount
+// the motor with its plug pointing back (the 4 screws allow any of 4 turns).
+ten    = 3;                         // belt tension travel each way (motor slides along x)
 win_hx = motor_w / 2 + motor_fit + ten;   // motor window half size in x
-in_y   = motor_w / 2 + motor_fit;          // walls' inner faces
+in_y   = motor_w / 2 + motor_fit;          // motor body clearance in y
+wall_t = 5;                         // front and wheel-side walls (3 mm pins on top)
+wall_o = 4;                         // outer (-x) wall: no pins, keeps the sled 1.1 clear of the left stand
+sl_x0 = -C - win_hx - wall_o;       // left end (-99.2)
+sl_x1 = 24;
+sl_hw = motor_w / 2 + motor_fit + 3 + 2.5;   // plate half width in y (27.6)
+cx0 = sl_x0;  cx1 = -C + win_hx + wall_t;   // cage x extent
+cy0 = -in_y - wall_t;  cy1 = in_y;          // cage y extent (back open at in_y)
 scr_x  = [12, -34];                 // sled screws (x), at y +-20: slots +-motor_adj in the base's nuts
-wall_t = 5;                         // walls 5 thick so a 3 mm pin fits on top
-pin_x  = [-20, 20];                 // roof pins (x from the motor's middle position)
+pins   = [[-C - 20, -in_y - wall_t / 2], [-C + 20, -in_y - wall_t / 2],          // front wall
+          [-C + win_hx + wall_t / 2, -12], [-C + win_hx + wall_t / 2, 12]];      // wheel-side wall
 // The roof is a SEPARATE flat print (first slice 11-16: printed in one piece, the roof is a 49 mm
 // bridge full of holes and Bambu filled the whole cage with support). It sits on the walls' tops:
-// the motor hangs from it, so its weight presses the roof down; two pins per wall stop the belt
-// pulling it sideways. Printed top face down: the sunk heads are then pockets on the bed.
+// the motor hangs from it, so its weight presses the roof down; 4 pins stop the belt pulling it
+// sideways. Printed top face down: the sunk heads are then pockets on the bed.
 module gr_sled() difference() {
   union() {
     translate([sl_x0, -sl_hw, 0]) cube([sl_x1 - sl_x0, 2 * sl_hw, sled_t]);                // plate
-    for (s = [-1, 1]) translate([-C - win_hx - 2.5, s > 0 ? in_y : -in_y - wall_t, 0]) {   // two walls
-      cube([2 * win_hx + 5, wall_t, mface]);
-      for (x = pin_x) translate([win_hx + 2.5 + x, wall_t / 2, mface - 0.01]) cylinder(d = 3, h = 3, $fn = 24);
-    }
+    translate([cx0, cy0, 0]) cube([cx1 - cx0, wall_t, mface]);                               // front wall
+    translate([cx0, cy0, 0]) cube([wall_o, cy1 - cy0, mface]);                               // outer wall
+    translate([cx1 - wall_t, cy0, 0]) cube([wall_t, cy1 - cy0, mface]);                      // wheel-side wall
+    for (p = pins) translate([p[0], p[1], mface - 0.01]) cylinder(d = 3, h = 3, $fn = 24);
     cylinder(d1 = 40, d2 = 16, h = post_top, $fn = 96);                                      // post
     translate([0, 0, post_top - 0.01]) cylinder(d = 5.2, h = idl_z0 - post_top + 0.01, $fn = 32);   // inner-race boss
   }
-  translate([-C - win_hx, -in_y, -1]) cube([2 * win_hx, 2 * in_y, mface + 1]);              // motor window
-  translate([0, 0, ax_bot]) cylinder(d = ax_d + 0.1, h = 100, $fn = 32);                     // rod: press fit
+  translate([-C - win_hx, -in_y, -1]) cube([2 * win_hx, sl_hw + in_y + 1, mface + 2]);      // motor window, open to the back
+  translate([0, 0, ax_bot]) cylinder(d = ax_d + 0.3, h = 100, $fn = 32);                     // rod: 3.3 prints ~3.1 (3.1 was too tight)
   for (x = scr_x, s = [-1, 1]) translate([x, s * 20, 0]) {                                   // sled screws
     translate([0, 0, -1]) cylinder(d = 3.4, h = sled_t + 2, $fn = 24);
     translate([0, 0, 2]) cylinder(d = 6.5, h = sled_t, $fn = 24);                             // head counterbore
@@ -159,8 +169,8 @@ module gr_sled() difference() {
 }
 // motor roof (world position): shaft + boss slot, screw slots, sunk heads (all slide +-ten along x)
 module gr_roof() difference() {
-  translate([-C - win_hx - 2.5, -in_y - wall_t, mface]) cube([2 * win_hx + 5, 2 * (in_y + wall_t), roof_t]);
-  for (s = [-1, 1], x = pin_x) translate([-C + x, s * (in_y + wall_t / 2), mface - 1]) cylinder(d = 3.4, h = 4 + 1, $fn = 24);
+  translate([cx0, cy0, mface]) cube([cx1 - cx0, cy1 - cy0, roof_t]);
+  for (p = pins) translate([p[0], p[1], mface - 1]) cylinder(d = 3.4, h = 4 + 1, $fn = 24);
   translate([-C, 0, 0]) {
     hull() for (x = [-ten, ten]) translate([x, 0, mface - 1]) cylinder(d = 8, h = roof_t + 2);
     hull() for (x = [-ten, ten]) translate([x, 0, mface - 1]) cylinder(d = 23.5, h = 3 + 1);
@@ -206,7 +216,12 @@ module belt() translate([0, 0, zb - belt_w / 2]) linear_extrude(belt_w) differen
   offset(r = 1.1) hull() { circle(d = pd(n_ring), $fn = 96); translate([-C, 0]) circle(d = pd(n_pul), $fn = 48); }
   offset(r = -0.3) hull() { circle(d = pd(n_ring), $fn = 96); translate([-C, 0]) circle(d = pd(n_pul), $fn = 48); }
 }
-module gr_motor() translate([-C, 0, mface]) rotate(90) nema17(shaft_len);     // plug faces -x (outboard)
+module gr_motor() translate([-C, 0, mface]) nema17(shaft_len);     // plug faces +y (the open back, sled 2)
+// Printed M3 nuts (Tim has 1 real nut): fit the base's hex slots; the M3 screw cuts its own thread.
+// They only locate the sled: belt pull and platter torque stay inside the sled (motor + axle on it).
+module gr_nut() difference() { rotate(30) cylinder(d = 6.3, h = 2.4, $fn = 6); translate([0, 0, -1]) cylinder(d = 2.5, h = 5, $fn = 20); }
+module print_plate13() { print_gr_sled(); translate([0, 75, 0]) print_gr_roof();
+                         for (x = [8, 18], y = [42, 52]) translate([x, y, 0]) gr_nut(); }
 module gr_pulley() translate([-C, 0, pul_z]) gt2_16t();
 module gr_idlers() for (i = [0 : idl_n - 1]) translate([0, 0, idl_z0 + i * idl_h]) idler();
 module gr_axle() translate([0, 0, ax_bot]) cylinder(d = ax_d, h = ax_len, $fn = 16);
@@ -258,6 +273,7 @@ if (part == "chk_roof_sled")    chk_roof_sled();
 if (part == "gr_base")          gr_base();
 if (part == "print_gr_wheel")   print_gr_wheel();
 if (part == "gr_standin")       gr_standin();
+if (part == "print_plate13")    print_plate13();
 if (part == "print_plate14")    print_plate14();
 if (part == "chk_standin_wheel") intersection() { translate([0, 0, W]) gr_wheel(); translate([0, 0, idl_z0 + idl_h]) translate([0, 0, si_h]) rotate([180, 0, 0]) gr_standin(); }
 if (part == "print_gr_sled")    print_gr_sled();
