@@ -161,6 +161,7 @@ module gr_sled() difference() {
     translate([0, 0, post_top - 0.01]) cylinder(d = 5.2, h = idl_z0 - post_top + 0.01, $fn = 32);   // inner-race boss
   }
   translate([-C - win_hx, -in_y, -1]) cube([2 * win_hx, sl_hw + in_y + 1, mface + 2]);      // motor window, open to the back
+  translate([sl_x0 - 1, cy1, -1]) cube([wall_o + 1, sl_hw, sled_t + 2]);                    // no plate stub behind the outer wall
   translate([0, 0, ax_bot]) cylinder(d = ax_d + 0.3, h = 100, $fn = 32);                     // rod: 3.3 prints ~3.1 (3.1 was too tight)
   for (x = scr_x, s = [-1, 1]) translate([x, s * 20, 0]) {                                   // sled screws
     translate([0, 0, -1]) cylinder(d = 3.4, h = sled_t + 2, $fn = 24);
