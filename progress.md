@@ -26,7 +26,8 @@ reports. V3 supersedes the 11-14 stands 2 / pen-holder plans (old list in the ar
   height: EMPTY, motor_sled = 0-thick face contact only) · plate5 clamp ring WITHOUT collar 3 ·
   WAITING: plate14 wheel (needs idler rim Ø → `idl_fd`). **Tim 11-16: only ONE spare idler exists**
   (2-pack, other one is on the carriage belt; my "other order" reading was wrong). Build plate14 with
-  idl_n = 1 at the pocket top + a printed 3 mm sleeve low in the hub on the rod as the 2nd support ·
+  the 2-idler pocket kept + a separate printed "stand-in idler" (idler-shaped plastic bushing, 3 mm
+  hole) pressed in low; Tim may order a 2-pack (said 11-16 "if it's really useful") to swap in later ·
   BLOCKED: plate9/9t/10 (carriage2_frame hits the 17.3 frame; cap needs sl_h 10.3 + 4 pegs). Belt 6 mm.
   Base 2 superseded. Hardware: 4 M3x8 + nuts, 3 mm rod cut to 56.7.
 - Prints, in this order: [ ] base 2 (started 11-14, check it finished) · [ ] plate5 ring 2 +
